@@ -109,19 +109,23 @@ const sidebarItems = [
 
 function SidebarLink({ item, isActive }: { item: typeof sidebarItems[0]; isActive: boolean }) {
   return (
-    <Link href={item.href} className="block relative">
+    <Link href={item.href} className="block relative group">
       {isActive && (
         <motion.div
           layoutId="sidebar-active"
-          className="absolute inset-0 rounded-xl bg-sky-500/8 border-l-2 border-sky-400"
-          style={{ boxShadow: "inset 0 0 20px rgba(56,189,248,0.03)" }}
+          className="absolute inset-0 rounded-xl bg-gradient-to-r from-sky-500/[0.12] to-violet-500/[0.06] border-l-2 border-sky-400"
+          style={{ boxShadow: "inset 0 0 24px rgba(56,189,248,0.05), 0 0 12px rgba(56,189,248,0.04)" }}
           transition={{ type: "spring", stiffness: 350, damping: 30 }}
         />
       )}
-      <div className={`sidebar-item relative z-10 ${isActive ? "text-white" : ""}`}>
-        <span className="flex-shrink-0">{item.icon}</span>
+      <motion.div
+        className={`sidebar-item relative z-10 ${isActive ? "text-white" : ""}`}
+        whileHover={{ x: 2 }}
+        transition={{ duration: 0.15 }}
+      >
+        <span className={`flex-shrink-0 transition-colors ${isActive ? "text-sky-400" : "group-hover:text-sky-400/60"}`}>{item.icon}</span>
         {item.label}
-      </div>
+      </motion.div>
     </Link>
   );
 }
@@ -157,7 +161,7 @@ export default function DashboardShell({
         </Link>
 
         {/* Main */}
-        <div className="text-[10px] uppercase tracking-[0.15em] text-white/15 px-4 mb-2 font-semibold">หลัก</div>
+        <div className="text-[10px] uppercase tracking-[0.15em] text-white/20 px-4 mb-2 font-semibold">หลัก</div>
         <nav className="space-y-0.5 mb-6">
           {sidebarItems.filter(i => i.section === "main").map((item) => (
             <SidebarLink key={item.label} item={item} isActive={pathname === item.href} />
@@ -165,7 +169,7 @@ export default function DashboardShell({
         </nav>
 
         {/* Management */}
-        <div className="text-[10px] uppercase tracking-[0.15em] text-white/15 px-4 mb-2 font-semibold">จัดการ</div>
+        <div className="text-[10px] uppercase tracking-[0.15em] text-white/20 px-4 mb-2 font-semibold">จัดการ</div>
         <nav className="space-y-0.5 mb-6">
           {sidebarItems.filter(i => i.section === "manage").map((item) => (
             <SidebarLink key={item.label} item={item} isActive={pathname === item.href} />
@@ -173,7 +177,7 @@ export default function DashboardShell({
         </nav>
 
         {/* Settings */}
-        <div className="text-[10px] uppercase tracking-[0.15em] text-white/15 px-4 mb-2 font-semibold">ตั้งค่า</div>
+        <div className="text-[10px] uppercase tracking-[0.15em] text-white/20 px-4 mb-2 font-semibold">ตั้งค่า</div>
         <nav className="space-y-0.5 flex-1">
           {sidebarItems.filter(i => i.section === "settings").map((item) => (
             <SidebarLink key={item.label} item={item} isActive={pathname === item.href} />
