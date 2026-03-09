@@ -1,0 +1,141 @@
+"use server";
+
+import { prisma } from "@/lib/db";
+import { sendSingleSms } from "@/lib/sms-gateway";
+import crypto from "crypto";
+
+const OTP_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
+const MAX_ATTEMPTS = 5;
+const MAX_OTP_PER_PHONE_PER_HOUR = 5;
+const OTP_CREDIT_COST = 1;
+
+function generateOtp(): string {
+  return crypto.randomInt(100000, 999999).toString();
+}
+
+export async function generateOtp_(
+  userId: string,
+  phone: string,
+  purpose: string = "verify"
+) {
+  // Validate phone
+  if (!/^0[689]\d{8}$/.test(phone)) {
+    throw new Error("หมายเลขโทรศัพท์ไม่ถูกต้อง");
+  }
+
+  // Rate limit: max 5 OTPs per phone per hour
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+  const recentCount = await prisma.otpRequest.count({
+    where: { userId, phone, createdAt: { gte: oneHourAgo } },
+  });
+
+  if (recentCount >= MAX_OTP_PER_PHONE_PER_HOUR) {
+    throw new Error("ส่ง OTP มากเกินไป กรุณารอ 1 ชั่วโมง");
+  }
+
+  // Check user credits
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { credits: true },
+  });
+
+  if (!user || user.credits < OTP_CREDIT_COST) {
+    throw new Error("เครดิตไม่เพียงพอ");
+  }
+
+  const code = generateOtp();
+  const expiresAt = new Date(Date.now() + OTP_EXPIRY_MS);
+
+  // Create OTP record + deduct credit in transaction
+  const [otpRecord] = await prisma.$transaction([
+    prisma.otpRequest.create({
+      data: { userId, phone, code, purpose, expiresAt },
+    }),
+    prisma.user.update({
+      where: { id: userId },
+      data: { credits: { decrement: OTP_CREDIT_COST } },
+    }),
+  ]);
+
+  // Send OTP via SMS
+  const message = `รหัส OTP ของคุณคือ ${code} (หมดอายุใน 5 นาที)`;
+  try {
+    await sendSingleSms(phone, message, "EasySlip");
+  } catch {
+    // Refund credit on send failure
+    await prisma.$transaction([
+      prisma.otpRequest.delete({ where: { id: otpRecord.id } }),
+      prisma.user.update({
+        where: { id: userId },
+        data: { credits: { increment: OTP_CREDIT_COST } },
+      }),
+    ]);
+    throw new Error("ส่ง OTP ไม่สำเร็จ กรุณาลองใหม่");
+  }
+
+  return {
+    id: otpRecord.id,
+    phone,
+    purpose,
+    expiresAt: otpRecord.expiresAt.toISOString(),
+    creditUsed: OTP_CREDIT_COST,
+  };
+}
+
+export async function verifyOtp_(
+  userId: string,
+  phone: string,
+  code: string
+) {
+  if (!code || code.length !== 6) {
+    throw new Error("รหัส OTP ไม่ถูกต้อง");
+  }
+
+  // Find the latest unexpired, unverified OTP for this phone
+  const otp = await prisma.otpRequest.findFirst({
+    where: {
+      userId,
+      phone,
+      verified: false,
+      expiresAt: { gte: new Date() },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  if (!otp) {
+    throw new Error("ไม่พบ OTP หรือ OTP หมดอายุแล้ว");
+  }
+
+  // Check max attempts
+  if (otp.attempts >= MAX_ATTEMPTS) {
+    throw new Error("ลองผิดมากเกินไป กรุณาขอ OTP ใหม่");
+  }
+
+  // Increment attempts
+  await prisma.otpRequest.update({
+    where: { id: otp.id },
+    data: { attempts: { increment: 1 } },
+  });
+
+  // Verify code (timing-safe comparison)
+  const isValid =
+    code.length === otp.code.length &&
+    crypto.timingSafeEqual(Buffer.from(code), Buffer.from(otp.code));
+
+  if (!isValid) {
+    const remaining = MAX_ATTEMPTS - (otp.attempts + 1);
+    throw new Error(`OTP ไม่ถูกต้อง (เหลือ ${remaining} ครั้ง)`);
+  }
+
+  // Mark as verified
+  await prisma.otpRequest.update({
+    where: { id: otp.id },
+    data: { verified: true },
+  });
+
+  return {
+    verified: true,
+    phone,
+    purpose: otp.purpose,
+  };
+}

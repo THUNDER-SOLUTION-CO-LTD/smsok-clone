@@ -26,6 +26,8 @@ model User {
   transactions     Transaction[]
   apiKeys          ApiKey[]
   messageTemplates MessageTemplate[]
+  otpRequests      OtpRequest[]
+  scheduledSms     ScheduledSms[]
 
   @@map("users")
 }
@@ -148,6 +150,42 @@ model MessageTemplate {
 
   @@index([userId])
   @@map("message_templates")
+}
+
+model OtpRequest {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id])
+  phone     String
+  code      String
+  purpose   String   @default("verify") // verify, login, transaction
+  attempts  Int      @default(0)
+  verified  Boolean  @default(false)
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId, phone, createdAt])
+  @@index([phone, code])
+  @@map("otp_requests")
+}
+
+model ScheduledSms {
+  id          String    @id @default(cuid())
+  userId      String    @map("user_id")
+  user        User      @relation(fields: [userId], references: [id])
+  senderName  String    @map("sender_name")
+  recipient   String
+  content     String
+  scheduledAt DateTime  @map("scheduled_at")
+  status      String    @default("pending") // pending, sent, failed, cancelled
+  messageId   String?   @map("message_id")
+  errorCode   String?   @map("error_code")
+  creditCost  Int       @default(1) @map("credit_cost")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@index([userId, scheduledAt])
+  @@index([status, scheduledAt])
+  @@map("scheduled_sms")
 }
 
 model Transaction {

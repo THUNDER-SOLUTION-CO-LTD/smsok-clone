@@ -1,11 +1,13 @@
 import { getSession } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import { getSenderNames } from "@/lib/actions/sender-names";
 import SenderNameForm from "./SenderNameForm";
 
 export default async function SendersPage() {
   const user = await getSession();
+  if (!user) redirect("/login");
 
-  const senderNames = await getSenderNames(user!.id);
+  const senderNames = await getSenderNames(user.id);
 
   const statusConfig: Record<string, { badge: string; label: string; icon: string }> = {
     pending: { badge: "badge-warning", label: "รออนุมัติ", icon: "⏳" },
@@ -80,7 +82,7 @@ export default async function SendersPage() {
           </div>
           ยื่นคำขอชื่อผู้ส่งใหม่
         </h2>
-        <SenderNameForm userId={user!.id} />
+        <SenderNameForm userId={user.id} />
       </div>
 
       {/* Sender Names List */}

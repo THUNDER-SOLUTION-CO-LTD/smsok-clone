@@ -6,3 +6,7 @@ export { PACKAGES } from "../packages-data";
 export { createApiKey, getApiKeys, toggleApiKey, deleteApiKey } from "./api-keys";
 export { updateProfile, changePassword, getProfile } from "./settings";
 export { getTemplates, createTemplate, updateTemplate, deleteTemplate } from "./templates";
+export { generateOtp_, verifyOtp_ } from "./otp";
+export { createScheduledSms, getScheduledSms, cancelScheduledSms, processScheduledSms } from "./scheduled-sms";
+export { getAnalytics } from "./analytics";
+export { substituteVariables, extractVariables } from "../template-utils";

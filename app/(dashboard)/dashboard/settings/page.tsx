@@ -5,10 +5,11 @@ import PasswordChangeForm from "./PasswordChangeForm";
 
 export default async function SettingsPage() {
   const user = await getSession();
+  if (!user) redirect("/login");
 
   // Get full user data including phone and createdAt
   const fullUser = await prisma.user.findUnique({
-    where: { id: user!.id },
+    where: { id: user.id },
     select: {
       id: true,
       name: true,

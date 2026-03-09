@@ -18,7 +18,7 @@ const sidebarItems = [
   {
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" />
+        <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
       </svg>
     ),
     label: "แดชบอร์ด",
@@ -41,18 +41,28 @@ const sidebarItems = [
         <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
       </svg>
     ),
-    label: "ข้อความ",
+    label: "ประวัติการส่ง",
     href: "/dashboard/messages",
     section: "main",
   },
   {
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
       </svg>
     ),
-    label: "แคมเปญ",
-    href: "/dashboard/campaigns",
+    label: "ตั้งเวลาส่ง",
+    href: "/dashboard/scheduled",
+    section: "main",
+  },
+  {
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" />
+      </svg>
+    ),
+    label: "เทมเพลต",
+    href: "/dashboard/templates",
     section: "main",
   },
   {
@@ -61,7 +71,7 @@ const sidebarItems = [
         <path d="M4 19.5A2.5 2.5 0 016.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" />
       </svg>
     ),
-    label: "สมุดโทรศัพท์",
+    label: "รายชื่อผู้ติดต่อ",
     href: "/dashboard/contacts",
     section: "manage",
   },
@@ -78,12 +88,32 @@ const sidebarItems = [
   {
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+      </svg>
+    ),
+    label: "แคมเปญ",
+    href: "/dashboard/campaigns",
+    section: "manage",
+  },
+  {
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" />
+      </svg>
+    ),
+    label: "รายงาน",
+    href: "/dashboard/analytics",
+    section: "manage",
+  },
+  {
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
       </svg>
     ),
     label: "เติมเงิน",
     href: "/dashboard/topup",
-    section: "manage",
+    section: "settings",
   },
   {
     icon: (
@@ -93,6 +123,16 @@ const sidebarItems = [
     ),
     label: "คีย์ API",
     href: "/dashboard/api-keys",
+    section: "settings",
+  },
+  {
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z" /><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z" />
+      </svg>
+    ),
+    label: "API Docs",
+    href: "/dashboard/api-docs",
     section: "settings",
   },
   {
@@ -113,17 +153,17 @@ function SidebarLink({ item, isActive }: { item: typeof sidebarItems[0]; isActiv
       {isActive && (
         <motion.div
           layoutId="sidebar-active"
-          className="absolute inset-0 rounded-xl bg-gradient-to-r from-sky-500/[0.12] to-violet-500/[0.06] border-l-2 border-sky-400"
-          style={{ boxShadow: "inset 0 0 20px rgba(56,189,248,0.03), -2px 0 8px rgba(56,189,248,0.15)" }}
-          transition={{ type: "spring", stiffness: 350, damping: 30 }}
+          className="absolute inset-0 rounded-lg bg-gradient-to-r from-violet-500/10 to-cyan-500/5"
+          style={{ boxShadow: "inset 0 0 0 1px rgba(139,92,246,0.12)" }}
+          transition={{ type: "spring", stiffness: 400, damping: 30 }}
         />
       )}
       <motion.div
-        className={`sidebar-item relative z-10 ${isActive ? "text-white" : ""}`}
+        className={`sidebar-item relative z-10 ${isActive ? "!text-white" : ""}`}
         whileHover={{ x: 2 }}
-        transition={{ duration: 0.15 }}
+        transition={{ duration: 0.1 }}
       >
-        <span className={`flex-shrink-0 transition-colors ${isActive ? "text-sky-400" : "group-hover:text-sky-400/60"}`}>{item.icon}</span>
+        <span className={`flex-shrink-0 transition-colors duration-150 ${isActive ? "text-violet-400" : "group-hover:text-slate-400"}`}>{item.icon}</span>
         {item.label}
       </motion.div>
     </Link>
@@ -142,62 +182,62 @@ export default function DashboardShell({
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
 
+  const mainItems = sidebarItems.filter(i => i.section === "main");
+  const manageItems = sidebarItems.filter(i => i.section === "manage");
+  const settingsItems = sidebarItems.filter(i => i.section === "settings");
+
   return (
     <div className="min-h-screen flex bg-[var(--bg-base)]">
-      {/* Sidebar */}
-      <aside className="hidden md:flex w-[240px] border-r border-white/[0.04] bg-[#080e1a]/95 backdrop-blur-2xl flex-col p-4">
+      {/* Sidebar — Slim, clean */}
+      <aside className="hidden md:flex w-[220px] flex-shrink-0 border-r border-[var(--border-subtle)] bg-[#0D1526]/95 backdrop-blur-xl flex-col">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2.5 px-4 py-3 mb-6 group">
-          <motion.svg
-            width="22" height="22" viewBox="0 0 24 24" fill="none"
-            className="text-sky-400"
-            whileHover={{ rotate: 12, scale: 1.1 }}
-            transition={{ type: "spring", stiffness: 300 }}
-          >
-            <path d="M12 2L2 7l10 5 10-5-10-5z" fill="currentColor" opacity="0.3" />
-            <path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </motion.svg>
-          <span className="text-lg font-bold bg-gradient-to-r from-sky-300 via-cyan-300 to-sky-400 bg-clip-text text-transparent">SMSOK</span>
+        <Link href="/" className="flex items-center gap-2.5 px-5 h-14 border-b border-[var(--border-subtle)] group">
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-violet-500/20">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="text-white">
+              <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" fill="currentColor" />
+            </svg>
+          </div>
+          <span className="text-base font-bold tracking-tight gradient-text-mixed">SMSOK</span>
         </Link>
 
-        {/* Main */}
-        <div className="text-[10px] uppercase tracking-[0.15em] text-white/20 px-4 mb-2 font-semibold">หลัก</div>
-        <nav className="space-y-0.5 mb-6">
-          {sidebarItems.filter(i => i.section === "main").map((item) => (
-            <SidebarLink key={item.label} item={item} isActive={pathname === item.href} />
-          ))}
-        </nav>
+        {/* Navigation */}
+        <div className="flex-1 overflow-y-auto py-3 px-3">
+          <div className="text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)] px-3 mb-2 font-medium">หลัก</div>
+          <nav className="space-y-0.5 mb-5">
+            {mainItems.map((item) => (
+              <SidebarLink key={item.label} item={item} isActive={pathname === item.href} />
+            ))}
+          </nav>
 
-        {/* Management */}
-        <div className="text-[10px] uppercase tracking-[0.15em] text-white/20 px-4 mb-2 font-semibold">จัดการ</div>
-        <nav className="space-y-0.5 mb-6">
-          {sidebarItems.filter(i => i.section === "manage").map((item) => (
-            <SidebarLink key={item.label} item={item} isActive={pathname === item.href} />
-          ))}
-        </nav>
+          <div className="text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)] px-3 mb-2 font-medium">จัดการ</div>
+          <nav className="space-y-0.5 mb-5">
+            {manageItems.map((item) => (
+              <SidebarLink key={item.label} item={item} isActive={pathname === item.href} />
+            ))}
+          </nav>
 
-        {/* Settings */}
-        <div className="text-[10px] uppercase tracking-[0.15em] text-white/20 px-4 mb-2 font-semibold">ตั้งค่า</div>
-        <nav className="space-y-0.5 flex-1">
-          {sidebarItems.filter(i => i.section === "settings").map((item) => (
-            <SidebarLink key={item.label} item={item} isActive={pathname === item.href} />
-          ))}
-        </nav>
+          <div className="text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)] px-3 mb-2 font-medium">ตั้งค่า</div>
+          <nav className="space-y-0.5">
+            {settingsItems.map((item) => (
+              <SidebarLink key={item.label} item={item} isActive={pathname === item.href} />
+            ))}
+          </nav>
+        </div>
 
-        {/* User */}
-        <div className="border-t border-white/[0.04] pt-4 px-2">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-sky-500/30 to-violet-500/20 border border-sky-500/20 flex items-center justify-center text-xs font-semibold text-sky-300 shadow-[0_0_12px_rgba(56,189,248,0.1)]">
+        {/* User section */}
+        <div className="border-t border-[var(--border-subtle)] p-3">
+          <div className="flex items-center gap-2.5 px-2 py-2 mb-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500/20 to-cyan-500/10 border border-violet-500/15 flex items-center justify-center text-xs font-semibold text-violet-300">
               {user.name.charAt(0)}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-sm text-white/60 truncate">{user.name}</div>
-              <div className="text-[11px] text-white/20 truncate">{user.email}</div>
+              <div className="text-sm text-[var(--text-secondary)] font-medium truncate">{user.name}</div>
+              <div className="text-[11px] text-[var(--text-muted)] truncate">{user.email}</div>
             </div>
           </div>
           <form action={logout}>
-            <button className="sidebar-item w-full text-red-400/40 hover:text-red-400">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <button className="sidebar-item w-full text-red-400/40 hover:text-red-400 hover:bg-red-500/5">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
               </svg>
               ออกจากระบบ
@@ -208,48 +248,51 @@ export default function DashboardShell({
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto">
-        {/* Top Bar */}
-        <header className="sticky top-0 z-40 border-b border-white/[0.04] bg-[#080e1a]/80 backdrop-blur-2xl px-6 md:px-8 h-14 flex items-center justify-between">
-          <h1 className="text-lg font-semibold text-white tracking-tight">{title || sidebarItems.find(i => i.href === pathname)?.label || "แดชบอร์ด"}</h1>
-          <div className="flex items-center gap-4">
-            <motion.div
-              className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-sky-500/[0.06] to-violet-500/[0.04] border border-sky-500/10"
-              whileHover={{ scale: 1.03, borderColor: "rgba(56,189,248,0.25)" }}
+        {/* Top Bar — Clean, minimal */}
+        <header className="sticky top-0 z-40 border-b border-[var(--border-subtle)] bg-[#0B1120]/80 backdrop-blur-xl h-14 flex items-center justify-between px-6 md:px-8">
+          <h1 className="text-base font-semibold text-[var(--text-primary)] tracking-tight">
+            {title || sidebarItems.find(i => i.href === pathname)?.label || "แดชบอร์ด"}
+          </h1>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/dashboard/topup"
+              className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)] hover:border-violet-500/20 transition-colors"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-sky-400">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-violet-400">
                 <line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
               </svg>
-              <span className="text-xs text-white/40">เครดิต:</span>
-              <span className="text-sm font-semibold bg-gradient-to-r from-sky-300 to-cyan-300 bg-clip-text text-transparent">{user.credits.toLocaleString()}</span>
-            </motion.div>
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-sky-500/30 to-violet-500/20 border border-sky-500/20 flex items-center justify-center text-xs font-semibold text-sky-300 md:hidden">
+              <span className="text-xs text-[var(--text-muted)]">เครดิต</span>
+              <span className="text-sm font-semibold gradient-text-cyan">{user.credits.toLocaleString()}</span>
+            </Link>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500/20 to-cyan-500/10 border border-violet-500/15 flex items-center justify-center text-xs font-semibold text-violet-300 md:hidden">
               {user.name.charAt(0)}
             </div>
           </div>
         </header>
 
+        {/* Page Content with transitions */}
         <AnimatePresence mode="wait">
           <motion.div
             key={pathname}
-            initial={{ opacity: 0, y: 12 }}
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -12 }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
           >
             {children}
           </motion.div>
         </AnimatePresence>
 
         {/* Footer */}
-        <footer className="border-t border-white/[0.03] px-8 py-4 mt-8">
-          <div className="flex items-center justify-between text-[11px] text-white/15">
+        <footer className="border-t border-[var(--border-subtle)] px-8 py-4 mt-8">
+          <div className="flex items-center justify-between text-[11px] text-[var(--text-muted)]">
             <span>v1.0</span>
-            <span>&copy; SMSOK — แพลตฟอร์มส่ง SMS</span>
+            <span>&copy; SMSOK</span>
           </div>
         </footer>
       </main>
 
-      {/* Mobile More Menu Overlay */}
+      {/* Mobile More Menu */}
       <AnimatePresence>
         {moreOpen && (
           <div className="md:hidden fixed inset-0 z-[60]">
@@ -261,39 +304,39 @@ export default function DashboardShell({
               onClick={() => setMoreOpen(false)}
             />
             <motion.div
-              className="absolute bottom-0 left-0 right-0 glass rounded-t-2xl border-t border-white/10 p-4 pb-8"
+              className="absolute bottom-0 left-0 right-0 bg-[#0D1526] rounded-t-2xl border-t border-[var(--border-subtle)] p-4 pb-8"
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
             >
               <div className="w-10 h-1 rounded-full bg-white/10 mx-auto mb-4" />
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-3 gap-2">
                 {sidebarItems.filter(i => !["/dashboard", "/dashboard/send", "/dashboard/messages"].includes(i.href)).map((item, idx) => (
                   <motion.div
                     key={item.href}
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: 16 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.05 }}
+                    transition={{ delay: idx * 0.03 }}
                   >
                     <Link
                       href={item.href}
                       onClick={() => setMoreOpen(false)}
-                      className={`flex flex-col items-center gap-2 p-3 rounded-xl transition-all min-h-[72px] ${
+                      className={`flex flex-col items-center gap-2 p-3 rounded-xl transition-all ${
                         pathname === item.href
-                          ? "bg-sky-500/10 text-sky-400 border border-sky-500/20"
-                          : "bg-white/[0.02] text-white/40 hover:bg-white/[0.04] border border-white/[0.04]"
+                          ? "bg-violet-500/10 text-violet-300 border border-violet-500/15"
+                          : "text-[var(--text-muted)] hover:bg-[var(--bg-surface)] border border-transparent"
                       }`}
                     >
-                      <span className="flex-shrink-0">{item.icon}</span>
-                      <span className="text-[11px] font-medium text-center leading-tight">{item.label}</span>
+                      <span>{item.icon}</span>
+                      <span className="text-[10px] font-medium text-center leading-tight">{item.label}</span>
                     </Link>
                   </motion.div>
                 ))}
               </div>
-              <div className="mt-4 pt-4 border-t border-white/5">
+              <div className="mt-4 pt-4 border-t border-[var(--border-subtle)]">
                 <form action={logout}>
-                  <button className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-red-400/60 hover:text-red-400 hover:bg-red-500/5 transition-all text-sm">
+                  <button className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-red-400/50 hover:text-red-400 hover:bg-red-500/5 transition-all text-sm">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
                     </svg>
@@ -307,32 +350,31 @@ export default function DashboardShell({
       </AnimatePresence>
 
       {/* Mobile Bottom Nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-white/[0.04] bg-[#080e1a]/90 backdrop-blur-2xl flex items-center justify-around px-2 py-2 safe-area-bottom">
-        <Link href="/dashboard" className={`flex flex-col items-center gap-1 py-1 px-3 ${pathname === "/dashboard" ? "text-sky-400" : "text-white/30"}`}>
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-[var(--border-subtle)] bg-[#0B1120]/95 backdrop-blur-xl flex items-center justify-around px-2 py-2 safe-area-bottom">
+        <Link href="/dashboard" className={`flex flex-col items-center gap-0.5 py-1.5 px-3 rounded-lg transition-colors ${pathname === "/dashboard" ? "text-violet-400" : "text-[var(--text-muted)]"}`}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" />
+            <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
           </svg>
           <span className="text-[10px]">หน้าหลัก</span>
-          {pathname === "/dashboard" && <div className="w-1 h-1 rounded-full bg-sky-400 shadow-[0_0_4px_rgba(56,189,248,0.6)]" />}
         </Link>
-        <Link href="/dashboard/send" className={`flex flex-col items-center gap-1 py-1 px-3 ${pathname === "/dashboard/send" ? "text-sky-400" : "text-white/30"}`}>
+        <Link href="/dashboard/send" className={`flex flex-col items-center gap-0.5 py-1.5 px-3 rounded-lg transition-colors ${pathname === "/dashboard/send" ? "text-violet-400" : "text-[var(--text-muted)]"}`}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
           </svg>
           <span className="text-[10px]">ส่ง SMS</span>
         </Link>
-        <Link href="/dashboard/send" className="flex items-center justify-center w-12 h-12 -mt-5 rounded-full bg-gradient-to-br from-sky-400 via-cyan-400 to-violet-500 shadow-[0_0_25px_rgba(56,189,248,0.4),0_4px_12px_rgba(0,0,0,0.3)]">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
+        <Link href="/dashboard/send" className="flex items-center justify-center w-11 h-11 -mt-4 rounded-xl bg-gradient-to-br from-violet-500 to-cyan-500 shadow-lg shadow-violet-500/25">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
             <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
           </svg>
         </Link>
-        <Link href="/dashboard/messages" className={`flex flex-col items-center gap-1 py-1 px-3 ${pathname === "/dashboard/messages" ? "text-sky-400" : "text-white/30"}`}>
+        <Link href="/dashboard/messages" className={`flex flex-col items-center gap-0.5 py-1.5 px-3 rounded-lg transition-colors ${pathname === "/dashboard/messages" ? "text-violet-400" : "text-[var(--text-muted)]"}`}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
           </svg>
-          <span className="text-[10px]">ข้อความ</span>
+          <span className="text-[10px]">ประวัติ</span>
         </Link>
-        <button onClick={() => setMoreOpen(true)} className="flex flex-col items-center gap-1 py-1 px-3 text-white/30 cursor-pointer min-w-[44px] min-h-[44px]">
+        <button onClick={() => setMoreOpen(true)} className="flex flex-col items-center gap-0.5 py-1.5 px-3 text-[var(--text-muted)] cursor-pointer min-w-[44px] min-h-[44px]">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="1" /><circle cx="12" cy="5" r="1" /><circle cx="12" cy="19" r="1" />
           </svg>

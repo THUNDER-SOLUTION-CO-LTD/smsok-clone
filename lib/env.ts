@@ -39,15 +39,16 @@ export function getEnv(): Env {
   const result = envSchema.safeParse(process.env);
 
   if (!result.success) {
+    const isBuildPhase = process.env.NEXT_PHASE === "phase-production-build";
     const errors = z.prettifyError(result.error);
     console.error("❌ Environment validation failed:");
     console.error(errors);
 
-    if (process.env.NODE_ENV === "production") {
+    if (process.env.NODE_ENV === "production" && !isBuildPhase) {
       process.exit(1);
     }
 
-    // In dev, return raw env to avoid crashing during build
+    // In dev or during build, return raw env to avoid crashing
     return process.env as unknown as Env;
   }
 

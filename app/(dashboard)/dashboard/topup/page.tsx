@@ -1,10 +1,12 @@
 import { getSession } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import { getPackages } from "@/lib/actions/payments";
 import { PACKAGES } from "@/lib/packages-data";
 import TopupContent from "./TopupContent";
 
 export default async function TopupPage() {
   const user = await getSession();
+  if (!user) redirect("/login");
 
   let packages;
   try {
@@ -29,6 +31,6 @@ export default async function TopupPage() {
   }
 
   return (
-    <TopupContent user={user!} packages={packages} />
+    <TopupContent user={user} packages={packages} />
   );
 }

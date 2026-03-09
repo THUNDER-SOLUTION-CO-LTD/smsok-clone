@@ -32,7 +32,9 @@ const DEFAULTS: Record<string, RateLimitConfig> = {
   password: { windowMs: 15 * 60_000, maxRequests: 5 },  // 5 password changes/15min
   apikey: { windowMs: 60_000, maxRequests: 10 },         // 10 key ops/min
   import: { windowMs: 60_000, maxRequests: 5 },          // 5 imports/min
-  admin: { windowMs: 60_000, maxRequests: 30 },          // 30 admin ops/min
+  admin: { windowMs: 60_000, maxRequests: 30 },              // 30 admin ops/min
+  otp_generate: { windowMs: 60_000, maxRequests: 5 },        // 5 OTP sends/min
+  otp_verify: { windowMs: 15 * 60_000, maxRequests: 10 },    // 10 verify attempts/15min
 };
 
 export function checkRateLimit(

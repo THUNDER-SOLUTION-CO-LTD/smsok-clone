@@ -13,11 +13,7 @@ async function requireAdmin(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
-    const admin = await requireAdmin(req);
-
-    const limit = checkRateLimit(admin.id, "admin");
-    if (!limit.allowed) return rateLimitResponse(limit.resetIn);
-
+    await requireAdmin(req);
     const pending = await adminGetPendingSenderNames();
     return apiResponse({ senders: pending });
   } catch (error) {
