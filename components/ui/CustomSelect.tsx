@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
 export interface CustomSelectOption {
@@ -27,23 +28,45 @@ export default function CustomSelect({
 }: CustomSelectProps) {
   const [open, setOpen] = useState(false);
   const [focused, setFocused] = useState(0);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [rect, setRect] = useState<{ top: number; left: number; width: number } | null>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   const selectedLabel = options.find((o) => o.value === value)?.label ?? "";
 
   const close = useCallback(() => setOpen(false), []);
 
+  // Compute trigger position whenever dropdown opens
+  function computeRect() {
+    if (triggerRef.current) {
+      const r = triggerRef.current.getBoundingClientRect();
+      setRect({ top: r.bottom + 4, left: r.left, width: r.width });
+    }
+  }
+
+  function toggle() {
+    if (disabled) return;
+    if (!open) computeRect();
+    setOpen((v) => !v);
+  }
+
+  // Close on outside click or scroll
   useEffect(() => {
     if (!open) return;
-    function handleClick(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+    function onClickOutside(e: MouseEvent) {
+      if (triggerRef.current && !triggerRef.current.contains(e.target as Node)) {
         close();
       }
     }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    function onScroll() { close(); }
+    document.addEventListener("mousedown", onClickOutside);
+    window.addEventListener("scroll", onScroll, true);
+    return () => {
+      document.removeEventListener("mousedown", onClickOutside);
+      window.removeEventListener("scroll", onScroll, true);
+    };
   }, [open, close]);
 
+  // Sync focused index on open
   useEffect(() => {
     if (open) {
       const idx = options.findIndex((o) => o.value === value);
@@ -55,29 +78,61 @@ export default function CustomSelect({
     if (disabled) return;
     if (!open && (e.key === "Enter" || e.key === " " || e.key === "ArrowDown")) {
       e.preventDefault();
+      computeRect();
       setOpen(true);
       return;
     }
     if (!open) return;
     if (e.key === "Escape") { close(); return; }
     if (e.key === "ArrowDown") { e.preventDefault(); setFocused((f) => Math.min(f + 1, options.length - 1)); }
-    if (e.key === "ArrowUp") { e.preventDefault(); setFocused((f) => Math.max(f - 1, 0)); }
+    if (e.key === "ArrowUp")   { e.preventDefault(); setFocused((f) => Math.max(f - 1, 0)); }
     if (e.key === "Enter") {
       e.preventDefault();
       if (options[focused]) { onChange(options[focused].value); close(); }
     }
   }
 
+  const dropdown = rect && (
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -4 }}
+          transition={{ duration: 0.15 }}
+          style={{ position: "fixed", top: rect.top, left: rect.left, width: rect.width, zIndex: 9999 }}
+          className="rounded-xl overflow-hidden
+            bg-[#0D1526]/95 backdrop-blur-xl border border-white/10
+            shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
+        >
+          {options.map((opt, i) => (
+            <button
+              key={opt.value}
+              type="button"
+              onMouseEnter={() => setFocused(i)}
+              onClick={() => { onChange(opt.value); close(); }}
+              className={`w-full text-left px-3 py-2 text-sm transition-colors
+                ${i === focused ? "bg-white/[0.08] text-white" : "text-[var(--text-secondary)] hover:bg-white/[0.05]"}
+                ${opt.value === value ? "text-violet-400 font-medium" : ""}`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+
   return (
-    <div ref={containerRef} className={`relative ${className}`}>
+    <div className={`relative ${className}`}>
       <button
+        ref={triggerRef}
         type="button"
-        onClick={() => !disabled && setOpen((v) => !v)}
+        onClick={toggle}
         onKeyDown={handleKeyDown}
         disabled={disabled}
         className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm
-          bg-[var(--bg-surface)]/80 backdrop-blur-sm
-          border transition-colors
+          bg-[var(--bg-surface)]/80 backdrop-blur-sm border transition-colors
           ${open ? "border-violet-500/40" : "border-[var(--border-subtle)] hover:border-violet-500/30"}
           text-[var(--text-secondary)] disabled:opacity-50 disabled:cursor-not-allowed`}
       >
@@ -87,46 +142,15 @@ export default function CustomSelect({
         <motion.svg
           animate={{ rotate: open ? 180 : 0 }}
           transition={{ duration: 0.15 }}
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
+          width="14" height="14" viewBox="0 0 24 24"
+          fill="none" stroke="currentColor" strokeWidth="2"
           className="text-[var(--text-muted)] flex-shrink-0 ml-2"
         >
           <polyline points="6 9 12 15 18 9" />
         </motion.svg>
       </button>
 
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.15 }}
-            className="absolute z-50 w-full mt-1 rounded-xl overflow-hidden
-              bg-[#0D1526]/90 backdrop-blur-xl border border-white/10
-              shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
-          >
-            {options.map((opt, i) => (
-              <button
-                key={opt.value}
-                type="button"
-                onMouseEnter={() => setFocused(i)}
-                onClick={() => { onChange(opt.value); close(); }}
-                className={`w-full text-left px-3 py-2 text-sm transition-colors
-                  ${i === focused ? "bg-white/8 text-white" : "text-[var(--text-secondary)]"}
-                  ${opt.value === value ? "text-violet-400" : ""}
-                  hover:bg-white/8`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {typeof document !== "undefined" && createPortal(dropdown, document.body)}
     </div>
   );
 }
