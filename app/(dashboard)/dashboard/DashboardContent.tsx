@@ -151,13 +151,13 @@ function SmsAreaChart({ chartData }: { chartData: DayStats[] }) {
             dataKey="day"
             axisLine={false}
             tickLine={false}
-            tick={{ fill: "rgba(148,163,184,0.4)", fontSize: 11, fontFamily: "'Noto Sans Thai', 'Inter', sans-serif" }}
+            tick={{ fill: "rgba(148,163,184,0.6)", fontSize: 11, fontFamily: "'Noto Sans Thai', 'Inter', sans-serif" }}
             dy={8}
           />
           <YAxis
             axisLine={false}
             tickLine={false}
-            tick={{ fill: "rgba(148,163,184,0.3)", fontSize: 9, fontFamily: "'Inter', sans-serif" }}
+            tick={{ fill: "rgba(148,163,184,0.5)", fontSize: 9, fontFamily: "'Inter', sans-serif" }}
             width={40}
           />
 

@@ -18,6 +18,13 @@ function getClientIp(req: NextRequest): string {
   );
 }
 
+function shouldExposeDebugOtp(req: NextRequest): boolean {
+  return (
+    process.env.NODE_ENV !== "production" &&
+    req.headers.get("x-debug-otp") === "1"
+  );
+}
+
 function pickSendInput(body: unknown) {
   const input = asRecord(body);
   return sendOtpSchema.parse({
@@ -55,7 +62,9 @@ export async function handleSendOtp(req: NextRequest, body?: unknown) {
       return rateLimitResponse(ipLimit.resetIn);
     }
 
-    const result = await generateOtp_(user.id, input.phone, input.purpose);
+    const result = await generateOtp_(user.id, input.phone, input.purpose, {
+      debug: shouldExposeDebugOtp(req),
+    });
     return apiResponse(result, 201);
   } catch (error) {
     return apiError(error);

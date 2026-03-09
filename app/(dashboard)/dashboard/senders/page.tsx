@@ -50,7 +50,7 @@ export default async function SendersPage() {
               </div>
             </div>
             <p className="text-[11px] text-[var(--text-muted)] mt-3">
-              ระหว่างรอสามารถใช้ <span className="text-cyan-300/60 font-medium">EasySlip</span> (Default) ส่ง SMS ได้เลย
+              ระหว่างรอสามารถใช้ <span className="text-cyan-300 font-medium">EasySlip</span> (Default) ส่ง SMS ได้เลย
             </p>
           </div>
         </div>

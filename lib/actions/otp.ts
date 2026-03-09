@@ -13,6 +13,10 @@ const MAX_OTP_PER_PHONE_PER_WINDOW = 3; // 3 per 5 min (architect spec #100)
 const OTP_RATE_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
 const OTP_CREDIT_COST = 1;
 
+type GenerateOtpOptions = {
+  debug?: boolean;
+};
+
 function getOtpHashSecret(): string {
   const explicitSecret = process.env.OTP_HASH_SECRET?.trim();
   if (explicitSecret) return explicitSecret;
@@ -45,6 +49,13 @@ function timingSafeMatch(left: string, right: string): boolean {
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
+function hasSmsGatewayCredentials(): boolean {
+  return Boolean(
+    process.env.SMS_API_USERNAME?.trim() &&
+    process.env.SMS_API_PASSWORD?.trim()
+  );
+}
+
 async function requireSessionUserId() {
   const user = await getSession();
   if (!user) {
@@ -56,10 +67,12 @@ async function requireSessionUserId() {
 export async function generateOtp_(
   userId: string,
   phone: string,
-  purpose: string = "verify"
+  purpose: string = "verify",
+  options: GenerateOtpOptions = {}
 ) {
   const input = sendOtpSchema.parse({ phone, purpose });
   const normalizedPhone = normalizePhone(input.phone);
+  const debugMode = options.debug === true && process.env.NODE_ENV !== "production";
 
   // Rate limit: max 3 OTPs per phone per 5 min (architect spec #100)
   const windowStart = new Date(Date.now() - OTP_RATE_WINDOW_MS);
@@ -127,21 +140,27 @@ export async function generateOtp_(
 
   // Send OTP via SMS
   const message = `รหัส OTP ของคุณคือ ${code} (หมดอายุใน 5 นาที)`;
-  try {
-    const result = await sendSingleSms(input.phone, message, "EasySlip");
-    if (!result.success) {
-      throw new Error(result.error || "ส่ง OTP ไม่สำเร็จ กรุณาลองใหม่");
+  let delivery: "sms" | "debug" = "sms";
+  if (debugMode && !hasSmsGatewayCredentials()) {
+    // Localhost testing path: keep Prisma flow real, expose the OTP instead of requiring SMS infra.
+    delivery = "debug";
+  } else {
+    try {
+      const result = await sendSingleSms(input.phone, message, "EasySlip");
+      if (!result.success) {
+        throw new Error(result.error || "ส่ง OTP ไม่สำเร็จ กรุณาลองใหม่");
+      }
+    } catch {
+      // Refund credit on send failure
+      await prisma.$transaction([
+        prisma.otpRequest.delete({ where: { id: otpRecord.id } }),
+        prisma.user.update({
+          where: { id: userId },
+          data: { credits: { increment: OTP_CREDIT_COST } },
+        }),
+      ]);
+      throw new Error("ส่ง OTP ไม่สำเร็จ กรุณาลองใหม่");
     }
-  } catch {
-    // Refund credit on send failure
-    await prisma.$transaction([
-      prisma.otpRequest.delete({ where: { id: otpRecord.id } }),
-      prisma.user.update({
-        where: { id: userId },
-        data: { credits: { increment: OTP_CREDIT_COST } },
-      }),
-    ]);
-    throw new Error("ส่ง OTP ไม่สำเร็จ กรุณาลองใหม่");
   }
 
   return {
@@ -153,6 +172,8 @@ export async function generateOtp_(
     expiresIn: Math.floor(OTP_EXPIRY_MS / 1000),
     creditUsed: OTP_CREDIT_COST,
     creditsRemaining: updatedUser.credits,
+    delivery,
+    ...(debugMode && { debugCode: code }),
   };
 }
 

@@ -250,7 +250,7 @@ export default function DashboardShell({
             </div>
           </div>
           <form action={logout}>
-            <button className="sidebar-item w-full text-red-400/40 hover:text-red-400 hover:bg-red-500/5">
+            <button className="sidebar-item w-full text-red-400/70 hover:text-red-400 hover:bg-red-500/5">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
               </svg>
@@ -378,7 +378,7 @@ export default function DashboardShell({
               </div>
               <div className="mt-4 pt-4 border-t border-[var(--border-subtle)]">
                 <form action={logout}>
-                  <button className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-red-400/50 hover:text-red-400 hover:bg-red-500/5 transition-all text-sm">
+                  <button className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-red-400/70 hover:text-red-400 hover:bg-red-500/5 transition-all text-sm">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
                     </svg>

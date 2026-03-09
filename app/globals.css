@@ -40,6 +40,7 @@
     font-family: 'Noto Sans Thai', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     background: var(--bg-base);
     color: var(--text-primary);
+    line-height: 1.6;
     min-height: 100vh;
     -webkit-font-smoothing: antialiased;
   }

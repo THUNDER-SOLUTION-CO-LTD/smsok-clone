@@ -137,7 +137,7 @@ export default async function SettingsPage() {
           <button
             type="button"
             disabled
-            className="px-4 py-2 rounded-xl text-xs font-medium bg-red-500/10 text-red-400/50 border border-red-500/10 cursor-not-allowed"
+            className="px-4 py-2 rounded-xl text-xs font-medium bg-red-500/10 text-red-400/70 border border-red-500/10 cursor-not-allowed"
           >
             ลบบัญชี (ติดต่อแอดมิน)
           </button>
