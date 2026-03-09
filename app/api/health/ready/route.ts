@@ -7,8 +7,29 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     await prisma.$queryRaw`SELECT 1`;
-    return NextResponse.json({ ready: true });
+    return NextResponse.json(
+      {
+        ready: true,
+        timestamp: new Date().toISOString(),
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store, max-age=0",
+        },
+      }
+    );
   } catch {
-    return NextResponse.json({ ready: false }, { status: 503 });
+    return NextResponse.json(
+      {
+        ready: false,
+        timestamp: new Date().toISOString(),
+      },
+      {
+        status: 503,
+        headers: {
+          "Cache-Control": "no-store, max-age=0",
+        },
+      }
+    );
   }
 }

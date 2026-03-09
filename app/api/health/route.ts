@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const start = Date.now();
   const checks: Record<string, { status: string; latency?: number; error?: string }> = {};
+  checks.app = { status: "ok" };
 
   // Database check
   try {
@@ -33,6 +34,7 @@ export async function GET() {
   return NextResponse.json(
     {
       status: allHealthy ? "healthy" : "degraded",
+      ready: allHealthy,
       uptime: Math.round(process.uptime()),
       timestamp: new Date().toISOString(),
       latency: Date.now() - start,
@@ -40,6 +42,11 @@ export async function GET() {
       checks,
       version: env.COMMIT_SHA,
     },
-    { status: allHealthy ? 200 : 503 }
+    {
+      status: allHealthy ? 200 : 503,
+      headers: {
+        "Cache-Control": "no-store, max-age=0",
+      },
+    }
   );
 }

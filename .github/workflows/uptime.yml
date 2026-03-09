@@ -11,24 +11,44 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check production health
+        env:
+          PRODUCTION_URL: ${{ secrets.PRODUCTION_URL }}
         run: |
-          RESPONSE=$(curl -sf --max-time 10 \
-            "${{ secrets.PRODUCTION_URL }}/api/health" 2>/dev/null || echo '{"status":"down"}')
+          if [ -z "$PRODUCTION_URL" ]; then
+            echo "PRODUCTION_URL secret is not configured"
+            exit 1
+          fi
+
+          HEALTH_URL="${PRODUCTION_URL%/}/api/health"
+          HTTP_CODE=$(curl -sS -o /tmp/health.json -w "%{http_code}" --max-time 10 "$HEALTH_URL" || echo "000")
+
+          if [ "$HTTP_CODE" = "000" ]; then
+            RESPONSE='{"status":"down","checks":{"database":{"status":"unknown"}}}'
+          else
+            RESPONSE=$(cat /tmp/health.json)
+          fi
 
           STATUS=$(echo "$RESPONSE" | jq -r '.status // "down"')
           DB=$(echo "$RESPONSE" | jq -r '.checks.database.status // "unknown"')
           LATENCY=$(echo "$RESPONSE" | jq -r '.latency // "N/A"')
+          VERSION=$(echo "$RESPONSE" | jq -r '.version // "unknown"')
+          UPTIME=$(echo "$RESPONSE" | jq -r '.uptime // "unknown"')
 
           echo "## Health Check Results" >> $GITHUB_STEP_SUMMARY
           echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| URL | $HEALTH_URL |" >> $GITHUB_STEP_SUMMARY
+          echo "| HTTP | $HTTP_CODE |" >> $GITHUB_STEP_SUMMARY
           echo "| App | $STATUS |" >> $GITHUB_STEP_SUMMARY
           echo "| Database | $DB |" >> $GITHUB_STEP_SUMMARY
           echo "| Latency | ${LATENCY}ms |" >> $GITHUB_STEP_SUMMARY
+          echo "| Version | $VERSION |" >> $GITHUB_STEP_SUMMARY
+          echo "| Uptime | ${UPTIME}s |" >> $GITHUB_STEP_SUMMARY
 
           if [ "$STATUS" != "healthy" ]; then
-            echo "::error::Production is $STATUS!"
+            echo "::error::Production is $STATUS (HTTP $HTTP_CODE)"
+            cat /tmp/health.json 2>/dev/null || true
             exit 1
           fi
 
-          echo "✅ Production healthy (${LATENCY}ms)"
+          echo "Production healthy (${LATENCY}ms)"

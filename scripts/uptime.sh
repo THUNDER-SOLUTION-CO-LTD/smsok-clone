@@ -20,12 +20,20 @@ check_health() {
     return 1
   fi
 
-  STATUS=$(echo "$RESPONSE" | grep -o '"status":"[^"]*"' | head -1 | cut -d'"' -f4)
-  LATENCY=$(echo "$RESPONSE" | grep -o '"latency":[0-9]*' | head -1 | cut -d: -f2)
-  DB=$(echo "$RESPONSE" | grep -o '"database":{"status":"[^"]*"' | head -1 | cut -d'"' -f6)
+  if command -v jq >/dev/null 2>&1; then
+    STATUS=$(echo "$RESPONSE" | jq -r '.status // "down"')
+    LATENCY=$(echo "$RESPONSE" | jq -r '.latency // "unknown"')
+    DB=$(echo "$RESPONSE" | jq -r '.checks.database.status // "unknown"')
+    VERSION=$(echo "$RESPONSE" | jq -r '.version // "unknown"')
+  else
+    STATUS=$(echo "$RESPONSE" | grep -o '"status":"[^"]*"' | head -1 | cut -d'"' -f4)
+    LATENCY=$(echo "$RESPONSE" | grep -o '"latency":[0-9]*' | head -1 | cut -d: -f2)
+    DB=$(echo "$RESPONSE" | grep -o '"database":{"status":"[^"]*"' | head -1 | cut -d'"' -f6)
+    VERSION="unknown"
+  fi
 
   if [ "$STATUS" = "healthy" ]; then
-    echo "$TIMESTAMP | UP | latency=${LATENCY}ms db=$DB" >> "$LOG_FILE"
+    echo "$TIMESTAMP | UP | latency=${LATENCY}ms db=$DB version=$VERSION" >> "$LOG_FILE"
     # Clear alert state on recovery
     if [ -f "$ALERT_FILE" ]; then
       echo "$TIMESTAMP | RECOVERED | Service back online" >> "$LOG_FILE"
@@ -33,7 +41,7 @@ check_health() {
     fi
     return 0
   else
-    echo "$TIMESTAMP | DEGRADED | status=$STATUS db=$DB" >> "$LOG_FILE"
+    echo "$TIMESTAMP | DEGRADED | status=$STATUS db=$DB version=$VERSION" >> "$LOG_FILE"
     return 1
   fi
 }
