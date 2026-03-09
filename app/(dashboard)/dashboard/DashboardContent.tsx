@@ -63,6 +63,73 @@ function MiniChart({ data, color }: { data: number[]; color: string }) {
   );
 }
 
+/* ── SVG Area Chart — 7-day SMS ── */
+const chartData7d = [
+  { day: "จ", value: 120 },
+  { day: "อ", value: 180 },
+  { day: "พ", value: 150 },
+  { day: "พฤ", value: 220 },
+  { day: "ศ", value: 310 },
+  { day: "ส", value: 190 },
+  { day: "อา", value: 140 },
+];
+
+function AreaChart() {
+  const max = Math.max(...chartData7d.map((d) => d.value));
+  const w = 560;
+  const h = 180;
+  const px = 40;
+  const py = 20;
+  const gw = w - px * 2;
+  const gh = h - py * 2;
+
+  const points = chartData7d.map((d, i) => ({
+    x: px + (i / (chartData7d.length - 1)) * gw,
+    y: py + gh - (d.value / max) * gh,
+  }));
+
+  const linePath = points.map((p, i) => {
+    if (i === 0) return `M${p.x},${p.y}`;
+    const prev = points[i - 1];
+    const cpx = (prev.x + p.x) / 2;
+    return `C${cpx},${prev.y} ${cpx},${p.y} ${p.x},${p.y}`;
+  }).join(" ");
+
+  const areaPath = `${linePath} L${points[points.length - 1].x},${h - py} L${points[0].x},${h - py} Z`;
+
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-auto">
+      <defs>
+        <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#8B5CF6" stopOpacity="0.3" />
+          <stop offset="100%" stopColor="#8B5CF6" stopOpacity="0" />
+        </linearGradient>
+        <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#22D3EE" />
+          <stop offset="50%" stopColor="#8B5CF6" />
+          <stop offset="100%" stopColor="#EC4899" />
+        </linearGradient>
+      </defs>
+      {/* Grid lines */}
+      {[0, 0.25, 0.5, 0.75, 1].map((t) => (
+        <line key={t} x1={px} y1={py + gh * (1 - t)} x2={w - px} y2={py + gh * (1 - t)} stroke="rgba(148,163,184,0.06)" strokeWidth="1" />
+      ))}
+      {/* Area fill */}
+      <motion.path d={areaPath} fill="url(#areaGrad)" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1, delay: 0.3 }} />
+      {/* Line */}
+      <motion.path d={linePath} fill="none" stroke="url(#lineGrad)" strokeWidth="2.5" strokeLinecap="round" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1.5, ease: "easeInOut" }} />
+      {/* Dots + labels */}
+      {points.map((p, i) => (
+        <g key={i}>
+          <motion.circle cx={p.x} cy={p.y} r="4" fill="#8B5CF6" stroke="#0B1120" strokeWidth="2" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.3 + i * 0.08, type: "spring", stiffness: 300 }} />
+          <text x={p.x} y={h - 4} textAnchor="middle" fill="rgba(148,163,184,0.5)" fontSize="10" fontFamily="Inter, sans-serif">{chartData7d[i].day}</text>
+          <motion.text x={p.x} y={p.y - 12} textAnchor="middle" fill="rgba(226,232,240,0.7)" fontSize="10" fontWeight="600" fontFamily="Inter, sans-serif" initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 + i * 0.08 }}>{chartData7d[i].value}</motion.text>
+        </g>
+      ))}
+    </svg>
+  );
+}
+
 /* ── Activity Ring ── */
 function ActivityRing({ percent, color, size = 56 }: { percent: number; color: string; size?: number }) {
   const r = (size - 6) / 2;
@@ -282,7 +349,7 @@ export default function DashboardContent({ user, stats, senderNames = ["EasySlip
             key={stat.key}
             variants={fadeUp}
             whileHover={{ y: -4, transition: { type: "spring", stiffness: 300, damping: 20 } }}
-            className={`${stat.glass} card-hover p-5 group relative overflow-hidden`}
+            className={`${stat.glass} card-conic card-hover p-5 group relative overflow-hidden ${stat.key === "credits" ? "glow-cyan" : stat.key === "sent" ? "glow-violet" : stat.key === "delivered" ? "glow-emerald" : "glow-rose"}`}
           >
             {/* Glow effect on hover */}
             <div className={`absolute inset-0 bg-gradient-to-br ${stat.glowFrom} ${stat.glowTo} opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-[inherit]`} />
@@ -323,7 +390,7 @@ export default function DashboardContent({ user, stats, senderNames = ["EasySlip
           </h3>
 
           <div className="space-y-3">
-            <div>
+            <div className="input-float-group">
               <label className="block text-xs text-[var(--text-muted)] mb-1.5 font-medium">ชื่อผู้ส่ง</label>
               <div className="relative">
                 <select
@@ -342,11 +409,11 @@ export default function DashboardContent({ user, stats, senderNames = ["EasySlip
                 </div>
               </div>
             </div>
-            <div>
+            <div className="input-float-group">
               <label className="block text-xs text-[var(--text-muted)] mb-1.5 font-medium">เบอร์ปลายทาง</label>
               <input type="text" className="input-glass" placeholder="0891234567" value={phone} onChange={(e) => setPhone(e.target.value)} />
             </div>
-            <div>
+            <div className="input-float-group">
               <label className="block text-xs text-[var(--text-muted)] mb-1.5 font-medium">ข้อความ</label>
               <textarea className="input-glass resize-none" rows={3} placeholder="รหัส OTP ของคุณคือ {code}" value={message} onChange={(e) => setMessage(e.target.value)} />
             </div>
@@ -368,7 +435,7 @@ export default function DashboardContent({ user, stats, senderNames = ["EasySlip
           <motion.button
             onClick={handleQuickSend}
             disabled={sending || !phone || !message}
-            className="btn-primary w-full mt-4 py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-40"
+            className="btn-gradient w-full mt-4 py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-40"
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.98 }}
           >
@@ -419,7 +486,7 @@ export default function DashboardContent({ user, stats, senderNames = ["EasySlip
                     className="flex items-center justify-between py-3 px-4 rounded-xl bg-[var(--bg-surface)]/50 border border-[var(--border-subtle)] hover:border-violet-500/15 transition-all cursor-default group"
                   >
                     <div className="flex items-center gap-3">
-                      <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${s.dot}`} />
+                      <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 dot-pulse ${s.dot}`} />
                       <div>
                         <span className="text-sm text-[var(--text-secondary)] font-mono group-hover:text-[var(--text-primary)] transition-colors">{msg.recipient}</span>
                         <span className="text-[11px] text-[var(--text-muted)] ml-2">{msg.senderName}</span>
@@ -459,6 +526,19 @@ export default function DashboardContent({ user, stats, senderNames = ["EasySlip
           )}
         </motion.div>
       </div>
+
+      {/* ═══ SMS 7-Day Chart ═══ */}
+      <motion.div variants={fadeUp} className="glass p-6 mt-6">
+        <h3 className="text-base font-semibold mb-4 flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500/15 to-pink-500/10 border border-violet-500/10 flex items-center justify-center">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-violet-400">
+              <line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" />
+            </svg>
+          </div>
+          <span className="gradient-text-mixed">SMS 7 วันล่าสุด</span>
+        </h3>
+        <AreaChart />
+      </motion.div>
 
       {/* ═══ Monthly Overview Bar ═══ */}
       {stats?.thisMonth && stats.thisMonth.total > 0 && (
