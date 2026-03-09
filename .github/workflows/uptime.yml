@@ -1,0 +1,34 @@
+name: Uptime Monitor
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"  # Every 5 minutes
+  workflow_dispatch:
+
+jobs:
+  check:
+    name: Health Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check production health
+        run: |
+          RESPONSE=$(curl -sf --max-time 10 \
+            "${{ secrets.PRODUCTION_URL }}/api/health" 2>/dev/null || echo '{"status":"down"}')
+
+          STATUS=$(echo "$RESPONSE" | jq -r '.status // "down"')
+          DB=$(echo "$RESPONSE" | jq -r '.checks.database.status // "unknown"')
+          LATENCY=$(echo "$RESPONSE" | jq -r '.latency // "N/A"')
+
+          echo "## Health Check Results" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| App | $STATUS |" >> $GITHUB_STEP_SUMMARY
+          echo "| Database | $DB |" >> $GITHUB_STEP_SUMMARY
+          echo "| Latency | ${LATENCY}ms |" >> $GITHUB_STEP_SUMMARY
+
+          if [ "$STATUS" != "healthy" ]; then
+            echo "::error::Production is $STATUS!"
+            exit 1
+          fi
+
+          echo "✅ Production healthy (${LATENCY}ms)"
