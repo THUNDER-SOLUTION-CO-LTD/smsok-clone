@@ -12,11 +12,19 @@ import { getSession, hashPassword, verifyPassword } from "../auth";
 export async function updateProfile(userId: string, data: unknown) {
   const input = updateProfileSchema.parse(data);
 
+  if (input.phone) {
+    const existing = await db.user.findFirst({
+      where: { phone: input.phone, NOT: { id: userId } },
+      select: { id: true },
+    });
+    if (existing) throw new Error("เบอร์โทรนี้ถูกใช้งานแล้ว");
+  }
+
   const updated = await db.user.update({
     where: { id: userId },
     data: {
       name: input.name,
-      phone: input.phone || null,
+      phone: input.phone ?? "",
     },
     select: { id: true, name: true, email: true, phone: true },
   });
