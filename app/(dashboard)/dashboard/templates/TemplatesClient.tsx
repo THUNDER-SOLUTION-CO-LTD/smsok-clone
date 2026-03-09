@@ -44,8 +44,8 @@ const CATEGORY_STYLES: Record<
 > = {
   general: {
     bg: "bg-slate-500/10",
-    text: "text-slate-400",
-    dot: "bg-slate-400",
+    text: "text-slate-300",
+    dot: "bg-slate-300",
   },
   otp: {
     bg: "bg-amber-500/10",

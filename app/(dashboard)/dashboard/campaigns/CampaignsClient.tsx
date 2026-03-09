@@ -131,7 +131,7 @@ const STATUS_CONFIG: Record<
   CampaignStatus,
   { label: string; bg: string; text: string; dot: string; pulse?: boolean }
 > = {
-  draft: { label: "แบบร่าง", bg: "bg-gray-500/10", text: "text-gray-400", dot: "bg-gray-400" },
+  draft: { label: "แบบร่าง", bg: "bg-slate-500/10", text: "text-slate-300", dot: "bg-slate-300" },
   scheduled: { label: "ตั้งเวลา", bg: "bg-amber-500/10", text: "text-amber-400", dot: "bg-amber-400" },
   running: { label: "กำลังส่ง", bg: "bg-cyan-500/10", text: "text-cyan-400", dot: "bg-cyan-400", pulse: true },
   completed: { label: "เสร็จสิ้น", bg: "bg-emerald-500/10", text: "text-emerald-400", dot: "bg-emerald-400" },
