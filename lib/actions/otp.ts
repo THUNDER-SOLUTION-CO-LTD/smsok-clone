@@ -268,7 +268,7 @@ export async function verifyOtpForSession(data: unknown) {
 // ==========================================
 
 export async function generateOtpForRegister(phone: string) {
-  const normalizedPhone = normalizePhone(sendOtpSchema.parse({ phone, purpose: "register" }).phone);
+  const normalizedPhone = normalizePhone(sendOtpSchema.parse({ phone, purpose: "verify" }).phone);
 
   const existing = await prisma.user.findFirst({ where: { phone: normalizedPhone }, select: { id: true } });
   if (existing) throw new Error("เบอร์โทรนี้ถูกใช้งานแล้ว");
@@ -291,7 +291,7 @@ export async function generateOtpForRegister(phone: string) {
       phone: normalizedPhone,
       code: hashOtp(code, refCode),
       refCode,
-      purpose: "register",
+      purpose: "verify",
       expiresAt,
     },
   });
@@ -317,7 +317,7 @@ export async function verifyOtpForRegister(ref: string, code: string) {
   const input = verifyOtpSchema.parse({ ref, code });
 
   const otp = await prisma.otpRequest.findFirst({
-    where: { refCode: input.ref, purpose: "register" },
+    where: { refCode: input.ref, purpose: "verify" },
     select: { id: true, refCode: true, phone: true, code: true, attempts: true, verified: true, expiresAt: true },
   });
 
