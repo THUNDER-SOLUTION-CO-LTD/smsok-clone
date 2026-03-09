@@ -2,12 +2,12 @@ import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import PasswordChangeForm from "./PasswordChangeForm";
+import Link from "next/link";
 
 export default async function SettingsPage() {
   const user = await getSession();
   if (!user) redirect("/login");
 
-  // Get full user data including phone and createdAt
   const fullUser = await prisma.user.findUnique({
     where: { id: user.id },
     select: {
@@ -23,84 +23,125 @@ export default async function SettingsPage() {
 
   if (!fullUser) redirect("/login");
 
+  const initials = fullUser.name.slice(0, 2).toUpperCase();
+  const memberSince = new Date(fullUser.createdAt).toLocaleDateString("th-TH", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
   return (
     <div className="p-6 md:p-8 max-w-4xl animate-fade-in-up">
       <h1 className="text-2xl font-bold tracking-tight mb-1"><span className="gradient-text-cyan">ตั้งค่า</span></h1>
       <p className="text-sm text-[var(--text-muted)] mb-8">จัดการบัญชีและข้อมูลส่วนตัว</p>
 
       <div className="space-y-6 stagger-children">
-      {/* Profile Section */}
-      <div className="glass p-6 md:p-8 mb-6">
-        <h2 className="text-base font-semibold text-white mb-5 flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-violet-500/[0.08] border border-violet-500/10 flex items-center justify-center">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-violet-400">
-              <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" /><circle cx="12" cy="7" r="4" />
-            </svg>
-          </div>
-          ข้อมูลส่วนตัว
-        </h2>
+        {/* Profile Card */}
+        <div className="glass p-6 md:p-8 relative overflow-hidden">
+          {/* Subtle gradient bg */}
+          <div className="absolute top-0 right-0 w-[200px] h-[200px] rounded-full bg-violet-500/5 blur-[60px]" />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <div>
-            <label className="block text-xs text-[var(--text-muted)] uppercase tracking-wider mb-2 font-medium">ชื่อ</label>
-            <div className="input-glass bg-[var(--bg-surface)] cursor-default text-[var(--text-secondary)]">{fullUser.name}</div>
+          <div className="relative flex flex-col sm:flex-row items-start sm:items-center gap-5 mb-6">
+            {/* Avatar */}
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500/30 to-cyan-500/20 border border-violet-500/20 flex items-center justify-center flex-shrink-0">
+              <span className="text-xl font-bold gradient-text-mixed">{initials}</span>
+            </div>
+            <div className="flex-1">
+              <h2 className="text-lg font-semibold text-[var(--text-primary)]">{fullUser.name}</h2>
+              <p className="text-sm text-[var(--text-muted)]">{fullUser.email}</p>
+              <div className="flex items-center gap-3 mt-2">
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-md bg-violet-500/10 text-violet-400 border border-violet-500/20">
+                  {fullUser.role}
+                </span>
+                <span className="text-[11px] text-[var(--text-muted)]">สมาชิกตั้งแต่ {memberSince}</span>
+              </div>
+            </div>
           </div>
-          <div>
-            <label className="block text-xs text-[var(--text-muted)] uppercase tracking-wider mb-2 font-medium">อีเมล</label>
-            <div className="input-glass bg-[var(--bg-surface)] cursor-default text-[var(--text-secondary)]">{fullUser.email}</div>
-          </div>
-          <div>
-            <label className="block text-xs text-[var(--text-muted)] uppercase tracking-wider mb-2 font-medium">เบอร์โทรศัพท์</label>
-            <div className="input-glass bg-[var(--bg-surface)] cursor-default text-[var(--text-secondary)]">{fullUser.phone || "ไม่ได้ระบุ"}</div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1.5 font-medium">ชื่อ</label>
+              <div className="input-glass bg-[var(--bg-surface)] cursor-default text-[var(--text-secondary)]">{fullUser.name}</div>
+            </div>
+            <div>
+              <label className="block text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1.5 font-medium">อีเมล</label>
+              <div className="input-glass bg-[var(--bg-surface)] cursor-default text-[var(--text-secondary)]">{fullUser.email}</div>
+            </div>
+            <div>
+              <label className="block text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1.5 font-medium">เบอร์โทรศัพท์</label>
+              <div className="input-glass bg-[var(--bg-surface)] cursor-default text-[var(--text-secondary)]">{fullUser.phone || "ไม่ได้ระบุ"}</div>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Password Change */}
-      <div className="glass p-6 md:p-8 mb-6">
-        <h2 className="text-base font-semibold text-white mb-5 flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-violet-500/[0.08] border border-violet-500/10 flex items-center justify-center">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-violet-400">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0110 0v4" />
-            </svg>
+        {/* Account Summary */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="glass-cyan p-5 card-hover">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-[var(--text-muted)]">เครดิตคงเหลือ</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-cyan-400">
+                <line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
+              </svg>
+            </div>
+            <p className="text-2xl font-bold gradient-text-cyan">{fullUser.credits.toLocaleString()}</p>
+            <Link href="/dashboard/topup" className="text-[10px] text-cyan-400/60 hover:text-cyan-400 transition-colors mt-1 inline-block">
+              เติมเครดิต →
+            </Link>
           </div>
-          เปลี่ยนรหัสผ่าน
-        </h2>
-        <PasswordChangeForm />
-      </div>
-
-      {/* Account Info */}
-      <div className="glass p-6 md:p-8">
-        <h2 className="text-base font-semibold text-white mb-5 flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-violet-500/[0.08] border border-violet-500/10 flex items-center justify-center">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-violet-400">
-              <circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" />
-            </svg>
+          <div className="glass-violet p-5 card-hover">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-[var(--text-muted)]">บทบาท</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-violet-400">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+            </div>
+            <p className="text-2xl font-bold text-violet-400 capitalize">{fullUser.role}</p>
           </div>
-          ข้อมูลบัญชี
-        </h2>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-          <div className="bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-xl p-4">
-            <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-1">บทบาท</p>
-            <p className="text-lg font-semibold text-white capitalize">{fullUser.role}</p>
-          </div>
-          <div className="bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-xl p-4">
-            <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-1">เครดิตคงเหลือ</p>
-            <p className="text-lg font-semibold gradient-text-cyan">{fullUser.credits.toLocaleString()}</p>
-          </div>
-          <div className="bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-xl p-4">
-            <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider mb-1">สมาชิกตั้งแต่</p>
-            <p className="text-lg font-semibold text-white">
-              {new Date(fullUser.createdAt).toLocaleDateString("th-TH", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}
-            </p>
+          <div className="glass p-5 card-hover">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-[var(--text-muted)]">API Keys</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-amber-400">
+                <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
+              </svg>
+            </div>
+            <Link href="/dashboard/api-keys" className="text-2xl font-bold text-amber-400 hover:text-amber-300 transition-colors">
+              จัดการ →
+            </Link>
           </div>
         </div>
-      </div>
+
+        {/* Password Change */}
+        <div className="glass p-6 md:p-8">
+          <h2 className="text-base font-semibold text-white mb-5 flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-violet-500/[0.08] border border-violet-500/10 flex items-center justify-center">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-violet-400">
+                <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0110 0v4" />
+              </svg>
+            </div>
+            เปลี่ยนรหัสผ่าน
+          </h2>
+          <PasswordChangeForm />
+        </div>
+
+        {/* Danger Zone */}
+        <div className="glass p-6 md:p-8 border-red-500/10">
+          <h2 className="text-base font-semibold text-red-400 mb-2 flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-red-500/[0.08] border border-red-500/10 flex items-center justify-center">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-red-400">
+                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+            </div>
+            Danger Zone
+          </h2>
+          <p className="text-xs text-[var(--text-muted)] mb-4">การลบบัญชีจะลบข้อมูลทั้งหมดอย่างถาวร</p>
+          <button
+            type="button"
+            disabled
+            className="px-4 py-2 rounded-xl text-xs font-medium bg-red-500/10 text-red-400/50 border border-red-500/10 cursor-not-allowed"
+          >
+            ลบบัญชี (ติดต่อแอดมิน)
+          </button>
+        </div>
       </div>
     </div>
   );
