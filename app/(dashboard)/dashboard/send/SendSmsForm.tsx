@@ -11,8 +11,8 @@ const MSG_LIMITS: Record<MsgType, { single: number; multi: number }> = {
   unicode: { single: 70, multi: 67 },
 };
 
-export default function SendSmsForm({ userId }: { userId: string }) {
-  const [senderName, setSenderName] = useState("EasySlip");
+export default function SendSmsForm({ userId, senderNames = ["EasySlip"] }: { userId: string; senderNames?: string[] }) {
+  const [senderName, setSenderName] = useState(senderNames[0] || "EasySlip");
   const [recipients, setRecipients] = useState("");
   const [message, setMessage] = useState("");
   const [msgType, setMsgType] = useState<MsgType>("thai");
@@ -98,15 +98,18 @@ export default function SendSmsForm({ userId }: { userId: string }) {
             {/* Sender Name */}
             <div>
               <label className="block text-xs text-white/50 uppercase tracking-wider mb-2">Sender Name</label>
-              <input
-                type="text"
-                className="input-glass"
+              <select
+                className="input-glass cursor-pointer"
                 value={senderName}
-                onChange={(e) => setSenderName(e.target.value.slice(0, 11))}
-                maxLength={11}
-                placeholder="EasySlip"
-              />
-              <p className="text-[11px] text-white/20 mt-1">{senderName.length}/11 characters</p>
+                onChange={(e) => setSenderName(e.target.value)}
+              >
+                {senderNames.map((name) => (
+                  <option key={name} value={name} className="bg-[#0a0f1a] text-white">
+                    {name}{name === "EasySlip" ? " (Default)" : ""}
+                  </option>
+                ))}
+              </select>
+              <p className="text-[11px] text-white/20 mt-1">เฉพาะ sender ที่ผ่านอนุมัติเท่านั้น</p>
             </div>
 
             {/* Message Type */}

@@ -23,7 +23,7 @@ export default async function SendersPage() {
       {/* Info Note */}
       <div className="glass p-4 mb-6">
         <p className="text-xs text-white/40 leading-relaxed">
-          <span className="text-sky-400 font-semibold">Note:</span> Sender name ใช้เวลาอนุมัติ 1-2 วันทำการ ระหว่างรออนุมัติสามารถใช้ชื่อ SMSOK (Default) ส่ง SMS ได้เลย
+          <span className="text-sky-400 font-semibold">Note:</span> Sender name ต้องผ่านการอนุมัติก่อนใช้งาน (1-2 วันทำการ) ระหว่างรอสามารถใช้ชื่อ <span className="text-sky-300 font-medium">EasySlip</span> (Default) ส่ง SMS ได้เลย
         </p>
       </div>
 
