@@ -804,9 +804,9 @@ export default function ContactsClient({
           </div>
           <motion.button
             onClick={() => { setShowCreateTagModal(true); setNewTagName(""); setNewTagColorIdx(0); }}
-            className="btn-glass px-3 py-1.5 text-xs rounded-lg inline-flex items-center gap-1.5"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+            className="btn-gradient px-4 py-2 text-xs rounded-xl inline-flex items-center gap-1.5 font-semibold"
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.96 }}
           >
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
             สร้างแท็ก
@@ -891,16 +891,33 @@ export default function ContactsClient({
                 </div>
                 <div>
                   <label className="block text-xs text-[var(--text-muted)] uppercase tracking-wider mb-2 font-medium">สี</label>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2.5">
                     {TAG_COLORS.map((c, idx) => (
-                      <button
+                      <motion.button
                         key={idx}
                         type="button"
                         onClick={() => setNewTagColorIdx(idx)}
-                        className={`w-7 h-7 rounded-full border-2 transition-all flex items-center justify-center ${c.text.replace("text-", "bg-").replace("/40", "/60")} ${newTagColorIdx === idx ? "border-white scale-110" : "border-transparent scale-100"}`}
+                        className={`w-8 h-8 rounded-full border-2 flex items-center justify-center ${c.text.replace("text-", "bg-").replace("/15", "/70")} ${newTagColorIdx === idx ? "border-white shadow-[0_0_10px_rgba(255,255,255,0.25)]" : "border-transparent"}`}
+                        animate={{ scale: newTagColorIdx === idx ? 1.18 : 1 }}
+                        whileHover={{ scale: newTagColorIdx === idx ? 1.22 : 1.1 }}
+                        whileTap={{ scale: 0.88 }}
+                        transition={{ type: "spring", stiffness: 500, damping: 25 }}
                       >
-                        {newTagColorIdx === idx && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>}
-                      </button>
+                        <AnimatePresence>
+                          {newTagColorIdx === idx && (
+                            <motion.svg
+                              key="check"
+                              initial={{ scale: 0, opacity: 0, rotate: -30 }}
+                              animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                              exit={{ scale: 0, opacity: 0, rotate: 30 }}
+                              transition={{ type: "spring", stiffness: 600, damping: 28 }}
+                              width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5"
+                            >
+                              <polyline points="20 6 9 17 4 12" />
+                            </motion.svg>
+                          )}
+                        </AnimatePresence>
+                      </motion.button>
                     ))}
                   </div>
                 </div>
@@ -920,9 +937,9 @@ export default function ContactsClient({
                     setNewTagName("");
                   }}
                   disabled={!newTagName.trim()}
-                  className="btn-primary flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-40"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                  className="btn-gradient flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-40"
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
                 >
                   สร้างแท็ก
                 </motion.button>
@@ -1292,10 +1309,10 @@ export default function ContactsClient({
                                   animate={{ opacity: 1, y: 0, scale: 1 }}
                                   exit={{ opacity: 0, y: -4, scale: 0.95 }}
                                   transition={{ duration: 0.12 }}
-                                  className="absolute left-0 top-7 z-50 w-48 rounded-xl border border-white/10 bg-[#0D1526]/95 backdrop-blur-xl shadow-2xl overflow-hidden"
+                                  className="absolute left-0 top-7 z-50 w-52 rounded-2xl border border-violet-500/15 bg-[#080F1E]/95 backdrop-blur-xl shadow-[0_12px_40px_rgba(0,0,0,0.6),0_0_0_1px_rgba(139,92,246,0.08)] overflow-hidden"
                                 >
-                                  <div className="px-3 py-2 border-b border-white/5">
-                                    <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-medium">เพิ่ม/ลบแท็ก</span>
+                                  <div className="px-3 py-2.5 border-b border-white/5 bg-white/[0.02]">
+                                    <span className="text-[10px] text-violet-400/70 uppercase tracking-wider font-semibold">เพิ่ม/ลบแท็ก</span>
                                   </div>
                                   <div className="max-h-40 overflow-y-auto py-1">
                                     {[...new Set([...allTagNames, ...TAG_PRESETS])].map((tag) => {
