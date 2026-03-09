@@ -275,6 +275,25 @@ export default function TopupContent({ user, packages }: { user: User; packages:
       {/* Slip Upload */}
       <SlipUploadSection userId={user.id} />
 
+      {/* Credit Rate Info Box */}
+      <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-5 mb-6">
+        <h3 className="text-sm font-semibold text-white mb-3">💡 การคิดเครดิต</h3>
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <div className="space-y-2">
+            <p className="text-[var(--text-muted)] text-xs uppercase tracking-wide">ส่ง SMS</p>
+            <div className="flex justify-between"><span className="text-slate-300 text-xs">EN ≤160 ตัวอักษร</span><span className="text-amber-400 text-xs">1 เครดิต</span></div>
+            <div className="flex justify-between"><span className="text-slate-300 text-xs">EN 161-320 ตัวอักษร</span><span className="text-amber-400 text-xs">2 เครดิต</span></div>
+            <div className="flex justify-between"><span className="text-slate-300 text-xs">ไทย ≤70 ตัวอักษร</span><span className="text-amber-400 text-xs">1 เครดิต</span></div>
+            <div className="flex justify-between"><span className="text-slate-300 text-xs">ไทย 71-140 ตัวอักษร</span><span className="text-amber-400 text-xs">2 เครดิต</span></div>
+          </div>
+          <div className="space-y-2">
+            <p className="text-[var(--text-muted)] text-xs uppercase tracking-wide">บริการอื่น</p>
+            <div className="flex justify-between"><span className="text-slate-300 text-xs">OTP SMS</span><span className="text-amber-400 text-xs">1 เครดิต</span></div>
+            <div className="flex justify-between mt-2"><span className="text-[var(--text-muted)] text-xs">เครดิตไม่หมดอายุ</span><span className="text-emerald-400 text-xs">✓</span></div>
+          </div>
+        </div>
+      </div>
+
       {/* Packages Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 stagger-children">
         {packages.map((pkg, i) => (

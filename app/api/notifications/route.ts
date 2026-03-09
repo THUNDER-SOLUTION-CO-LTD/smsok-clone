@@ -6,7 +6,11 @@ export async function GET() {
   const user = await getSession();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const [recentMessages, recentTopups] = await Promise.all([
+  const [userData, recentMessages, recentTopups] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: user.id },
+      select: { notificationsReadAt: true },
+    }),
     prisma.message.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: "desc" },
@@ -21,6 +25,8 @@ export async function GET() {
     }),
   ]);
 
+  const readAt = userData?.notificationsReadAt ?? null;
+
   const items = [
     ...recentMessages.map((m) => ({
       id: `msg_${m.id}`,
@@ -32,18 +38,20 @@ export async function GET() {
           ? `ส่ง SMS ถึง ${m.recipient} ล้มเหลว`
           : `กำลังส่ง SMS ถึง ${m.recipient}`,
       createdAt: m.createdAt.toISOString(),
-      read: false,
+      read: readAt ? m.createdAt <= readAt : false,
     })),
     ...recentTopups.map((t) => ({
       id: `txn_${t.id}`,
       type: "topup",
       message: `เติมเครดิต ${t.credits.toLocaleString()} เครดิต สำเร็จ`,
       createdAt: t.createdAt.toISOString(),
-      read: false,
+      read: readAt ? t.createdAt <= readAt : false,
     })),
   ]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 10);
 
-  return NextResponse.json({ items, unreadCount: items.length });
+  const unreadCount = items.filter((i) => !i.read).length;
+
+  return NextResponse.json({ items, unreadCount });
 }

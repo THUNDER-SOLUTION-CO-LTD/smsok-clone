@@ -17,7 +17,8 @@ model User {
   role                String    @default("user")
   emailVerified       Boolean   @default(false)
   phoneVerified       Boolean   @default(false) @map("phone_verified")
-  mustChangePassword  Boolean   @default(false) @map("must_change_password")
+  mustChangePassword    Boolean   @default(false) @map("must_change_password")
+  notificationsReadAt   DateTime? @map("notifications_read_at")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 

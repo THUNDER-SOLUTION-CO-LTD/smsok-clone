@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { generateOtpForSession, verifyOtpForSession } from "@/lib/actions/otp";
+import { blockNonNumeric, fieldCls } from "@/lib/form-utils";
 
 const features = [
   {
@@ -193,7 +194,10 @@ function OtpTestPanel() {
               <label className="block text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1.5 font-medium">เบอร์โทร</label>
               <input
                 type="tel"
-                className="input-glass"
+                inputMode="numeric"
+                maxLength={10}
+                onKeyDown={blockNonNumeric}
+                className={fieldCls(phone && !/^0[689]\d{8}$/.test(phone) ? "error" : undefined, phone && /^0[689]\d{8}$/.test(phone) ? phone : "")}
                 placeholder="0891234567"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
@@ -211,7 +215,7 @@ function OtpTestPanel() {
                 <option value="transaction" className="bg-[var(--bg-elevated)]">transaction</option>
               </select>
             </div>
-            <div className="flex items-end">
+            <div>
               <button
                 onClick={handleGenerate}
                 disabled={loading || isPending || !phone}
@@ -222,8 +226,11 @@ function OtpTestPanel() {
                 ) : (
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" /></svg>
                 )}
-                Send OTP
+                ส่ง OTP
               </button>
+              <p className="text-xs text-[var(--text-muted)] text-center mt-2">
+                การส่ง OTP จะหัก <span className="text-amber-400">1 เครดิต</span>
+              </p>
             </div>
           </div>
         ) : (

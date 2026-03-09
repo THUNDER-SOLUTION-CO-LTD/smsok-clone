@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { sendSms, sendBatchSms } from "@/lib/actions/sms";
 import { smsCounterText } from "@/lib/form-utils";
+import { calculateCreditCost, calculateSmsCount } from "@/lib/validations";
 
 type MsgType = "english" | "thai" | "unicode";
 
@@ -35,7 +36,6 @@ export default function SendSmsForm({ userId, senderNames = ["EasySlip"] }: { us
     .map((r) => r.trim())
     .filter(Boolean);
   const recipientCount = recipientList.length;
-  const totalCost = (recipientCount * smsCount * 0.22).toFixed(2);
 
   const invalidPhones = recipientList.filter(r => !/^0[689]\d{8}$/.test(r.replace(/[^0-9]/g, "")));
   const phoneError = invalidPhones.length > 0 ? `เบอร์ไม่ถูกต้อง: ${invalidPhones.slice(0, 3).join(", ")}${invalidPhones.length > 3 ? ` +${invalidPhones.length - 3} เบอร์` : ""}` : "";
@@ -194,9 +194,16 @@ export default function SendSmsForm({ userId, senderNames = ["EasySlip"] }: { us
                 placeholder="พิมพ์ข้อความ SMS ที่นี่..."
                 maxLength={1000}
               />
-              <p className="text-[11px] text-[var(--text-muted)] mt-1.5 text-right">
-                {smsCounterText(message) || `0 chars • 0 SMS (${msgType === "english" ? "EN: 160/SMS" : "Thai: 70/SMS"})`}
-              </p>
+              <div className="flex items-center justify-between mt-1.5">
+                <p className="text-[11px] text-[var(--text-muted)]">
+                  {smsCounterText(message) || `0 ตัวอักษร • 0 SMS (${msgType === "english" ? "EN: 160/SMS" : "Thai: 70/SMS"})`}
+                </p>
+                {message.length > 0 && (
+                  <p className="text-[11px] text-amber-400 font-medium">
+                    💳 จะใช้ {calculateCreditCost(message)} เครดิต
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         </motion.div>
@@ -225,23 +232,27 @@ export default function SendSmsForm({ userId, senderNames = ["EasySlip"] }: { us
 
           {/* Cost Summary */}
           <div className="glass p-6">
-            <h3 className="text-xs text-slate-300 uppercase tracking-wider mb-4">สรุปค่าใช้จ่าย</h3>
+            <h3 className="text-xs text-slate-300 uppercase tracking-wider mb-4">สรุปเครดิตที่ใช้</h3>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between text-slate-300">
                 <span>จำนวนผู้รับ</span>
                 <span className="text-white">{recipientCount}</span>
               </div>
               <div className="flex justify-between text-slate-300">
-                <span>จำนวนส่วน SMS</span>
-                <span className="text-white">{smsCount}</span>
-              </div>
-              <div className="flex justify-between text-slate-300">
-                <span>ราคา/SMS</span>
-                <span className="text-white">฿0.22</span>
+                <span>เครดิต/เบอร์</span>
+                <span className="text-white">{message ? calculateCreditCost(message) : 0}</span>
               </div>
               <div className="border-t border-white/5 pt-2 mt-2 flex justify-between font-semibold">
-                <span className="text-white">รวม</span>
-                <span className="gradient-text-cyan text-lg">฿{totalCost}</span>
+                <span className="text-white">รวมเครดิต</span>
+                <span className="text-amber-400 text-lg font-bold">
+                  {message && recipientCount > 0 ? calculateCreditCost(message) * recipientCount : 0} เครดิต
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 pt-1">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[var(--text-muted)] flex-shrink-0"><circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" /></svg>
+                <p className="text-[11px] text-[var(--text-muted)]">
+                  {/[\u0E00-\u0E7F]/.test(message) ? "ไทย: 70 ตัว/SMS" : "EN: 160 ตัว/SMS"} • 1 เครดิต = 1 SMS part
+                </p>
               </div>
             </div>
 
