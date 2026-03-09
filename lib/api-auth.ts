@@ -63,7 +63,7 @@ export function apiError(error: unknown) {
         ? ((error as { issues: Array<{ message?: string }> }).issues)
         : null;
 
-    // Known validation/business logic errors → 400
+    // Known validation/business logic errors → 400, expose message
     const msg = zodIssues?.[0]?.message || error.message;
     const isValidation =
       msg.includes("ไม่ถูกต้อง") ||
@@ -77,9 +77,11 @@ export function apiError(error: unknown) {
       msg.includes("ไม่สำเร็จ") ||
       msg.includes("ใช้งานแล้ว") ||
       msg.includes("ถูกล็อค") ||
+      msg.includes("หากเบอร์") ||
       error.name === "ZodError";
+    // For unexpected server errors (5xx), never expose raw message — may leak internals
     return Response.json(
-      { error: msg },
+      { error: isValidation ? msg : "เกิดข้อผิดพลาดภายในระบบ กรุณาลองใหม่" },
       { status: isValidation ? 400 : 500 }
     );
   }

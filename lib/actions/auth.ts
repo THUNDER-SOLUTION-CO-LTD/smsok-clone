@@ -90,7 +90,8 @@ export async function forgotPassword(input: unknown) {
   });
 
   if (!user) {
-    throw new Error("ไม่พบเบอร์โทรนี้ในระบบ");
+    // Generic message to prevent user enumeration
+    throw new Error("หากเบอร์นี้ลงทะเบียนไว้ จะได้รับรหัสรีเซ็ตรหัสผ่านทาง SMS");
   }
 
   const windowStart = new Date(Date.now() - RESET_RATE_WINDOW_MS);

@@ -418,7 +418,6 @@ export function InlineTagPicker({
         </motion.div>
         )}
       </AnimatePresence>
-    )
   );
 
   return (
