@@ -9,6 +9,8 @@ const balanceRoute = readFileSync(resolve(ROOT, "app/api/v1/balance/route.ts"), 
 const sendersRoute = readFileSync(resolve(ROOT, "app/api/v1/senders/route.ts"), "utf-8");
 const otpSendRoute = readFileSync(resolve(ROOT, "app/api/v1/otp/send/route.ts"), "utf-8");
 const otpVerifyRoute = readFileSync(resolve(ROOT, "app/api/v1/otp/verify/route.ts"), "utf-8");
+const tagsRoute = readFileSync(resolve(ROOT, "app/api/v1/tags/route.ts"), "utf-8");
+const campaignsRoute = readFileSync(resolve(ROOT, "app/api/v1/campaigns/route.ts"), "utf-8");
 
 // ==========================================
 // POST /api/v1/sms/send
@@ -136,5 +138,33 @@ describe("API Route: POST /api/v1/otp/verify", () => {
 
   it("delegates to OTP verify handler", () => {
     expect(otpVerifyRoute).toContain("handleVerifyOtp");
+  });
+});
+
+describe("API Route: /api/v1/tags", () => {
+  it("authenticates with public API key auth", () => {
+    expect(tagsRoute).toContain("authenticatePublicApiKey");
+  });
+
+  it("supports getTags", () => {
+    expect(tagsRoute).toContain("getTags");
+  });
+
+  it("supports createTag", () => {
+    expect(tagsRoute).toContain("createTag");
+  });
+});
+
+describe("API Route: /api/v1/campaigns", () => {
+  it("authenticates with public API key auth", () => {
+    expect(campaignsRoute).toContain("authenticatePublicApiKey");
+  });
+
+  it("supports getCampaigns", () => {
+    expect(campaignsRoute).toContain("getCampaigns");
+  });
+
+  it("supports createCampaign", () => {
+    expect(campaignsRoute).toContain("createCampaign");
   });
 });

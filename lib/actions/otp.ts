@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/db";
+import { getSession } from "@/lib/auth";
 import { sendSingleSms } from "@/lib/sms-gateway";
 import { normalizePhone, sendOtpSchema, verifyOtpSchema } from "@/lib/validations";
 import crypto from "crypto";
@@ -11,7 +12,17 @@ const MAX_ATTEMPTS = 5;
 const MAX_OTP_PER_PHONE_PER_WINDOW = 3; // 3 per 5 min (architect spec #100)
 const OTP_RATE_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
 const OTP_CREDIT_COST = 1;
-const OTP_HASH_SECRET = process.env.OTP_HASH_SECRET || process.env.JWT_SECRET || "smsok-otp-secret";
+
+function getOtpHashSecret(): string {
+  const explicitSecret = process.env.OTP_HASH_SECRET?.trim();
+  if (explicitSecret) return explicitSecret;
+
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("OTP_HASH_SECRET is not configured");
+  }
+
+  return process.env.JWT_SECRET || "smsok-otp-dev-secret";
+}
 
 function generateOtp(): string {
   return crypto.randomInt(100000, 999999).toString();
@@ -23,8 +34,8 @@ function generateRefCode(): string {
 
 function hashOtp(code: string, refCode: string): string {
   return crypto
-    .createHash("sha256")
-    .update(`${OTP_HASH_SECRET}:${refCode}:${code}`)
+    .createHmac("sha256", getOtpHashSecret())
+    .update(`${refCode}:${code}`)
     .digest("hex");
 }
 
@@ -32,6 +43,14 @@ function timingSafeMatch(left: string, right: string): boolean {
   const a = Buffer.from(left);
   const b = Buffer.from(right);
   return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+async function requireSessionUserId() {
+  const user = await getSession();
+  if (!user) {
+    throw new Error("Unauthorized");
+  }
+  return user.id;
 }
 
 export async function generateOtp_(
@@ -204,4 +223,16 @@ export async function verifyOtp_(
     phone: otp.phone,
     purpose: otp.purpose,
   };
+}
+
+export async function generateOtpForSession(data: unknown) {
+  const userId = await requireSessionUserId();
+  const input = sendOtpSchema.parse(data);
+  return generateOtp_(userId, input.phone, input.purpose);
+}
+
+export async function verifyOtpForSession(data: unknown) {
+  const userId = await requireSessionUserId();
+  const input = verifyOtpSchema.parse(data);
+  return verifyOtp_(userId, input.ref, input.code);
 }

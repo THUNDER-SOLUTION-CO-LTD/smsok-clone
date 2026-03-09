@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { createContact, deleteContact } from "@/lib/actions/contacts";
 import { useRouter } from "next/navigation";
 import EmptyState from "@/app/components/ui/EmptyState";
-import { useToast } from "@/app/components/ui/Toast";
 
 type Contact = {
   id: string;
@@ -14,6 +13,12 @@ type Contact = {
   email: string | null;
   tags: string | null;
   createdAt: string;
+};
+
+type ContactGroup = {
+  id: string;
+  name: string;
+  memberCount: number;
 };
 
 const stagger = {
@@ -30,10 +35,12 @@ export default function ContactsClient({
   userId,
   initialContacts,
   totalContacts,
+  initialGroups,
 }: {
   userId: string;
   initialContacts: Contact[];
   totalContacts: number;
+  initialGroups?: ContactGroup[];
 }) {
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
@@ -101,7 +108,7 @@ export default function ContactsClient({
         <div>
           <h2 className="text-2xl font-bold tracking-tight gradient-text-mixed">รายชื่อผู้ติดต่อ</h2>
           <p className="text-sm text-[var(--text-muted)] mt-1">
-            จัดการรายชื่อผู้ติดต่อ ({totalContacts} รายชื่อ)
+            จัดการรายชื่อผู้ติดต่อ ({totalContacts} รายชื่อ{typeof initialGroups?.length === "number" ? `, ${initialGroups.length} กลุ่ม` : ""})
           </p>
         </div>
         <motion.button

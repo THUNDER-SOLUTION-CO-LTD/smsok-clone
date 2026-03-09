@@ -111,6 +111,32 @@ export const addGroupMembersSchema = z.object({
   contactIds: z.array(z.string().cuid()).min(1),
 });
 
+export const contactFilterSchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  tagId: z.string().cuid().optional(),
+});
+
+const hexColorSchema = z.string().regex(/^#[0-9A-Fa-f]{6}$/, "สีต้องเป็นรหัส HEX เช่น #94A3B8");
+
+export const createTagSchema = z.object({
+  name: z.string().min(1, "กรุณากรอกชื่อแท็ก").max(50, "ชื่อแท็กต้องไม่เกิน 50 ตัวอักษร").trim(),
+  color: hexColorSchema.default("#94A3B8"),
+});
+
+export const updateTagSchema = z
+  .object({
+    name: z.string().min(1, "กรุณากรอกชื่อแท็ก").max(50, "ชื่อแท็กต้องไม่เกิน 50 ตัวอักษร").trim().optional(),
+    color: hexColorSchema.optional(),
+  })
+  .refine((data) => data.name !== undefined || data.color !== undefined, {
+    message: "กรุณาระบุข้อมูลที่ต้องการแก้ไข",
+  });
+
+export const assignContactTagSchema = z.object({
+  tagId: z.string().cuid(),
+});
+
 // ==========================================
 // Sender Name Validations
 // ==========================================
@@ -156,6 +182,19 @@ export const verifyTransactionSchema = z.object({
 
 export const createApiKeySchema = z.object({
   name: z.string().min(1, "กรุณาตั้งชื่อ API Key").max(100).trim(),
+});
+
+export const createCampaignSchema = z.object({
+  name: z.string().min(1, "กรุณากรอกชื่อแคมเปญ").max(100, "ชื่อแคมเปญต้องไม่เกิน 100 ตัวอักษร").trim(),
+  contactGroupId: z.string().cuid().optional(),
+  templateId: z.string().cuid().optional(),
+  senderName: z
+    .string()
+    .min(3, "ชื่อผู้ส่งต้องมีอย่างน้อย 3 ตัวอักษร")
+    .max(11, "ชื่อผู้ส่งต้องไม่เกิน 11 ตัวอักษร")
+    .regex(/^[A-Za-z0-9]+$/, "ชื่อผู้ส่งต้องเป็นตัวอักษรภาษาอังกฤษหรือตัวเลขเท่านั้น")
+    .optional(),
+  scheduledAt: z.coerce.date().optional(),
 });
 
 // ==========================================

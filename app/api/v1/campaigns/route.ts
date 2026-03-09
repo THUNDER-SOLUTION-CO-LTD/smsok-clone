@@ -1,14 +1,18 @@
 import { NextRequest } from "next/server";
-import { apiResponse, apiError } from "@/lib/api-auth";
+import { apiError, apiResponse } from "@/lib/api-auth";
 import { authenticatePublicApiKey } from "@/lib/api-key-auth";
-import { createApiKey, getApiKeys } from "@/lib/actions/api-keys";
+import { createCampaign, getCampaigns } from "@/lib/actions/campaigns";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 export async function GET(req: NextRequest) {
   try {
     const user = await authenticatePublicApiKey(req);
-    const keys = await getApiKeys(user.id);
-    return apiResponse({ apiKeys: keys });
+    const { searchParams } = new URL(req.url);
+    const page = searchParams.get("page") || "1";
+    const limit = searchParams.get("limit") || "20";
+
+    const result = await getCampaigns(user.id, { page, limit });
+    return apiResponse(result);
   } catch (error) {
     return apiError(error);
   }
@@ -17,13 +21,12 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const user = await authenticatePublicApiKey(req);
-
-    const limit = checkRateLimit(user.id, "apikey");
+    const limit = checkRateLimit(user.id, "batch");
     if (!limit.allowed) return rateLimitResponse(limit.resetIn);
 
     const body = await req.json();
-    const apiKey = await createApiKey(user.id, body);
-    return apiResponse(apiKey, 201);
+    const campaign = await createCampaign(user.id, body);
+    return apiResponse(campaign, 201);
   } catch (error) {
     return apiError(error);
   }

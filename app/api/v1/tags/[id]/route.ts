@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
-import { apiResponse, apiError } from "@/lib/api-auth";
+import { apiError, apiResponse } from "@/lib/api-auth";
 import { authenticatePublicApiKey } from "@/lib/api-key-auth";
-import { toggleApiKey, deleteApiKey } from "@/lib/actions/api-keys";
+import { deleteTag, updateTag } from "@/lib/actions/tags";
 
 export async function PATCH(
   req: NextRequest,
@@ -9,9 +9,10 @@ export async function PATCH(
 ) {
   try {
     const user = await authenticatePublicApiKey(req);
+    const body = await req.json();
     const { id } = await params;
-    const result = await toggleApiKey(user.id, id);
-    return apiResponse(result);
+    const tag = await updateTag(user.id, id, body);
+    return apiResponse(tag);
   } catch (error) {
     return apiError(error);
   }
@@ -24,7 +25,7 @@ export async function DELETE(
   try {
     const user = await authenticatePublicApiKey(req);
     const { id } = await params;
-    await deleteApiKey(user.id, id);
+    await deleteTag(user.id, id);
     return apiResponse({ success: true });
   } catch (error) {
     return apiError(error);

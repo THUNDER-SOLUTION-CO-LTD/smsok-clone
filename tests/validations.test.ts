@@ -10,12 +10,17 @@ import {
   updateContactSchema,
   createContactGroupSchema,
   addGroupMembersSchema,
+  contactFilterSchema,
+  createTagSchema,
+  updateTagSchema,
+  assignContactTagSchema,
   requestSenderNameSchema,
   approveSenderNameSchema,
   purchasePackageSchema,
   uploadSlipSchema,
   verifyTransactionSchema,
   createApiKeySchema,
+  createCampaignSchema,
   idSchema,
   paginationSchema,
   dateRangeSchema,
@@ -271,6 +276,52 @@ describe("createContactSchema", () => {
   });
 });
 
+describe("contactFilterSchema", () => {
+  it("accepts valid tagId filter", () => {
+    const result = contactFilterSchema.parse({
+      page: "1",
+      limit: "20",
+      tagId: "clxxxxxxxxxxxxxxxxxxxxxxxxx".slice(0, 25),
+    });
+    expect(result.tagId).toBeTruthy();
+  });
+});
+
+describe("createTagSchema", () => {
+  it("accepts valid tag", () => {
+    const result = createTagSchema.parse({ name: "VIP", color: "#FF0000" });
+    expect(result.name).toBe("VIP");
+    expect(result.color).toBe("#FF0000");
+  });
+
+  it("defaults color", () => {
+    const result = createTagSchema.parse({ name: "Customer" });
+    expect(result.color).toBe("#94A3B8");
+  });
+
+  it("rejects invalid color", () => {
+    expect(() => createTagSchema.parse({ name: "VIP", color: "red" })).toThrow();
+  });
+});
+
+describe("updateTagSchema", () => {
+  it("accepts partial update", () => {
+    const result = updateTagSchema.parse({ color: "#00FF00" });
+    expect(result.color).toBe("#00FF00");
+  });
+
+  it("rejects empty update", () => {
+    expect(() => updateTagSchema.parse({})).toThrow();
+  });
+});
+
+describe("assignContactTagSchema", () => {
+  it("accepts valid tagId", () => {
+    const result = assignContactTagSchema.parse({ tagId: "clxxxxxxxxxxxxxxxxxxxxxxxxx".slice(0, 25) });
+    expect(result.tagId).toBeTruthy();
+  });
+});
+
 describe("updateContactSchema", () => {
   it("accepts partial update", () => {
     const result = updateContactSchema.parse({ name: "New Name" });
@@ -421,6 +472,24 @@ describe("createApiKeySchema", () => {
   it("trims whitespace", () => {
     const result = createApiKeySchema.parse({ name: "  Staging  " });
     expect(result.name).toBe("Staging");
+  });
+});
+
+describe("createCampaignSchema", () => {
+  it("accepts valid campaign", () => {
+    const result = createCampaignSchema.parse({
+      name: "March Promo",
+      senderName: "EASYSHOP",
+    });
+    expect(result.name).toBe("March Promo");
+  });
+
+  it("accepts scheduledAt string", () => {
+    const result = createCampaignSchema.parse({
+      name: "Scheduled Promo",
+      scheduledAt: "2026-03-10T03:00:00Z",
+    });
+    expect(result.scheduledAt).toBeInstanceOf(Date);
   });
 });
 

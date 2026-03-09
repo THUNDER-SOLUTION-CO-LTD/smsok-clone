@@ -8,8 +8,9 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const page = searchParams.get("page") || "1";
     const limit = searchParams.get("limit") || "50";
+    const tagId = searchParams.get("tagId") || undefined;
 
-    const result = await getContacts(user.id, { page, limit });
+    const result = await getContacts(user.id, { page, limit, tagId });
     return apiResponse(result);
   } catch (error) {
     return apiError(error);

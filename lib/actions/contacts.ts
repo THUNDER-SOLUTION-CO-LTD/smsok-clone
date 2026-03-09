@@ -3,38 +3,51 @@
 import { prisma as db } from "../db";
 import { revalidatePath } from "next/cache";
 import {
+  contactFilterSchema,
   createContactSchema,
   updateContactSchema,
   idSchema,
-  paginationSchema,
 } from "../validations";
+
+const contactInclude = {
+  groups: { include: { group: true } },
+  contactTags: { include: { tag: true } },
+} as const;
 
 // ==========================================
 // List contacts
 // ==========================================
 
 export async function getContacts(userId: string, filters?: unknown) {
-  const pagination = filters ? paginationSchema.parse(filters) : { page: 1, limit: 50 };
-  const skip = (pagination.page - 1) * pagination.limit;
+  const input = filters ? contactFilterSchema.parse(filters) : { page: 1, limit: 50, tagId: undefined };
+  const skip = (input.page - 1) * input.limit;
+  const where = {
+    userId,
+    ...(input.tagId && {
+      contactTags: {
+        some: { tagId: input.tagId },
+      },
+    }),
+  };
 
   const [contacts, total] = await db.$transaction([
     db.contact.findMany({
-      where: { userId },
-      include: { groups: { include: { group: true } } },
+      where,
+      include: contactInclude,
       orderBy: { createdAt: "desc" },
       skip,
-      take: pagination.limit,
+      take: input.limit,
     }),
-    db.contact.count({ where: { userId } }),
+    db.contact.count({ where }),
   ]);
 
   return {
     contacts,
     pagination: {
-      page: pagination.page,
-      limit: pagination.limit,
+      page: input.page,
+      limit: input.limit,
       total,
-      totalPages: Math.ceil(total / pagination.limit),
+      totalPages: Math.ceil(total / input.limit),
     },
   };
 }
@@ -166,7 +179,10 @@ export async function importContacts(
 export async function exportContacts(userId: string) {
   const contacts = await db.contact.findMany({
     where: { userId },
-    include: { groups: { include: { group: { select: { name: true } } } } },
+    include: {
+      groups: { include: { group: { select: { name: true } } } },
+      contactTags: { include: { tag: { select: { name: true } } } },
+    },
     orderBy: { createdAt: "desc" },
   });
 
@@ -174,7 +190,9 @@ export async function exportContacts(userId: string) {
     name: c.name,
     phone: c.phone,
     email: c.email || "",
-    tags: c.tags || "",
+    tags: c.contactTags.length > 0
+      ? c.contactTags.map((item: typeof c.contactTags[number]) => item.tag.name).join(", ")
+      : c.tags || "",
     groups: c.groups.map((g: typeof c.groups[number]) => g.group.name).join(", "),
     createdAt: c.createdAt.toISOString(),
   }));

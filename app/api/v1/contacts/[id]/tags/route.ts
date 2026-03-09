@@ -1,16 +1,17 @@
 import { NextRequest } from "next/server";
-import { apiResponse, apiError } from "@/lib/api-auth";
+import { apiError, apiResponse } from "@/lib/api-auth";
 import { authenticatePublicApiKey } from "@/lib/api-key-auth";
-import { toggleApiKey, deleteApiKey } from "@/lib/actions/api-keys";
+import { assignTagToContact, unassignTagFromContact } from "@/lib/actions/tags";
 
-export async function PATCH(
+export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await authenticatePublicApiKey(req);
+    const body = await req.json();
     const { id } = await params;
-    const result = await toggleApiKey(user.id, id);
+    const result = await assignTagToContact(user.id, id, body);
     return apiResponse(result);
   } catch (error) {
     return apiError(error);
@@ -23,9 +24,10 @@ export async function DELETE(
 ) {
   try {
     const user = await authenticatePublicApiKey(req);
+    const body = await req.json();
     const { id } = await params;
-    await deleteApiKey(user.id, id);
-    return apiResponse({ success: true });
+    const result = await unassignTagFromContact(user.id, id, body);
+    return apiResponse(result);
   } catch (error) {
     return apiError(error);
   }

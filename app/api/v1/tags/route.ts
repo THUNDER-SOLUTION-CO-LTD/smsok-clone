@@ -1,14 +1,14 @@
 import { NextRequest } from "next/server";
-import { apiResponse, apiError } from "@/lib/api-auth";
+import { apiError, apiResponse } from "@/lib/api-auth";
 import { authenticatePublicApiKey } from "@/lib/api-key-auth";
-import { createApiKey, getApiKeys } from "@/lib/actions/api-keys";
+import { createTag, getTags } from "@/lib/actions/tags";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 export async function GET(req: NextRequest) {
   try {
     const user = await authenticatePublicApiKey(req);
-    const keys = await getApiKeys(user.id);
-    return apiResponse({ apiKeys: keys });
+    const tags = await getTags(user.id);
+    return apiResponse({ tags });
   } catch (error) {
     return apiError(error);
   }
@@ -17,13 +17,12 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const user = await authenticatePublicApiKey(req);
-
-    const limit = checkRateLimit(user.id, "apikey");
+    const limit = checkRateLimit(user.id, "api");
     if (!limit.allowed) return rateLimitResponse(limit.resetIn);
 
     const body = await req.json();
-    const apiKey = await createApiKey(user.id, body);
-    return apiResponse(apiKey, 201);
+    const tag = await createTag(user.id, body);
+    return apiResponse(tag, 201);
   } catch (error) {
     return apiError(error);
   }

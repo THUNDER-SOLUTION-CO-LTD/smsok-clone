@@ -34,14 +34,25 @@ function DonutChart({ data }: { data: { label: string; value: number; color: str
   const r = 60;
   const circ = 2 * Math.PI * r;
 
-  let offset = 0;
-  const segments = data.filter(d => d.value > 0).map((d) => {
-    const pct = d.value / total;
-    const dashLen = circ * pct;
-    const seg = { ...d, pct, dashLen, dashOffset: circ - offset };
-    offset += dashLen;
-    return seg;
-  });
+  const segments = data
+    .filter((d) => d.value > 0)
+    .reduce<Array<{ label: string; value: number; color: string; pct: number; dashLen: number; dashOffset: number }>>(
+      (acc, d) => {
+        const used = acc.reduce((sum, seg) => sum + seg.dashLen, 0);
+        const pct = d.value / total;
+        const dashLen = circ * pct;
+
+        acc.push({
+          ...d,
+          pct,
+          dashLen,
+          dashOffset: circ - used,
+        });
+
+        return acc;
+      },
+      []
+    );
 
   return (
     <div className="flex flex-col items-center gap-4">

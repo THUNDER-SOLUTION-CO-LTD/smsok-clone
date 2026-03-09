@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { changePasswordForSession } from "@/lib/actions/settings";
 
 export default function PasswordChangeForm() {
   const [currentPassword, setCurrentPassword] = useState("");
@@ -24,16 +25,11 @@ export default function PasswordChangeForm() {
     setResult(null);
 
     try {
-      const res = await fetch("/api/v1/change-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currentPassword, newPassword }),
+      await changePasswordForSession({
+        currentPassword,
+        newPassword,
+        confirmPassword,
       });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "เกิดข้อผิดพลาด");
-      }
 
       setResult({ type: "success", message: "เปลี่ยนรหัสผ่านเรียบร้อยแล้ว" });
       setCurrentPassword("");

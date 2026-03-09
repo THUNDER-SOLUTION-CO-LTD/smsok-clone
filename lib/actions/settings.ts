@@ -3,7 +3,7 @@
 import { prisma as db } from "../db";
 import { revalidatePath } from "next/cache";
 import { changePasswordSchema } from "../validations";
-import { hashPassword, verifyPassword } from "../auth";
+import { getSession, hashPassword, verifyPassword } from "../auth";
 import { z } from "zod";
 
 const updateProfileSchema = z.object({
@@ -61,6 +61,15 @@ export async function changePassword(userId: string, data: unknown) {
 
   revalidatePath("/dashboard/settings");
   return { success: true };
+}
+
+export async function changePasswordForSession(data: unknown) {
+  const user = await getSession();
+  if (!user) {
+    throw new Error("Unauthorized");
+  }
+
+  return changePassword(user.id, data);
 }
 
 // ==========================================

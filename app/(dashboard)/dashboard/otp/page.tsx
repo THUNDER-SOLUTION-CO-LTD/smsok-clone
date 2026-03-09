@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
+import { generateOtpForSession, verifyOtpForSession } from "@/lib/actions/otp";
 
 const features = [
   {
@@ -89,65 +90,64 @@ function OtpTestPanel() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
   const [countdown, setCountdown] = useState(0);
+  const [isPending, startTransition] = useTransition();
 
   // Countdown timer for OTP expiry
-  useState(() => {
+  useEffect(() => {
     if (countdown <= 0) return;
     const t = setInterval(() => setCountdown((c) => Math.max(c - 1, 0)), 1000);
     return () => clearInterval(t);
-  });
+  }, [countdown]);
 
   const handleGenerate = async () => {
     if (!phone) return;
-    setLoading(true);
     setResult(null);
-    try {
-      const res = await fetch("/api/v1/otp/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, purpose }),
-      });
-      const data = await res.json();
-      if (res.ok) {
+    setLoading(true);
+
+    startTransition(async () => {
+      try {
+        const data = await generateOtpForSession({ phone, purpose });
         setRef(data.ref || "");
         setStep("verify");
-        setCountdown(300);
+        setCountdown(data.expiresIn ?? 300);
         setResult({ ok: true, msg: `OTP sent! Ref: ${data.ref || "N/A"}` });
-      } else {
-        setResult({ ok: false, msg: data.error || "Failed" });
+      } catch (error) {
+        setResult({
+          ok: false,
+          msg: error instanceof Error ? error.message : "Failed to send OTP",
+        });
+      } finally {
+        setLoading(false);
       }
-    } catch {
-      setResult({ ok: false, msg: "Network error" });
-    } finally {
-      setLoading(false);
-    }
+    });
   };
 
   const handleVerify = async () => {
     if (!code) return;
-    setLoading(true);
     setResult(null);
-    try {
-      const res = await fetch("/api/v1/otp/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ref, code, phone }),
-      });
-      const data = await res.json();
-      if (res.ok && data.verified) {
-        setResult({ ok: true, msg: "OTP verified successfully!" });
-        setStep("generate");
-        setCode("");
-        setRef("");
-        setCountdown(0);
-      } else {
-        setResult({ ok: false, msg: data.error || "Invalid OTP" });
+    setLoading(true);
+
+    startTransition(async () => {
+      try {
+        const data = await verifyOtpForSession({ ref, code });
+        if (data.verified) {
+          setResult({ ok: true, msg: "OTP verified successfully!" });
+          setStep("generate");
+          setCode("");
+          setRef("");
+          setCountdown(0);
+        } else {
+          setResult({ ok: false, msg: "Invalid OTP" });
+        }
+      } catch (error) {
+        setResult({
+          ok: false,
+          msg: error instanceof Error ? error.message : "Failed to verify OTP",
+        });
+      } finally {
+        setLoading(false);
       }
-    } catch {
-      setResult({ ok: false, msg: "Network error" });
-    } finally {
-      setLoading(false);
-    }
+    });
   };
 
   const mins = Math.floor(countdown / 60);
@@ -214,7 +214,7 @@ function OtpTestPanel() {
             <div className="flex items-end">
               <button
                 onClick={handleGenerate}
-                disabled={loading || !phone}
+                disabled={loading || isPending || !phone}
                 className="btn-primary w-full py-2.5 rounded-xl text-sm font-semibold disabled:opacity-40 flex items-center justify-center gap-2"
               >
                 {loading ? (
@@ -246,7 +246,7 @@ function OtpTestPanel() {
             <div className="flex items-end gap-2">
               <button
                 onClick={handleVerify}
-                disabled={loading || code.length !== 6}
+                disabled={loading || isPending || code.length !== 6}
                 className="btn-primary flex-1 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-40 flex items-center justify-center gap-2"
               >
                 {loading ? (

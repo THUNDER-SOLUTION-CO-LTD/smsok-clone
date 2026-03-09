@@ -22,6 +22,14 @@ describe("Prisma Schema: Models", () => {
     expect(schema).toContain("model Contact");
   });
 
+  it("has Tag model", () => {
+    expect(schema).toContain("model Tag");
+  });
+
+  it("has ContactTag model", () => {
+    expect(schema).toContain("model ContactTag");
+  });
+
   it("has ContactGroup model", () => {
     expect(schema).toContain("model ContactGroup");
   });
@@ -118,6 +126,17 @@ describe("Prisma Schema: ContactGroupMember", () => {
 
   it("cascade deletes on group", () => {
     expect(schema).toContain("onDelete: Cascade");
+  });
+});
+
+describe("Prisma Schema: Contact Tags", () => {
+  it("has unique contactId+tagId", () => {
+    expect(schema).toContain("@@unique([contactId, tagId])");
+  });
+
+  it("has unique userId+name for tags", () => {
+    const tagBlock = schema.slice(schema.indexOf("model Tag"), schema.indexOf("model ContactTag"));
+    expect(tagBlock).toContain("@@unique([userId, name])");
   });
 });
 
