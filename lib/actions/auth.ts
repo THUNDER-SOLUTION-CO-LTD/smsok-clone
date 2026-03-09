@@ -7,8 +7,6 @@ import { sendSingleSms } from "@/lib/sms-gateway";
 import { forgotPasswordSchema, resetPasswordSchema } from "@/lib/validations";
 
 const RESET_TOKEN_EXPIRY_MS = 5 * 60 * 1000;
-const RESET_RATE_WINDOW_MS = 5 * 60 * 1000;
-const MAX_RESET_PER_PHONE_PER_WINDOW = 3;
 const MAX_RESET_ATTEMPTS = 5;
 const RESET_PURPOSE = "password_reset";
 
@@ -90,21 +88,13 @@ export async function forgotPassword(input: unknown) {
   });
 
   if (!user) {
-    // Generic message to prevent user enumeration
-    throw new Error("หากเบอร์นี้ลงทะเบียนไว้ จะได้รับรหัสรีเซ็ตรหัสผ่านทาง SMS");
-  }
-
-  const windowStart = new Date(Date.now() - RESET_RATE_WINDOW_MS);
-  const recentCount = await prisma.otpRequest.count({
-    where: {
-      phone: user.phone,
-      purpose: RESET_PURPOSE,
-      createdAt: { gte: windowStart },
-    },
-  });
-
-  if (recentCount >= MAX_RESET_PER_PHONE_PER_WINDOW) {
-    throw new Error("ส่งรหัสรีเซ็ตรหัสผ่านมากเกินไป กรุณารอ 5 นาที");
+    // Silent return — prevents HTTP status side-channel enumeration
+    // Attacker cannot distinguish "not found" (was: 400) from "found" (200)
+    return {
+      success: true,
+      expiresIn: Math.floor(RESET_TOKEN_EXPIRY_MS / 1000),
+      delivery: "sms" as const,
+    };
   }
 
   const refCode = generateResetRefCode();
