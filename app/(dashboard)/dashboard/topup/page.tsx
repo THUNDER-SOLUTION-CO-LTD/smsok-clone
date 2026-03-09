@@ -7,7 +7,7 @@ export default async function TopupPage() {
   const user = await getSession();
   if (!user) redirect("/login");
 
-  let packages = [];
+  let packages: Awaited<ReturnType<typeof getPackages>> = [];
   try {
     packages = await getPackages();
   } catch {
