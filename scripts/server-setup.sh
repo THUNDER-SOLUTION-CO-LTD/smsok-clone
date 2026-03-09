@@ -179,6 +179,7 @@ ENVEOF
   JWT_SECRET=$(openssl rand -hex 32)
   CRON_SECRET=$(openssl rand -hex 24)
   OTP_HASH_SECRET=$(openssl rand -hex 32)
+  NEXTAUTH_SECRET=$(openssl rand -hex 32)
   DB_PASSWORD=$(openssl rand -hex 16)
   DB_USER="smsok"
   DB_NAME="smsok"
@@ -205,6 +206,8 @@ REDIS_URL=redis://redis:6379
 JWT_SECRET=${JWT_SECRET}
 CRON_SECRET=${CRON_SECRET}
 OTP_HASH_SECRET=${OTP_HASH_SECRET}
+OTP_BYPASS_CODE=
+NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
 
 # --- SMTP / Email ---
 SMTP_HOST=smtp.example.com
@@ -215,6 +218,7 @@ SMTP_FROM="SMSOK Clone <no-reply@your-domain.com>"
 SMTP_SECURE=false
 
 # --- EasyThunder SMS Gateway ---
+EASYTHUNDER_API_KEY=CHANGE_ME
 SMS_API_URL=https://sms-api.cl1.easythunder.com
 SMS_API_USERNAME=CHANGE_ME
 SMS_API_PASSWORD=CHANGE_ME
@@ -249,7 +253,9 @@ ENVEOF
   echo ""
   echo "   SMS_API_USERNAME  = (from EasyThunder)"
   echo "   SMS_API_PASSWORD  = (from EasyThunder)"
+  echo "   EASYTHUNDER_API_KEY = (if your gateway account requires it)"
   echo "   EASYSLIP_API_KEY  = (from EasySlip dashboard)"
+  echo "   OTP_BYPASS_CODE   = (leave blank in production unless required)"
   echo "   SMTP_HOST/PORT/USER/PASS/FROM = (your SMTP provider)"
   echo "   NEXT_PUBLIC_APP_URL = (your domain, or keep IP)"
   echo ""

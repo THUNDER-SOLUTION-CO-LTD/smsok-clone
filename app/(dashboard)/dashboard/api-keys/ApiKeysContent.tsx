@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { createApiKey, toggleApiKey, deleteApiKey } from "@/lib/actions/api-keys";
 import EmptyState from "@/app/components/ui/EmptyState";
 import ConfirmDialog from "@/app/components/ui/ConfirmDialog";
+import { fieldCls } from "@/lib/form-utils";
 
 type ApiKey = {
   id: string;
@@ -192,7 +193,7 @@ export default function ApiKeysContent({ userId, apiKeys: initialKeys }: { userI
                 <label className="block text-xs text-[var(--text-muted)] uppercase tracking-wider mb-2 font-medium">ชื่อ API Key</label>
                 <input
                   type="text"
-                  className="input-glass"
+                  className={fieldCls(undefined, keyName)}
                   placeholder="เช่น Production, Staging, My App"
                   value={keyName}
                   onChange={(e) => setKeyName(e.target.value)}
