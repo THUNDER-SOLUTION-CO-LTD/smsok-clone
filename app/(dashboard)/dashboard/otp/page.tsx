@@ -80,6 +80,203 @@ function CodeBlock({ title, code, lang }: { title: string; code: string; lang: "
   );
 }
 
+function OtpTestPanel() {
+  const [phone, setPhone] = useState("");
+  const [purpose, setPurpose] = useState("verify");
+  const [code, setCode] = useState("");
+  const [ref, setRef] = useState("");
+  const [step, setStep] = useState<"generate" | "verify">("generate");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [countdown, setCountdown] = useState(0);
+
+  // Countdown timer for OTP expiry
+  useState(() => {
+    if (countdown <= 0) return;
+    const t = setInterval(() => setCountdown((c) => Math.max(c - 1, 0)), 1000);
+    return () => clearInterval(t);
+  });
+
+  const handleGenerate = async () => {
+    if (!phone) return;
+    setLoading(true);
+    setResult(null);
+    try {
+      const res = await fetch("/api/v1/otp/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone, purpose }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setRef(data.ref || "");
+        setStep("verify");
+        setCountdown(300);
+        setResult({ ok: true, msg: `OTP sent! Ref: ${data.ref || "N/A"}` });
+      } else {
+        setResult({ ok: false, msg: data.error || "Failed" });
+      }
+    } catch {
+      setResult({ ok: false, msg: "Network error" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerify = async () => {
+    if (!code) return;
+    setLoading(true);
+    setResult(null);
+    try {
+      const res = await fetch("/api/v1/otp/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ref, code, phone }),
+      });
+      const data = await res.json();
+      if (res.ok && data.verified) {
+        setResult({ ok: true, msg: "OTP verified successfully!" });
+        setStep("generate");
+        setCode("");
+        setRef("");
+        setCountdown(0);
+      } else {
+        setResult({ ok: false, msg: data.error || "Invalid OTP" });
+      }
+    } catch {
+      setResult({ ok: false, msg: "Network error" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const mins = Math.floor(countdown / 60);
+  const secs = countdown % 60;
+
+  return (
+    <div className="glass p-6 mb-8 relative overflow-hidden">
+      <div className="absolute top-0 right-0 w-[200px] h-[200px] rounded-full bg-violet-500/5 blur-[60px]" />
+
+      <div className="relative">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-base font-semibold flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500/15 to-orange-500/10 border border-amber-500/20 flex items-center justify-center">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-amber-400">
+                <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+              </svg>
+            </div>
+            <span className="gradient-text-mixed">ทดสอบ OTP</span>
+          </h2>
+          {countdown > 0 && (
+            <span className="text-xs font-mono text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
+              หมดอายุใน {mins}:{secs.toString().padStart(2, "0")}
+            </span>
+          )}
+        </div>
+
+        {/* Steps indicator */}
+        <div className="flex items-center gap-3 mb-5">
+          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${step === "generate" ? "bg-violet-500/15 text-violet-400 border border-violet-500/20" : "text-[var(--text-muted)]"}`}>
+            <span className="w-5 h-5 rounded-full bg-violet-500/20 flex items-center justify-center text-[10px] font-bold">1</span>
+            Generate
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[var(--text-muted)]"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
+          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${step === "verify" ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20" : "text-[var(--text-muted)]"}`}>
+            <span className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center text-[10px] font-bold">2</span>
+            Verify
+          </div>
+        </div>
+
+        {step === "generate" ? (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1.5 font-medium">เบอร์โทร</label>
+              <input
+                type="tel"
+                className="input-glass"
+                placeholder="0891234567"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1.5 font-medium">Purpose</label>
+              <select
+                className="input-glass appearance-none cursor-pointer"
+                value={purpose}
+                onChange={(e) => setPurpose(e.target.value)}
+              >
+                <option value="verify" className="bg-[var(--bg-elevated)]">verify</option>
+                <option value="login" className="bg-[var(--bg-elevated)]">login</option>
+                <option value="transaction" className="bg-[var(--bg-elevated)]">transaction</option>
+              </select>
+            </div>
+            <div className="flex items-end">
+              <button
+                onClick={handleGenerate}
+                disabled={loading || !phone}
+                className="btn-primary w-full py-2.5 rounded-xl text-sm font-semibold disabled:opacity-40 flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>
+                ) : (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" /></svg>
+                )}
+                Send OTP
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1.5 font-medium">Ref Code</label>
+              <div className="input-glass bg-[var(--bg-surface)] cursor-default text-violet-400 font-mono text-sm">{ref || "—"}</div>
+            </div>
+            <div>
+              <label className="block text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1.5 font-medium">OTP Code</label>
+              <input
+                type="text"
+                className="input-glass font-mono text-center text-lg tracking-[0.3em]"
+                placeholder="000000"
+                maxLength={6}
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+              />
+            </div>
+            <div className="flex items-end gap-2">
+              <button
+                onClick={handleVerify}
+                disabled={loading || code.length !== 6}
+                className="btn-primary flex-1 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-40 flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>
+                ) : (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>
+                )}
+                Verify
+              </button>
+              <button
+                onClick={() => { setStep("generate"); setCode(""); setRef(""); setCountdown(0); setResult(null); }}
+                className="btn-glass px-3 py-2.5 rounded-xl text-sm"
+                title="Reset"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 4v6h6M23 20v-6h-6" /><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15" /></svg>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {result && (
+          <div className={`mt-4 px-4 py-3 rounded-xl text-sm font-medium border ${result.ok ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-red-500/10 text-red-400 border-red-500/20"}`}>
+            {result.msg}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function OtpPage() {
   const [activeTab, setActiveTab] = useState<"generate" | "verify">("generate");
 
@@ -309,6 +506,9 @@ export default function OtpPage() {
           )}
         </div>
       </div>
+
+      {/* ═══ Live Test Panel ═══ */}
+      <OtpTestPanel />
 
       {/* Quick Start Code */}
       <div className="glass p-6 mb-8">

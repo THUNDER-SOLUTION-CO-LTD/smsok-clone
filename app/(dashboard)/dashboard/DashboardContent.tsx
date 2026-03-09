@@ -73,44 +73,42 @@ function MiniChart({ data, color }: { data: number[]; color: string }) {
   );
 }
 
-/* ── SVG Area Chart — 7-day SMS ── */
+/* ── Recharts Area Chart — 7-day SMS ── */
 const chartData7d = [
-  { day: "จ", value: 120, label: "จันทร์" },
-  { day: "อ", value: 180, label: "อังคาร" },
-  { day: "พ", value: 150, label: "พุธ" },
-  { day: "พฤ", value: 220, label: "พฤหัส" },
-  { day: "ศ", value: 310, label: "ศุกร์" },
-  { day: "ส", value: 190, label: "เสาร์" },
-  { day: "อา", value: 140, label: "อาทิตย์" },
+  { day: "จันทร์", short: "จ", sms: 120, delivered: 112, failed: 8 },
+  { day: "อังคาร", short: "อ", sms: 180, delivered: 174, failed: 6 },
+  { day: "พุธ", short: "พ", sms: 150, delivered: 145, failed: 5 },
+  { day: "พฤหัส", short: "พฤ", sms: 220, delivered: 215, failed: 5 },
+  { day: "ศุกร์", short: "ศ", sms: 310, delivered: 302, failed: 8 },
+  { day: "เสาร์", short: "ส", sms: 190, delivered: 185, failed: 5 },
+  { day: "อาทิตย์", short: "อา", sms: 140, delivered: 136, failed: 4 },
 ];
 
-function AreaChart() {
-  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
-  const max = Math.max(...chartData7d.map((d) => d.value));
-  const total = chartData7d.reduce((a, b) => a + b.value, 0);
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function ChartTooltip({ active, payload, label }: any) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="rounded-xl border border-violet-500/20 bg-[#0B1120]/95 backdrop-blur-xl px-4 py-3 shadow-xl shadow-violet-500/10">
+      <p className="text-xs font-semibold text-[var(--text-primary)] mb-2">{label}</p>
+      {payload.map((entry: any) => (
+        <div key={entry.dataKey} className="flex items-center justify-between gap-4 text-[11px]">
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
+            <span className="text-[var(--text-muted)]">
+              {entry.dataKey === "sms" ? "ทั้งหมด" : entry.dataKey === "delivered" ? "สำเร็จ" : "ล้มเหลว"}
+            </span>
+          </span>
+          <span className="font-semibold text-[var(--text-primary)]">{entry.value}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
+function SmsAreaChart() {
+  const total = chartData7d.reduce((a, b) => a + b.sms, 0);
   const avg = Math.round(total / chartData7d.length);
-  const w = 600;
-  const h = 220;
-  const px = 50;
-  const py = 30;
-  const gw = w - px * 2;
-  const gh = h - py * 2;
-
-  const points = chartData7d.map((d, i) => ({
-    x: px + (i / (chartData7d.length - 1)) * gw,
-    y: py + gh - (d.value / max) * gh,
-  }));
-
-  const linePath = points.map((p, i) => {
-    if (i === 0) return `M${p.x},${p.y}`;
-    const prev = points[i - 1];
-    const cpx = (prev.x + p.x) / 2;
-    return `C${cpx},${prev.y} ${cpx},${p.y} ${p.x},${p.y}`;
-  }).join(" ");
-
-  const areaPath = `${linePath} L${points[points.length - 1].x},${h - py} L${points[0].x},${h - py} Z`;
-
-  const avgY = py + gh - (avg / max) * gh;
 
   return (
     <div className="relative">
@@ -121,117 +119,93 @@ function AreaChart() {
           <span className="text-[11px] text-[var(--text-muted)]">รวม {total.toLocaleString()} ข้อความ</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-3 h-0.5 rounded-full bg-amber-400/50" />
+          <div className="w-2 h-2 rounded-full bg-emerald-400/60" />
+          <span className="text-[11px] text-[var(--text-muted)]">สำเร็จ</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-red-400/60" />
+          <span className="text-[11px] text-[var(--text-muted)]">ล้มเหลว</span>
+        </div>
+        <div className="flex items-center gap-2 ml-auto">
+          <div className="w-3 h-0.5 rounded-full bg-amber-400/40" />
           <span className="text-[11px] text-[var(--text-muted)]">เฉลี่ย {avg}/วัน</span>
         </div>
       </div>
 
-      <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-auto" onMouseLeave={() => setHoveredIdx(null)}>
-        <defs>
-          <linearGradient id="areaGrad2" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#8B5CF6" stopOpacity="0.35" />
-            <stop offset="50%" stopColor="#22D3EE" stopOpacity="0.1" />
-            <stop offset="100%" stopColor="#8B5CF6" stopOpacity="0" />
-          </linearGradient>
-          <linearGradient id="lineGrad2" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#22D3EE" />
-            <stop offset="40%" stopColor="#8B5CF6" />
-            <stop offset="80%" stopColor="#EC4899" />
-            <stop offset="100%" stopColor="#F59E0B" />
-          </linearGradient>
-          <filter id="glow">
-            <feGaussianBlur stdDeviation="3" result="coloredBlur" />
-            <feMerge>
-              <feMergeNode in="coloredBlur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-          <filter id="dotGlow">
-            <feGaussianBlur stdDeviation="2" result="coloredBlur" />
-            <feMerge>
-              <feMergeNode in="coloredBlur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        </defs>
+      <ResponsiveContainer width="100%" height={260}>
+        <RechartsAreaChart data={chartData7d} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+          <defs>
+            <linearGradient id="gradSms" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#8B5CF6" stopOpacity={0.35} />
+              <stop offset="50%" stopColor="#22D3EE" stopOpacity={0.1} />
+              <stop offset="100%" stopColor="#8B5CF6" stopOpacity={0} />
+            </linearGradient>
+            <linearGradient id="gradDelivered" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#10B981" stopOpacity={0.25} />
+              <stop offset="100%" stopColor="#10B981" stopOpacity={0} />
+            </linearGradient>
+            <linearGradient id="gradFailed" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#EF4444" stopOpacity={0.2} />
+              <stop offset="100%" stopColor="#EF4444" stopOpacity={0} />
+            </linearGradient>
+          </defs>
 
-        {/* Y-axis labels */}
-        {[0, 0.25, 0.5, 0.75, 1].map((t) => (
-          <g key={t}>
-            <line x1={px} y1={py + gh * (1 - t)} x2={w - px} y2={py + gh * (1 - t)} stroke="rgba(148,163,184,0.05)" strokeWidth="1" />
-            <text x={px - 8} y={py + gh * (1 - t) + 4} textAnchor="end" fill="rgba(148,163,184,0.3)" fontSize="9" fontFamily="'Inter', sans-serif">
-              {Math.round(max * t)}
-            </text>
-          </g>
-        ))}
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.06)" vertical={false} />
 
-        {/* Avg line */}
-        <line x1={px} y1={avgY} x2={w - px} y2={avgY} stroke="rgba(245,158,11,0.2)" strokeWidth="1" strokeDasharray="6 4" />
-        <text x={w - px + 6} y={avgY + 3} fill="rgba(245,158,11,0.4)" fontSize="8" fontFamily="'Inter', sans-serif">avg</text>
+          <XAxis
+            dataKey="day"
+            axisLine={false}
+            tickLine={false}
+            tick={{ fill: "rgba(148,163,184,0.4)", fontSize: 11, fontFamily: "'Noto Sans Thai', 'Inter', sans-serif" }}
+            dy={8}
+          />
+          <YAxis
+            axisLine={false}
+            tickLine={false}
+            tick={{ fill: "rgba(148,163,184,0.3)", fontSize: 9, fontFamily: "'Inter', sans-serif" }}
+            width={40}
+          />
 
-        {/* Area fill */}
-        <motion.path d={areaPath} fill="url(#areaGrad2)" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1, delay: 0.3 }} />
+          <Tooltip content={<ChartTooltip />} cursor={{ stroke: "rgba(139,92,246,0.15)", strokeDasharray: "4 4" }} />
 
-        {/* Line with glow */}
-        <motion.path d={linePath} fill="none" stroke="url(#lineGrad2)" strokeWidth="2.5" strokeLinecap="round" filter="url(#glow)" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1.8, ease: "easeInOut" }} />
+          <ReferenceLine y={avg} stroke="rgba(245,158,11,0.25)" strokeDasharray="6 4" label={{ value: "avg", position: "right", fill: "rgba(245,158,11,0.4)", fontSize: 9 }} />
 
-        {/* Interactive hover zones */}
-        {points.map((p, i) => (
-          <g key={i}>
-            <rect
-              x={p.x - gw / chartData7d.length / 2}
-              y={py}
-              width={gw / chartData7d.length}
-              height={gh}
-              fill="transparent"
-              onMouseEnter={() => setHoveredIdx(i)}
-              style={{ cursor: "crosshair" }}
-            />
-
-            {hoveredIdx === i && (
-              <line x1={p.x} y1={py} x2={p.x} y2={h - py} stroke="rgba(139,92,246,0.15)" strokeWidth="1" strokeDasharray="3 3" />
-            )}
-
-            <motion.circle
-              cx={p.x} cy={p.y} r={hoveredIdx === i ? 6 : 4}
-              fill={hoveredIdx === i ? "#EC4899" : "#8B5CF6"}
-              stroke="#0B1120"
-              strokeWidth="2"
-              filter={hoveredIdx === i ? "url(#dotGlow)" : undefined}
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.3 + i * 0.08, type: "spring", stiffness: 300 }}
-            />
-
-            <text x={p.x} y={h - 6} textAnchor="middle" fill={hoveredIdx === i ? "rgba(226,232,240,0.9)" : "rgba(148,163,184,0.4)"} fontSize="10" fontWeight={hoveredIdx === i ? "600" : "400"} fontFamily="'Noto Sans Thai', 'Inter', sans-serif">
-              {chartData7d[i].day}
-            </text>
-
-            <motion.text
-              x={p.x} y={p.y - 14}
-              textAnchor="middle"
-              fill={hoveredIdx === i ? "#fff" : "rgba(226,232,240,0.6)"}
-              fontSize={hoveredIdx === i ? "12" : "10"}
-              fontWeight="600"
-              fontFamily="'Inter', sans-serif"
-              initial={{ opacity: 0, y: 5 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 + i * 0.08 }}
-            >
-              {chartData7d[i].value}
-            </motion.text>
-
-            {hoveredIdx === i && (
-              <g>
-                <rect x={p.x - 40} y={p.y - 48} width="80" height="24" rx="6" fill="rgba(11,17,32,0.9)" stroke="rgba(139,92,246,0.3)" strokeWidth="1" />
-                <text x={p.x} y={p.y - 32} textAnchor="middle" fill="#E2E8F0" fontSize="10" fontFamily="'Noto Sans Thai', 'Inter', sans-serif">
-                  {chartData7d[i].label} · {chartData7d[i].value}
-                </text>
-              </g>
-            )}
-          </g>
-        ))}
-      </svg>
+          <Area
+            type="monotone"
+            dataKey="sms"
+            stroke="#8B5CF6"
+            strokeWidth={2.5}
+            fill="url(#gradSms)"
+            dot={{ r: 4, fill: "#8B5CF6", stroke: "#0B1120", strokeWidth: 2 }}
+            activeDot={{ r: 6, fill: "#EC4899", stroke: "#0B1120", strokeWidth: 2 }}
+            animationDuration={1800}
+            animationEasing="ease-in-out"
+          />
+          <Area
+            type="monotone"
+            dataKey="delivered"
+            stroke="#10B981"
+            strokeWidth={1.5}
+            strokeDasharray="4 2"
+            fill="url(#gradDelivered)"
+            dot={false}
+            activeDot={{ r: 4, fill: "#10B981", stroke: "#0B1120", strokeWidth: 2 }}
+            animationDuration={2000}
+            animationEasing="ease-in-out"
+          />
+          <Area
+            type="monotone"
+            dataKey="failed"
+            stroke="#EF4444"
+            strokeWidth={1}
+            fill="url(#gradFailed)"
+            dot={false}
+            activeDot={{ r: 3, fill: "#EF4444", stroke: "#0B1120", strokeWidth: 2 }}
+            animationDuration={2200}
+            animationEasing="ease-in-out"
+          />
+        </RechartsAreaChart>
+      </ResponsiveContainer>
     </div>
   );
 }
@@ -593,7 +567,7 @@ export default function DashboardContent({ user, stats, senderNames = ["EasySlip
             </div>
           </div>
 
-          <AreaChart />
+          <SmsAreaChart />
         </div>
       </motion.div>
 
