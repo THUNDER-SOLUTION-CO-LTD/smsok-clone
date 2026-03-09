@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import CustomSelect from "@/components/ui/CustomSelect";
 
 type Message = {
   id: string;
@@ -114,22 +115,18 @@ export default function MessagesClient({
           />
         </div>
         <div className="relative">
-          <select
-            className="input-glass cursor-pointer appearance-none pr-10 min-w-[140px]"
+          <CustomSelect
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="all" className="bg-[var(--bg-elevated)] text-white">ทุกสถานะ</option>
-            <option value="delivered" className="bg-[var(--bg-elevated)] text-white">ส่งสำเร็จ</option>
-            <option value="sent" className="bg-[var(--bg-elevated)] text-white">ส่งแล้ว</option>
-            <option value="pending" className="bg-[var(--bg-elevated)] text-white">รอส่ง</option>
-            <option value="failed" className="bg-[var(--bg-elevated)] text-white">ล้มเหลว</option>
-          </select>
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--text-muted)]">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M6 9l6 6 6-6" />
-            </svg>
-          </div>
+            onChange={setStatusFilter}
+            options={[
+              { value: "all", label: "ทุกสถานะ" },
+              { value: "delivered", label: "ส่งสำเร็จ" },
+              { value: "sent", label: "ส่งแล้ว" },
+              { value: "pending", label: "รอส่ง" },
+              { value: "failed", label: "ล้มเหลว" },
+            ]}
+            className="min-w-[140px]"
+          />
         </div>
       </motion.div>
 

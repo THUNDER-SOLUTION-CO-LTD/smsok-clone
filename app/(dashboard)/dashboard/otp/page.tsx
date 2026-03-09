@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { generateOtpForSession, verifyOtpForSession } from "@/lib/actions/otp";
 import { blockNonNumeric, fieldCls } from "@/lib/form-utils";
+import CustomSelect from "@/components/ui/CustomSelect";
 
 const features = [
   {
@@ -205,15 +206,15 @@ function OtpTestPanel() {
             </div>
             <div>
               <label className="block text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1.5 font-medium">Purpose</label>
-              <select
-                className="input-glass appearance-none cursor-pointer"
+              <CustomSelect
                 value={purpose}
-                onChange={(e) => setPurpose(e.target.value)}
-              >
-                <option value="verify" className="bg-[var(--bg-elevated)]">verify</option>
-                <option value="login" className="bg-[var(--bg-elevated)]">login</option>
-                <option value="transaction" className="bg-[var(--bg-elevated)]">transaction</option>
-              </select>
+                onChange={setPurpose}
+                options={[
+                  { value: "verify", label: "verify" },
+                  { value: "login", label: "login" },
+                  { value: "transaction", label: "transaction" },
+                ]}
+              />
             </div>
             <div>
               <button

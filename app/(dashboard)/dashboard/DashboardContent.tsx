@@ -14,6 +14,7 @@ import {
   ReferenceLine,
 } from "recharts";
 import { sendSms } from "@/lib/actions/sms";
+import CustomSelect from "@/components/ui/CustomSelect";
 
 type User = {
   id: string;
@@ -613,22 +614,14 @@ export default function DashboardContent({ user, stats, senderNames = ["EasySlip
             <div className="space-y-3.5">
               <div>
                 <label className="block text-xs text-[var(--text-muted)] mb-1.5 font-medium">ชื่อผู้ส่ง</label>
-                <div className="relative">
-                  <select
-                    className="input-glass cursor-pointer appearance-none pr-10"
-                    value={senderName}
-                    onChange={(e) => setSenderName(e.target.value)}
-                  >
-                    {senderNames.map((name) => (
-                      <option key={name} value={name} className="bg-[var(--bg-elevated)] text-white">
-                        {name === "EasySlip" ? "EasySlip (ค่าเริ่มต้น)" : name}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--text-muted)]">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6" /></svg>
-                  </div>
-                </div>
+                <CustomSelect
+                  value={senderName}
+                  onChange={setSenderName}
+                  options={senderNames.map((name) => ({
+                    value: name,
+                    label: name === "EasySlip" ? "EasySlip (ค่าเริ่มต้น)" : name,
+                  }))}
+                />
               </div>
               <div>
                 <label className="block text-xs text-[var(--text-muted)] mb-1.5 font-medium">เบอร์ปลายทาง</label>

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { sendSms, sendBatchSms } from "@/lib/actions/sms";
 import { smsCounterText } from "@/lib/form-utils";
 import { calculateCreditCost, calculateSmsCount } from "@/lib/validations";
+import CustomSelect from "@/components/ui/CustomSelect";
 
 type MsgType = "english" | "thai" | "unicode";
 
@@ -120,25 +121,14 @@ export default function SendSmsForm({ userId, senderNames = ["EasySlip"] }: { us
             {/* Sender Name */}
             <div>
               <label className="block text-xs text-slate-300 uppercase tracking-wider mb-2">ชื่อผู้ส่ง</label>
-              <div className="relative">
-                <select
-                  className="input-glass cursor-pointer appearance-none pr-10"
-                  value={senderName}
-                  onChange={(e) => setSenderName(e.target.value)}
-                >
-                  <option value="EasySlip" className="bg-[#0a0f1a] text-white">EasySlip (ค่าเริ่มต้น)</option>
-                  {senderNames.filter(n => n !== "EasySlip").map((name) => (
-                    <option key={name} value={name} className="bg-[#0a0f1a] text-white">
-                      {name}
-                    </option>
-                  ))}
-                </select>
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-300">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M6 9l6 6 6-6" />
-                  </svg>
-                </div>
-              </div>
+              <CustomSelect
+                value={senderName}
+                onChange={setSenderName}
+                options={[
+                  { value: "EasySlip", label: "EasySlip (ค่าเริ่มต้น)" },
+                  ...senderNames.filter((n) => n !== "EasySlip").map((name) => ({ value: name, label: name })),
+                ]}
+              />
               <p className="text-[11px] text-slate-300 mt-1.5">
                 {senderName === "EasySlip" ? "ใช้ชื่อค่าเริ่มต้นได้เลย หรือ" : "Sender ที่ผ่านอนุมัติแล้ว — "}{" "}
                 <a href="/dashboard/senders" className="text-violet-400 hover:text-violet-300 transition-colors">ขอ Sender Name ใหม่ →</a>

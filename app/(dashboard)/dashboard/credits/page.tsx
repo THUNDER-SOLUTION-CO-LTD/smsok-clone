@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import CustomSelect from "@/components/ui/CustomSelect";
 
 type CreditEntry = {
   id: string;
@@ -111,21 +112,17 @@ export default function CreditsPage() {
             </div>
             <div>
               <label className="block text-[11px] text-[var(--text-muted)] mb-1.5 font-medium uppercase tracking-wider">ประเภท</label>
-              <div className="relative">
-                <select
-                  value={typeFilter}
-                  onChange={(e) => setTypeFilter(e.target.value as "" | CreditEntry["type"])}
-                  className="input-glass text-sm py-2 pl-3 pr-8 appearance-none cursor-pointer w-[160px]"
-                >
-                  <option value="">ทุกประเภท</option>
-                  <option value="TOPUP">เติมเครดิต</option>
-                  <option value="SMS_SEND">ส่ง SMS</option>
-                  <option value="REFUND">คืนเครดิต</option>
-                </select>
-                <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--text-muted)]">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6" /></svg>
-                </div>
-              </div>
+              <CustomSelect
+                value={typeFilter}
+                onChange={(v) => setTypeFilter(v as "" | CreditEntry["type"])}
+                className="w-[160px]"
+                options={[
+                  { value: "", label: "ทุกประเภท" },
+                  { value: "TOPUP", label: "เติมเครดิต" },
+                  { value: "SMS_SEND", label: "ส่ง SMS" },
+                  { value: "REFUND", label: "คืนเครดิต" },
+                ]}
+              />
             </div>
             <motion.button
               onClick={handleFilter}

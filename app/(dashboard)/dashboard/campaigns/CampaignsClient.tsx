@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { createCampaign } from "@/lib/actions/campaigns";
 import { allowAlphaNumericSpace, fieldCls } from "@/lib/form-utils";
+import CustomSelect from "@/components/ui/CustomSelect";
 
 // ─── Types ────────────────────────────────────────────────────────────────
 type CampaignStatus = "draft" | "scheduled" | "running" | "completed" | "cancelled";
@@ -382,18 +383,15 @@ export default function CampaignsClient({
                 <label className="block text-xs text-[var(--text-secondary)] uppercase tracking-wider mb-2">
                   กลุ่มผู้รับ *
                 </label>
-                <select
-                  className="input-glass"
+                <CustomSelect
                   value={formGroup}
-                  onChange={(e) => setFormGroup(e.target.value)}
-                >
-                  <option value="">-- เลือกกลุ่ม --</option>
-                  {groups.map((g) => (
-                    <option key={g.id} value={g.id}>
-                      {g.name} ({g.count.toLocaleString()} รายชื่อ)
-                    </option>
-                  ))}
-                </select>
+                  onChange={setFormGroup}
+                  placeholder="-- เลือกกลุ่ม --"
+                  options={groups.map((g) => ({
+                    value: g.id,
+                    label: `${g.name} (${g.count.toLocaleString()} รายชื่อ)`,
+                  }))}
+                />
               </div>
 
               {/* Template */}
@@ -401,18 +399,12 @@ export default function CampaignsClient({
                 <label className="block text-xs text-[var(--text-secondary)] uppercase tracking-wider mb-2">
                   เทมเพลต *
                 </label>
-                <select
-                  className="input-glass"
+                <CustomSelect
                   value={formTemplate}
-                  onChange={(e) => setFormTemplate(e.target.value)}
-                >
-                  <option value="">-- เลือกเทมเพลต --</option>
-                  {templates.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setFormTemplate}
+                  placeholder="-- เลือกเทมเพลต --"
+                  options={templates.map((t) => ({ value: t.id, label: t.name }))}
+                />
               </div>
 
               {/* Schedule */}
