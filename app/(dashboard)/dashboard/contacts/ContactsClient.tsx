@@ -8,8 +8,6 @@ import {
   deleteContact,
   importContacts,
   exportContacts,
-  createContactGroup,
-  addContactsToGroup,
 } from "@/lib/actions/contacts";
 import { useRouter } from "next/navigation";
 import EmptyState from "@/app/components/ui/EmptyState";
@@ -27,12 +25,6 @@ type Contact = {
   email: string | null;
   tags: string | null;
   createdAt: string;
-};
-
-type ContactGroup = {
-  id: string;
-  name: string;
-  memberCount: number;
 };
 
 // ==========================================
@@ -285,12 +277,10 @@ export default function ContactsClient({
   userId,
   initialContacts,
   totalContacts,
-  initialGroups = [],
 }: {
   userId: string;
   initialContacts: Contact[];
   totalContacts: number;
-  initialGroups?: ContactGroup[];
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -320,15 +310,27 @@ export default function ContactsClient({
   // Selection state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  // Group state
-  const [showGroups, setShowGroups] = useState(false);
-  const [newGroupName, setNewGroupName] = useState("");
-  const [showGroupForm, setShowGroupForm] = useState(false);
-
   // Batch tag state
   const [showBatchTagInput, setShowBatchTagInput] = useState(false);
   const [batchTagValue, setBatchTagValue] = useState("");
   const [batchAction, setBatchAction] = useState<"add" | "remove">("add");
+
+  // Tag management state
+  const [showCreateTagModal, setShowCreateTagModal] = useState(false);
+  const [newTagName, setNewTagName] = useState("");
+  const [newTagColorIdx, setNewTagColorIdx] = useState(0);
+  const [quickTagContactId, setQuickTagContactId] = useState<string | null>(null);
+  const quickTagRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleOutside(e: MouseEvent) {
+      if (quickTagRef.current && !quickTagRef.current.contains(e.target as Node)) {
+        setQuickTagContactId(null);
+      }
+    }
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, []);
 
   // Delete state
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -519,48 +521,6 @@ export default function ContactsClient({
     });
   };
 
-  const handleCreateGroup = () => {
-    if (!newGroupName.trim()) return;
-    startTransition(async () => {
-      try {
-        await createContactGroup(userId, newGroupName.trim());
-        toast("success", `สร้างกลุ่ม "${newGroupName.trim()}" สำเร็จ`);
-        setNewGroupName("");
-        setShowGroupForm(false);
-        router.refresh();
-      } catch (e) {
-        toast(
-          "error",
-          e instanceof Error ? e.message : "เกิดข้อผิดพลาด",
-        );
-      }
-    });
-  };
-
-  const handleAddToGroup = (groupId: string) => {
-    if (selectedIds.size === 0) return;
-    startTransition(async () => {
-      try {
-        await addContactsToGroup(
-          userId,
-          groupId,
-          Array.from(selectedIds),
-        );
-        toast(
-          "success",
-          `เพิ่ม ${selectedIds.size} รายชื่อเข้ากลุ่มสำเร็จ`,
-        );
-        setSelectedIds(new Set());
-        router.refresh();
-      } catch (e) {
-        toast(
-          "error",
-          e instanceof Error ? e.message : "เกิดข้อผิดพลาด",
-        );
-      }
-    });
-  };
-
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -670,6 +630,23 @@ export default function ContactsClient({
     });
   };
 
+  const handleQuickTagToggle = (contactId: string, tag: string) => {
+    const contact = initialContacts.find((c) => c.id === contactId);
+    if (!contact) return;
+    const currentTags = parseTags(contact.tags);
+    const newTags = currentTags.includes(tag)
+      ? currentTags.filter((t) => t !== tag)
+      : [...currentTags, tag];
+    startTransition(async () => {
+      try {
+        await updateContact(userId, contactId, { tags: newTags.join(", ") });
+        router.refresh();
+      } catch {
+        toast("error", "เกิดข้อผิดพลาด");
+      }
+    });
+  };
+
   // ==========================================
   // Render
   // ==========================================
@@ -688,11 +665,7 @@ export default function ContactsClient({
             รายชื่อผู้ติดต่อ
           </h2>
           <p className="text-sm text-[var(--text-muted)] mt-1">
-            จัดการรายชื่อผู้ติดต่อ ({totalContacts} รายชื่อ
-            {initialGroups.length > 0
-              ? `, ${initialGroups.length} กลุ่ม`
-              : ""}
-            )
+            จัดการรายชื่อผู้ติดต่อ ({totalContacts} รายชื่อ)
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -813,224 +786,159 @@ export default function ContactsClient({
         </div>
       </div>
 
-      {/* Tag Filter Bar */}
-      {allTags.size > 0 && (
-        <motion.div
-          className="glass p-4 mb-4"
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <div className="flex items-center gap-2 mb-2">
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="text-[var(--text-muted)]"
-            >
+      {/* Tag Management Panel */}
+      <motion.div
+        className="glass p-4 mb-4"
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+      >
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-violet-400">
               <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z" />
               <line x1="7" y1="7" x2="7.01" y2="7" />
             </svg>
-            <span className="text-xs text-[var(--text-muted)] uppercase tracking-wider font-medium">
-              กรองตามแท็ก
-            </span>
+            <span className="text-xs text-[var(--text-secondary)] uppercase tracking-wider font-semibold">จัดการแท็ก</span>
+            {allTags.size > 0 && <span className="text-[10px] text-[var(--text-muted)] bg-white/5 px-1.5 py-0.5 rounded-md">{allTags.size} แท็ก</span>}
           </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setActiveTagFilter(null)}
-              className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-all ${
-                activeTagFilter === null
-                  ? "bg-white/10 text-white border border-white/20"
-                  : "bg-white/5 text-[var(--text-muted)] border border-transparent hover:bg-white/8 hover:text-slate-200"
-              }`}
-            >
-              ทั้งหมด ({totalContacts})
-            </button>
-            {Array.from(allTags.entries()).map(([tag, count]) => {
-              const color = getTagColor(tag);
-              const isActive = activeTagFilter === tag;
-              return (
-                <button
-                  key={tag}
-                  onClick={() =>
-                    setActiveTagFilter(isActive ? null : tag)
-                  }
-                  className={`text-xs px-3 py-1.5 rounded-lg font-semibold uppercase tracking-wider transition-all border ${
-                    isActive
-                      ? `${color.bg} ${color.text} ${color.border}`
-                      : `bg-white/5 text-[var(--text-muted)] border-transparent hover:bg-white/8`
-                  }`}
-                >
-                  {tag} ({count})
-                </button>
-              );
-            })}
-          </div>
-        </motion.div>
-      )}
-
-      {/* Contact Groups Section */}
-      <motion.div
-        className="glass mb-4 overflow-hidden"
-        initial={{ opacity: 0, y: -8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.15 }}
-      >
-        <button
-          onClick={() => setShowGroups(!showGroups)}
-          className="w-full flex items-center justify-between p-4 text-left hover:bg-white/[0.02] transition-colors"
-        >
-          <div className="flex items-center gap-2">
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="text-[var(--text-muted)]"
-            >
-              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
-              <circle cx="9" cy="7" r="4" />
-              <path d="M23 21v-2a4 4 0 00-3-3.87" />
-              <path d="M16 3.13a4 4 0 010 7.75" />
-            </svg>
-            <span className="text-xs text-[var(--text-muted)] uppercase tracking-wider font-medium">
-              กลุ่มผู้ติดต่อ ({initialGroups.length})
-            </span>
-          </div>
-          <motion.svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            className="text-[var(--text-muted)]"
-            animate={{ rotate: showGroups ? 180 : 0 }}
+          <motion.button
+            onClick={() => { setShowCreateTagModal(true); setNewTagName(""); setNewTagColorIdx(0); }}
+            className="btn-glass px-3 py-1.5 text-xs rounded-lg inline-flex items-center gap-1.5"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
           >
-            <polyline points="6 9 12 15 18 9" />
-          </motion.svg>
-        </button>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+            สร้างแท็ก
+          </motion.button>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setActiveTagFilter(null)}
+            className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full font-medium transition-all border ${
+              activeTagFilter === null
+                ? "bg-white/10 text-white border-white/20"
+                : "bg-white/5 text-[var(--text-muted)] border-transparent hover:bg-white/8 hover:text-slate-200"
+            }`}
+          >
+            ทั้งหมด
+            <span className="text-[10px] bg-white/10 px-1.5 rounded-full">{totalContacts}</span>
+          </button>
+          {Array.from(allTags.entries()).map(([tag, count]) => {
+            const color = getTagColor(tag);
+            const isActive = activeTagFilter === tag;
+            return (
+              <button
+                key={tag}
+                onClick={() => setActiveTagFilter(isActive ? null : tag)}
+                className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full font-semibold uppercase tracking-wider transition-all border ${
+                  isActive
+                    ? `${color.bg} ${color.text} ${color.border}`
+                    : "bg-white/5 text-[var(--text-muted)] border-transparent hover:bg-white/8 hover:text-slate-200"
+                }`}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${color.text.replace("text-", "bg-")}`} />
+                {tag}
+                <span className="text-[10px] bg-white/10 px-1.5 rounded-full">{count}</span>
+              </button>
+            );
+          })}
+          {allTags.size === 0 && (
+            <span className="text-xs text-[var(--text-muted)]">ยังไม่มีแท็ก — สร้างแท็กแรกของคุณ</span>
+          )}
+        </div>
+      </motion.div>
 
-        <AnimatePresence>
-          {showGroups && (
+      {/* Create Tag Modal */}
+      <AnimatePresence>
+        {showCreateTagModal && (
+          <motion.div
+            className="fixed inset-0 z-[70] flex items-center justify-center p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowCreateTagModal(false)} />
             <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.25 }}
-              className="overflow-hidden"
+              className="relative z-10 w-full max-w-sm rounded-2xl border border-white/10 bg-[#0D1526]/95 backdrop-blur-xl shadow-2xl p-6"
+              initial={{ scale: 0.95, y: 16 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 16 }}
+              transition={{ duration: 0.2 }}
             >
-              <div className="px-4 pb-4 border-t border-[var(--border-subtle)] pt-3">
-                {initialGroups.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    {initialGroups.map((group) => (
+              <h3 className="text-base font-semibold text-white mb-4 flex items-center gap-2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-violet-400"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z" /><line x1="7" y1="7" x2="7.01" y2="7" /></svg>
+                สร้างแท็กใหม่
+              </h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs text-[var(--text-muted)] uppercase tracking-wider mb-2 font-medium">ชื่อแท็ก</label>
+                  <input
+                    type="text"
+                    className="input-glass w-full"
+                    placeholder="เช่น VIP, ลูกค้าใหม่, Partner"
+                    value={newTagName}
+                    onChange={(e) => setNewTagName(e.target.value)}
+                    maxLength={20}
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && newTagName.trim()) {
+                        setActiveTagFilter(null);
+                        setShowCreateTagModal(false);
+                      }
+                    }}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-[var(--text-muted)] uppercase tracking-wider mb-2 font-medium">สี</label>
+                  <div className="flex gap-2">
+                    {TAG_COLORS.map((c, idx) => (
                       <button
-                        key={group.id}
-                        onClick={() => {
-                          if (hasSelection) {
-                            handleAddToGroup(group.id);
-                          }
-                        }}
-                        className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-all border ${
-                          hasSelection
-                            ? "bg-cyan-500/10 text-cyan-400 border-cyan-500/20 hover:bg-cyan-500/20 cursor-pointer"
-                            : "bg-white/5 text-[var(--text-secondary)] border-transparent"
-                        }`}
+                        key={idx}
+                        type="button"
+                        onClick={() => setNewTagColorIdx(idx)}
+                        className={`w-7 h-7 rounded-full border-2 transition-all flex items-center justify-center ${c.text.replace("text-", "bg-").replace("/40", "/60")} ${newTagColorIdx === idx ? "border-white scale-110" : "border-transparent scale-100"}`}
                       >
-                        {group.name} ({group.memberCount})
-                        {hasSelection && (
-                          <span className="ml-1 text-[10px] opacity-60">
-                            + เพิ่ม
-                          </span>
-                        )}
+                        {newTagColorIdx === idx && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>}
                       </button>
                     ))}
                   </div>
-                )}
-
-                {initialGroups.length === 0 && !showGroupForm && (
-                  <p className="text-xs text-[var(--text-muted)] mb-3">
-                    ยังไม่มีกลุ่ม
-                  </p>
-                )}
-
-                <AnimatePresence>
-                  {showGroupForm && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="flex gap-2 mb-3"
-                    >
-                      <input
-                        type="text"
-                        className="input-glass flex-1 !py-1.5 text-sm"
-                        placeholder="ชื่อกลุ่มใหม่..."
-                        value={newGroupName}
-                        onChange={(e) =>
-                          setNewGroupName(e.target.value)
-                        }
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") handleCreateGroup();
-                        }}
-                      />
-                      <motion.button
-                        onClick={handleCreateGroup}
-                        disabled={isPending || !newGroupName.trim()}
-                        className="btn-primary px-3 py-1.5 text-xs rounded-lg disabled:opacity-40"
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        บันทึก
-                      </motion.button>
-                      <motion.button
-                        onClick={() => {
-                          setShowGroupForm(false);
-                          setNewGroupName("");
-                        }}
-                        className="btn-glass px-3 py-1.5 text-xs rounded-lg"
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        ยกเลิก
-                      </motion.button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {!showGroupForm && (
-                  <button
-                    onClick={() => setShowGroupForm(true)}
-                    className="text-xs text-[var(--text-muted)] hover:text-slate-200 transition-colors flex items-center gap-1"
-                  >
-                    <svg
-                      width="12"
-                      height="12"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
-                      <line x1="12" y1="5" x2="12" y2="19" />
-                      <line x1="5" y1="12" x2="19" y2="12" />
-                    </svg>
-                    สร้างกลุ่มใหม่
-                  </button>
+                </div>
+                {newTagName.trim() && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-[var(--text-muted)]">ตัวอย่าง:</span>
+                    <TagChip tag={newTagName.trim()} size="sm" />
+                  </div>
                 )}
               </div>
+              <div className="flex gap-2 mt-5">
+                <motion.button
+                  onClick={() => {
+                    if (!newTagName.trim()) return;
+                    setActiveTagFilter(null);
+                    setShowCreateTagModal(false);
+                    setNewTagName("");
+                  }}
+                  disabled={!newTagName.trim()}
+                  className="btn-primary flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-40"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  สร้างแท็ก
+                </motion.button>
+                <motion.button
+                  onClick={() => setShowCreateTagModal(false)}
+                  className="btn-glass px-4 py-2.5 rounded-xl text-sm"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  ยกเลิก
+                </motion.button>
+              </div>
             </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Batch Actions Toolbar */}
       <AnimatePresence>
@@ -1358,26 +1266,62 @@ export default function ContactsClient({
                         {contact.email || "-"}
                       </td>
                       <td className="px-5 py-3.5 hidden md:table-cell">
-                        {contactTags.length > 0 ? (
-                          <div className="flex gap-1 flex-wrap items-center">
-                            {visibleTags.map((tag) => (
-                              <TagChip
-                                key={tag}
-                                tag={tag}
-                                size="xs"
-                              />
-                            ))}
-                            {overflowCount > 0 && (
-                              <span className="text-[10px] text-[var(--text-muted)] ml-0.5">
-                                +{overflowCount}
-                              </span>
-                            )}
+                        <div className="flex gap-1 flex-wrap items-center">
+                          {visibleTags.map((tag) => (
+                            <TagChip key={tag} tag={tag} size="xs" />
+                          ))}
+                          {overflowCount > 0 && (
+                            <span className="text-[10px] text-[var(--text-muted)] ml-0.5">+{overflowCount}</span>
+                          )}
+                          {/* Quick tag picker */}
+                          <div className="relative" ref={quickTagContactId === contact.id ? quickTagRef : undefined}>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setQuickTagContactId(quickTagContactId === contact.id ? null : contact.id);
+                              }}
+                              className="w-5 h-5 rounded-md bg-white/5 hover:bg-white/10 border border-white/5 hover:border-violet-500/20 flex items-center justify-center text-[var(--text-muted)] hover:text-violet-400 transition-all"
+                            >
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                            </button>
+                            <AnimatePresence>
+                              {quickTagContactId === contact.id && (
+                                <motion.div
+                                  initial={{ opacity: 0, y: -4, scale: 0.95 }}
+                                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                                  exit={{ opacity: 0, y: -4, scale: 0.95 }}
+                                  transition={{ duration: 0.12 }}
+                                  className="absolute left-0 top-7 z-50 w-48 rounded-xl border border-white/10 bg-[#0D1526]/95 backdrop-blur-xl shadow-2xl overflow-hidden"
+                                >
+                                  <div className="px-3 py-2 border-b border-white/5">
+                                    <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-medium">เพิ่ม/ลบแท็ก</span>
+                                  </div>
+                                  <div className="max-h-40 overflow-y-auto py-1">
+                                    {[...new Set([...allTagNames, ...TAG_PRESETS])].map((tag) => {
+                                      const active = contactTags.includes(tag);
+                                      const color = getTagColor(tag);
+                                      return (
+                                        <button
+                                          key={tag}
+                                          type="button"
+                                          onClick={() => handleQuickTagToggle(contact.id, tag)}
+                                          className={`w-full flex items-center justify-between px-3 py-2 text-xs hover:bg-white/5 transition-colors ${active ? color.text : "text-[var(--text-secondary)]"}`}
+                                        >
+                                          <span className="flex items-center gap-2">
+                                            <span className={`w-1.5 h-1.5 rounded-full ${active ? color.text.replace("text-", "bg-") : "bg-white/20"}`} />
+                                            {tag}
+                                          </span>
+                                          {active && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
                           </div>
-                        ) : (
-                          <span className="text-[var(--text-muted)]">
-                            -
-                          </span>
-                        )}
+                        </div>
                       </td>
                       <td className="px-5 py-3.5 text-right">
                         <div className="flex items-center justify-end gap-1.5">

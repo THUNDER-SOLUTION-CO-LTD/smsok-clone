@@ -1,16 +1,13 @@
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { getContacts, getContactGroups } from "@/lib/actions/contacts";
+import { getContacts } from "@/lib/actions/contacts";
 import ContactsClient from "./ContactsClient";
 
 export default async function ContactsPage() {
   const user = await getSession();
   if (!user) redirect("/login");
 
-  const [{ contacts, pagination }, groups] = await Promise.all([
-    getContacts(user.id),
-    getContactGroups(user.id),
-  ]);
+  const { contacts, pagination } = await getContacts(user.id);
 
   // Serialize dates for client component
   const serializedContacts = contacts.map((c: typeof contacts[number]) => ({
@@ -27,7 +24,6 @@ export default async function ContactsPage() {
       userId={user.id}
       initialContacts={serializedContacts}
       totalContacts={pagination.total}
-      initialGroups={groups}
     />
   );
 }
