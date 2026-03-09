@@ -164,11 +164,11 @@ export default function LandingPage() {
 
       {/* Ambient orbs */}
       <div className="fixed top-[-200px] left-1/2 -translate-x-1/2 w-[1000px] h-[800px] rounded-full pointer-events-none"
-        style={{ background: "radial-gradient(circle, rgba(14,165,233,0.15) 0%, rgba(56,189,248,0.05) 40%, transparent 70%)" }} />
+        style={{ background: "radial-gradient(circle, rgba(14,165,233,0.15) 0%, rgba(139,92,246,0.05) 40%, transparent 70%)" }} />
       <div className="fixed top-[30%] right-[-200px] w-[600px] h-[600px] rounded-full pointer-events-none animate-float"
         style={{ background: "radial-gradient(circle, rgba(129,140,248,0.1) 0%, transparent 70%)" }} />
       <div className="fixed bottom-[-100px] left-[-100px] w-[500px] h-[500px] rounded-full pointer-events-none"
-        style={{ background: "radial-gradient(circle, rgba(56,189,248,0.08) 0%, transparent 70%)", animationDelay: "3s" }} />
+        style={{ background: "radial-gradient(circle, rgba(139,92,246,0.08) 0%, transparent 70%)", animationDelay: "3s" }} />
 
       {/* === NAV === */}
       <nav className={`fixed top-0 w-full z-50 transition-all duration-500 ${
@@ -179,13 +179,13 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5 group">
             <div className="relative">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-sky-400 transition-all group-hover:drop-shadow-[0_0_8px_rgba(56,189,248,0.6)]">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-violet-400 transition-all group-hover:drop-shadow-[0_0_8px_rgba(139,92,246,0.6)]">
                 <path d="M12 2L2 7l10 5 10-5-10-5z" fill="currentColor" opacity="0.3" />
                 <path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-              <div className="absolute inset-0 bg-sky-400/20 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="absolute inset-0 bg-violet-400/20 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
-            <span className="text-xl font-bold neon-blue tracking-tight">SMSOK</span>
+            <span className="text-xl font-bold gradient-text-mixed tracking-tight">SMSOK</span>
           </Link>
 
           <div className="hidden md:flex items-center gap-8 text-sm text-white/40">
@@ -197,7 +197,7 @@ export default function LandingPage() {
             ].map((item) => (
               <a key={item.href} href={item.href} className="relative hover:text-white transition-colors duration-300 py-1 group">
                 {item.label}
-                <span className="absolute bottom-0 left-0 w-0 h-px bg-sky-400 group-hover:w-full transition-all duration-300" />
+                <span className="absolute bottom-0 left-0 w-0 h-px bg-violet-400 group-hover:w-full transition-all duration-300" />
               </a>
             ))}
           </div>
@@ -237,16 +237,16 @@ export default function LandingPage() {
       <section className="relative pt-32 sm:pt-40 pb-20 sm:pb-28 px-4 sm:px-6">
         <div className="max-w-5xl mx-auto text-center">
           {/* Badge */}
-          <div className="animate-fade-in inline-flex items-center gap-2 mb-6 sm:mb-8 px-4 py-1.5 rounded-full border border-sky-500/20 bg-sky-500/[0.06]">
+          <div className="animate-fade-in inline-flex items-center gap-2 mb-6 sm:mb-8 px-4 py-1.5 rounded-full border border-violet-500/20 bg-violet-500/[0.06]">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-glow-pulse" />
-            <span className="text-sky-300 text-xs sm:text-sm font-medium tracking-wide">ส่ง SMS ง่าย รวดเร็ว ราคาถูก</span>
+            <span className="text-cyan-300 text-xs sm:text-sm font-medium tracking-wide">ส่ง SMS ง่าย รวดเร็ว ราคาถูก</span>
           </div>
 
           {/* Heading */}
           <h1 className="animate-fade-in text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold leading-[1.1] mb-6 sm:mb-8" style={{ animationDelay: "0.1s" }}>
             <span className="text-white">แพลตฟอร์มส่ง</span>
             <br className="sm:hidden" />
-            <span className="neon-blue"> SMS</span>
+            <span className="gradient-text-mixed"> SMS</span>
             <br />
             <span className="bg-gradient-to-r from-white/90 via-white/70 to-white/50 bg-clip-text text-transparent">ที่ธุรกิจไว้วางใจ</span>
           </h1>
@@ -287,7 +287,7 @@ export default function LandingPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-white/[0.04]">
               {stats.map((s) => (
                 <div key={s.label} className="px-4 py-5 sm:py-6 text-center group">
-                  <div className="text-2xl sm:text-3xl font-bold neon-blue mb-1 group-hover:scale-110 transition-transform">{s.value}</div>
+                  <div className="text-2xl sm:text-3xl font-bold gradient-text-mixed mb-1 group-hover:scale-110 transition-transform">{s.value}</div>
                   <div className="text-[11px] sm:text-xs text-white/30 uppercase tracking-wider">{s.label}</div>
                 </div>
               ))}
@@ -300,9 +300,9 @@ export default function LandingPage() {
       <section id="why" className="py-20 sm:py-28 px-4 sm:px-6 scroll-mt-20 relative">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12 sm:mb-16">
-            <div className="inline-block text-xs font-semibold text-sky-400/60 uppercase tracking-[0.2em] mb-3">Why Choose Us</div>
+            <div className="inline-block text-xs font-semibold text-violet-400/60 uppercase tracking-[0.2em] mb-3">Why Choose Us</div>
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">
-              ทำไมต้อง <span className="neon-blue">SMSOK</span>?
+              ทำไมต้อง <span className="gradient-text-mixed">SMSOK</span>?
             </h2>
             <p className="text-white/35 max-w-xl mx-auto text-sm sm:text-base">บริการส่ง SMS ที่ครบทุกฟีเจอร์ ในราคาที่ถูกที่สุด</p>
           </div>
@@ -314,7 +314,7 @@ export default function LandingPage() {
                 className="glass card-glow p-5 sm:p-6 text-center group animate-fade-in"
                 style={{ animationDelay: `${i * 0.08}s` }}
               >
-                <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-sky-500/[0.08] border border-sky-500/10 flex items-center justify-center text-sky-400/70 group-hover:text-sky-300 group-hover:bg-sky-500/[0.12] group-hover:border-sky-500/20 group-hover:shadow-[0_0_20px_rgba(56,189,248,0.15)] transition-all duration-500">
+                <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-violet-500/[0.08] border border-violet-500/10 flex items-center justify-center text-violet-400/70 group-hover:text-cyan-300 group-hover:bg-violet-500/[0.12] group-hover:border-violet-500/20 group-hover:shadow-[0_0_20px_rgba(139,92,246,0.15)] transition-all duration-500">
                   {b.icon}
                 </div>
                 <h3 className="font-semibold text-white mb-1.5 text-xs sm:text-sm md:text-base">{b.title}</h3>
@@ -329,7 +329,7 @@ export default function LandingPage() {
       <section id="features" className="py-20 sm:py-28 px-4 sm:px-6 scroll-mt-20 relative">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12 sm:mb-16">
-            <div className="inline-block text-xs font-semibold text-indigo-400/60 uppercase tracking-[0.2em] mb-3">Features</div>
+            <div className="inline-block text-xs font-semibold text-cyan-400/60 uppercase tracking-[0.2em] mb-3">Features</div>
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">
               ฟีเจอร์<span className="neon-violet">ครบ</span>ทุกความต้องการ
             </h2>
@@ -343,7 +343,7 @@ export default function LandingPage() {
                 className="glass card-glow p-6 sm:p-8 flex gap-5 group animate-fade-in"
                 style={{ animationDelay: `${i * 0.1}s` }}
               >
-                <div className="w-14 h-14 flex-shrink-0 rounded-xl bg-indigo-500/[0.08] border border-indigo-500/10 flex items-center justify-center text-indigo-400/60 group-hover:text-indigo-300 group-hover:bg-indigo-500/[0.12] group-hover:border-indigo-500/20 group-hover:shadow-[0_0_20px_rgba(129,140,248,0.15)] transition-all duration-500">
+                <div className="w-14 h-14 flex-shrink-0 rounded-xl bg-cyan-500/[0.08] border border-cyan-500/10 flex items-center justify-center text-cyan-400/60 group-hover:text-indigo-300 group-hover:bg-cyan-500/[0.12] group-hover:border-cyan-500/20 group-hover:shadow-[0_0_20px_rgba(129,140,248,0.15)] transition-all duration-500">
                   {f.icon}
                 </div>
                 <div>
@@ -371,16 +371,16 @@ export default function LandingPage() {
             </div>
             {/* Code */}
             <div className="p-5 sm:p-6 font-mono text-xs sm:text-sm leading-relaxed overflow-x-auto">
-              <div><span className="text-indigo-400">const</span> <span className="text-sky-300">response</span> <span className="text-white/50">=</span> <span className="text-indigo-400">await</span> <span className="text-emerald-400">fetch</span><span className="text-white/40">(</span></div>
+              <div><span className="text-cyan-400">const</span> <span className="text-cyan-300">response</span> <span className="text-white/50">=</span> <span className="text-cyan-400">await</span> <span className="text-emerald-400">fetch</span><span className="text-white/40">(</span></div>
               <div className="pl-4"><span className="text-amber-300">{`"https://api.smsok.com/v1/send"`}</span><span className="text-white/40">,</span></div>
               <div className="pl-4"><span className="text-white/40">{"{"}</span></div>
-              <div className="pl-8"><span className="text-sky-300">method</span><span className="text-white/40">:</span> <span className="text-amber-300">{`"POST"`}</span><span className="text-white/40">,</span></div>
-              <div className="pl-8"><span className="text-sky-300">headers</span><span className="text-white/40">:</span> <span className="text-white/40">{"{"}</span></div>
+              <div className="pl-8"><span className="text-cyan-300">method</span><span className="text-white/40">:</span> <span className="text-amber-300">{`"POST"`}</span><span className="text-white/40">,</span></div>
+              <div className="pl-8"><span className="text-cyan-300">headers</span><span className="text-white/40">:</span> <span className="text-white/40">{"{"}</span></div>
               <div className="pl-12"><span className="text-amber-300">{`"Authorization"`}</span><span className="text-white/40">:</span> <span className="text-amber-300">{`"Bearer \${API_KEY}"`}</span></div>
               <div className="pl-8"><span className="text-white/40">{"}"}</span><span className="text-white/40">,</span></div>
-              <div className="pl-8"><span className="text-sky-300">body</span><span className="text-white/40">:</span> <span className="text-emerald-400">JSON</span><span className="text-white/40">.</span><span className="text-emerald-400">stringify</span><span className="text-white/40">({"{"}</span></div>
-              <div className="pl-12"><span className="text-sky-300">to</span><span className="text-white/40">:</span> <span className="text-amber-300">{`"0891234567"`}</span><span className="text-white/40">,</span></div>
-              <div className="pl-12"><span className="text-sky-300">message</span><span className="text-white/40">:</span> <span className="text-amber-300">{`"Your OTP is 1234"`}</span></div>
+              <div className="pl-8"><span className="text-cyan-300">body</span><span className="text-white/40">:</span> <span className="text-emerald-400">JSON</span><span className="text-white/40">.</span><span className="text-emerald-400">stringify</span><span className="text-white/40">({"{"}</span></div>
+              <div className="pl-12"><span className="text-cyan-300">to</span><span className="text-white/40">:</span> <span className="text-amber-300">{`"0891234567"`}</span><span className="text-white/40">,</span></div>
+              <div className="pl-12"><span className="text-cyan-300">message</span><span className="text-white/40">:</span> <span className="text-amber-300">{`"Your OTP is 1234"`}</span></div>
               <div className="pl-8"><span className="text-white/40">{"})"}</span></div>
               <div className="pl-4"><span className="text-white/40">{"}"}</span></div>
               <div><span className="text-white/40">)</span><span className="text-white/40">;</span></div>
@@ -395,9 +395,9 @@ export default function LandingPage() {
       <section id="pricing" className="py-20 sm:py-28 px-4 sm:px-6 scroll-mt-20 relative">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12 sm:mb-16">
-            <div className="inline-block text-xs font-semibold text-sky-400/60 uppercase tracking-[0.2em] mb-3">Pricing</div>
+            <div className="inline-block text-xs font-semibold text-violet-400/60 uppercase tracking-[0.2em] mb-3">Pricing</div>
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">
-              เลือก<span className="neon-blue">แพ็กเกจ</span>ที่เหมาะกับคุณ
+              เลือก<span className="gradient-text-mixed">แพ็กเกจ</span>ที่เหมาะกับคุณ
             </h2>
             <p className="text-white/35 max-w-xl mx-auto text-sm sm:text-base">ยิ่งซื้อมาก ยิ่งถูก — โบนัสสูงสุด 50%</p>
           </div>
@@ -408,19 +408,19 @@ export default function LandingPage() {
                 key={pkg.name}
                 className={`glass card-glow p-5 sm:p-6 flex flex-col group relative animate-fade-in ${
                   pkg.best
-                    ? "border-sky-400/30 shadow-[0_0_60px_rgba(56,189,248,0.12)] scale-[1.02] z-10"
+                    ? "border-sky-400/30 shadow-[0_0_60px_rgba(139,92,246,0.12)] scale-[1.02] z-10"
                     : ""
                 }`}
                 style={{ animationDelay: `${i * 0.08}s` }}
               >
                 {/* Best seller glow */}
                 {pkg.best && (
-                  <div className="absolute -inset-px rounded-[16px] bg-gradient-to-b from-sky-400/20 via-transparent to-indigo-400/10 pointer-events-none" />
+                  <div className="absolute -inset-px rounded-[16px] bg-gradient-to-b from-sky-400/20 via-transparent to-cyan-400/10 pointer-events-none" />
                 )}
 
                 {pkg.best && (
-                  <div className="relative inline-flex items-center gap-1.5 text-xs font-bold text-sky-400 uppercase tracking-wider mb-3">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="text-sky-400">
+                  <div className="relative inline-flex items-center gap-1.5 text-xs font-bold text-violet-400 uppercase tracking-wider mb-3">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="text-violet-400">
                       <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                     </svg>
                     Best Seller
@@ -429,7 +429,7 @@ export default function LandingPage() {
 
                 <div className="relative">
                   <div className="text-sm text-white/30 mb-1">SMSOK {pkg.name}</div>
-                  <div className="text-2xl sm:text-3xl font-bold text-white mb-1 group-hover:text-sky-200 transition-colors duration-300">
+                  <div className="text-2xl sm:text-3xl font-bold text-white mb-1 group-hover:text-cyan-200 transition-colors duration-300">
                     ฿{fmt(pkg.price)}
                   </div>
                   {pkg.bonus > 0 ? (
@@ -485,7 +485,7 @@ export default function LandingPage() {
       <section className="py-16 sm:py-20 px-4 sm:px-6">
         <div className="max-w-4xl mx-auto glass p-10 sm:p-14 text-center relative animate-breathe">
           {/* Background glow */}
-          <div className="absolute inset-0 rounded-[16px] bg-gradient-to-br from-sky-500/[0.05] to-indigo-500/[0.03] pointer-events-none" />
+          <div className="absolute inset-0 rounded-[16px] bg-gradient-to-br from-violet-500/[0.05] to-cyan-500/[0.03] pointer-events-none" />
 
           <div className="relative">
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4">ต้องการแพ็กเกจพิเศษ?</h2>
@@ -506,7 +506,7 @@ export default function LandingPage() {
       <section id="faq" className="py-20 sm:py-28 px-4 sm:px-6 scroll-mt-20">
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-12 sm:mb-16">
-            <div className="inline-block text-xs font-semibold text-indigo-400/60 uppercase tracking-[0.2em] mb-3">FAQ</div>
+            <div className="inline-block text-xs font-semibold text-cyan-400/60 uppercase tracking-[0.2em] mb-3">FAQ</div>
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold">
               คำถาม<span className="neon-violet">ที่พบบ่อย</span>
             </h2>
@@ -517,7 +517,7 @@ export default function LandingPage() {
               <div
                 key={faq.q}
                 className={`glass transition-all duration-400 ${
-                  openFaq === i ? "border-sky-500/25 shadow-[0_0_30px_rgba(56,189,248,0.06)]" : ""
+                  openFaq === i ? "border-violet-500/25 shadow-[0_0_30px_rgba(139,92,246,0.06)]" : ""
                 }`}
               >
                 <button
@@ -526,8 +526,8 @@ export default function LandingPage() {
                   aria-expanded={openFaq === i}
                 >
                   <span className="text-sm sm:text-base">{faq.q}</span>
-                  <span className={`w-6 h-6 flex-shrink-0 rounded-full border border-white/10 flex items-center justify-center text-sky-400/50 text-sm transition-all duration-300 ${
-                    openFaq === i ? "rotate-45 border-sky-500/30 bg-sky-500/10" : ""
+                  <span className={`w-6 h-6 flex-shrink-0 rounded-full border border-white/10 flex items-center justify-center text-violet-400/50 text-sm transition-all duration-300 ${
+                    openFaq === i ? "rotate-45 border-violet-500/30 bg-violet-500/10" : ""
                   }`}>+</span>
                 </button>
                 <div
@@ -548,11 +548,11 @@ export default function LandingPage() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 mb-12">
             <div className="col-span-2 sm:col-span-1">
               <Link href="/" className="flex items-center gap-2 mb-4">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-sky-400">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-violet-400">
                   <path d="M12 2L2 7l10 5 10-5-10-5z" fill="currentColor" opacity="0.3" />
                   <path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
-                <span className="text-lg font-bold neon-blue">SMSOK</span>
+                <span className="text-lg font-bold gradient-text-mixed">SMSOK</span>
               </Link>
               <p className="text-xs sm:text-sm text-white/25 leading-relaxed">แพลตฟอร์มส่ง SMS ที่ธุรกิจไว้วางใจ ราคาถูก ส่งเร็ว ซัพพอร์ต 24/7</p>
             </div>
@@ -588,17 +588,17 @@ export default function LandingPage() {
           <div className="border-t border-white/[0.04] pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="text-xs sm:text-sm text-white/15">&copy; 2026 SMSOK — SMS Sending Platform</div>
             <div className="flex items-center gap-4">
-              <a href="#" className="text-white/15 hover:text-sky-400 transition-colors p-1" aria-label="LINE">
+              <a href="#" className="text-white/15 hover:text-violet-400 transition-colors p-1" aria-label="LINE">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2C6.48 2 2 5.81 2 10.41c0 4.15 3.68 7.63 8.65 8.28.34.07.8.22.91.51.1.26.07.67.03.93l-.15.87c-.04.25-.2.98.87.53s5.8-3.41 7.9-5.84C22.15 13.59 22 12.03 22 10.41 22 5.81 17.52 2 12 2z" />
                 </svg>
               </a>
-              <a href="#" className="text-white/15 hover:text-sky-400 transition-colors p-1" aria-label="Facebook">
+              <a href="#" className="text-white/15 hover:text-violet-400 transition-colors p-1" aria-label="Facebook">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
                 </svg>
               </a>
-              <a href="#" className="text-white/15 hover:text-sky-400 transition-colors p-1" aria-label="X">
+              <a href="#" className="text-white/15 hover:text-violet-400 transition-colors p-1" aria-label="X">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
                 </svg>

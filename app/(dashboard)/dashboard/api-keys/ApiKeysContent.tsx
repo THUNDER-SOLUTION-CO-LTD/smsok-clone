@@ -100,8 +100,8 @@ export default function ApiKeysContent({ userId, apiKeys: initialKeys }: { userI
     >
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-emerald-300 via-sky-300 to-emerald-400 bg-clip-text text-transparent">คีย์ API</h1>
-          <p className="text-sm text-white/40 mt-1">จัดการ API Keys สำหรับเชื่อมต่อระบบ</p>
+          <h1 className="text-2xl font-bold tracking-tight gradient-text-cyan">คีย์ API</h1>
+          <p className="text-sm text-[var(--text-muted)] mt-1">จัดการ API Keys สำหรับเชื่อมต่อระบบ</p>
         </div>
         <motion.button
           onClick={() => setShowForm(!showForm)}
@@ -146,9 +146,9 @@ export default function ApiKeysContent({ userId, apiKeys: initialKeys }: { userI
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-emerald-400 mb-1">API Key สร้างเรียบร้อยแล้ว</p>
-                <p className="text-xs text-white/40 mb-3">กรุณาคัดลอกเก็บไว้ — คุณจะไม่สามารถเห็น Key เต็มได้อีก</p>
+                <p className="text-xs text-[var(--text-muted)] mb-3">กรุณาคัดลอกเก็บไว้ — คุณจะไม่สามารถเห็น Key เต็มได้อีก</p>
                 <div className="flex items-center gap-2">
-                  <code className="flex-1 bg-white/[0.03] border border-white/5 rounded-lg px-4 py-2.5 text-sm text-sky-300 font-mono break-all">
+                  <code className="flex-1 bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-lg px-4 py-2.5 text-sm text-cyan-300 font-mono break-all">
                     {newlyCreatedKey}
                   </code>
                   <motion.button
@@ -189,7 +189,7 @@ export default function ApiKeysContent({ userId, apiKeys: initialKeys }: { userI
             <h2 className="text-base font-semibold text-white mb-4">สร้าง API Key ใหม่</h2>
             <form onSubmit={handleCreate} className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1">
-                <label className="block text-xs text-white/30 uppercase tracking-wider mb-2 font-medium">ชื่อ API Key</label>
+                <label className="block text-xs text-[var(--text-muted)] uppercase tracking-wider mb-2 font-medium">ชื่อ API Key</label>
                 <input
                   type="text"
                   className="input-glass"
@@ -228,13 +228,13 @@ export default function ApiKeysContent({ userId, apiKeys: initialKeys }: { userI
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-white/5">
-                  <th className="text-left px-5 py-3 text-xs text-white/40 uppercase tracking-wider font-medium">ชื่อ</th>
-                  <th className="text-left px-5 py-3 text-xs text-white/40 uppercase tracking-wider font-medium">Key</th>
-                  <th className="text-left px-5 py-3 text-xs text-white/40 uppercase tracking-wider font-medium">สถานะ</th>
-                  <th className="text-left px-5 py-3 text-xs text-white/40 uppercase tracking-wider font-medium hidden md:table-cell">สร้างเมื่อ</th>
-                  <th className="text-left px-5 py-3 text-xs text-white/40 uppercase tracking-wider font-medium hidden md:table-cell">ใช้ล่าสุด</th>
-                  <th className="text-right px-5 py-3 text-xs text-white/40 uppercase tracking-wider font-medium">จัดการ</th>
+                <tr className="border-b border-[var(--border-subtle)]">
+                  <th className="text-left px-5 py-3 text-xs text-[var(--text-muted)] uppercase tracking-wider font-medium">ชื่อ</th>
+                  <th className="text-left px-5 py-3 text-xs text-[var(--text-muted)] uppercase tracking-wider font-medium">Key</th>
+                  <th className="text-left px-5 py-3 text-xs text-[var(--text-muted)] uppercase tracking-wider font-medium">สถานะ</th>
+                  <th className="text-left px-5 py-3 text-xs text-[var(--text-muted)] uppercase tracking-wider font-medium hidden md:table-cell">สร้างเมื่อ</th>
+                  <th className="text-left px-5 py-3 text-xs text-[var(--text-muted)] uppercase tracking-wider font-medium hidden md:table-cell">ใช้ล่าสุด</th>
+                  <th className="text-right px-5 py-3 text-xs text-[var(--text-muted)] uppercase tracking-wider font-medium">จัดการ</th>
                 </tr>
               </thead>
               <motion.tbody variants={stagger} initial="hidden" animate="show">
@@ -242,15 +242,15 @@ export default function ApiKeysContent({ userId, apiKeys: initialKeys }: { userI
                   <motion.tr key={key.id} variants={rowVariant} className="table-row">
                     <td className="px-5 py-3.5 text-white/70 font-semibold">{key.name}</td>
                     <td className="px-5 py-3.5">
-                      <code className="text-xs text-sky-300/60 font-mono bg-white/[0.02] px-2 py-1 rounded">{maskKey(key.key)}</code>
+                      <code className="text-xs text-cyan-300/60 font-mono bg-[var(--bg-surface)] px-2 py-1 rounded">{maskKey(key.key)}</code>
                     </td>
                     <td className="px-5 py-3.5">
                       <span className={`text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-md ${key.isActive ? "bg-emerald-500/10 text-emerald-400" : "bg-red-500/10 text-red-400"}`}>
                         {key.isActive ? "ใช้งาน" : "ปิดใช้งาน"}
                       </span>
                     </td>
-                    <td className="px-5 py-3.5 text-white/30 text-xs hidden md:table-cell">{new Date(key.createdAt).toLocaleDateString("th-TH")}</td>
-                    <td className="px-5 py-3.5 text-white/30 text-xs hidden md:table-cell">{key.lastUsed ? new Date(key.lastUsed).toLocaleDateString("th-TH") : "ยังไม่เคยใช้"}</td>
+                    <td className="px-5 py-3.5 text-[var(--text-muted)] text-xs hidden md:table-cell">{new Date(key.createdAt).toLocaleDateString("th-TH")}</td>
+                    <td className="px-5 py-3.5 text-[var(--text-muted)] text-xs hidden md:table-cell">{key.lastUsed ? new Date(key.lastUsed).toLocaleDateString("th-TH") : "ยังไม่เคยใช้"}</td>
                     <td className="px-5 py-3.5">
                       <div className="flex items-center justify-end gap-2">
                         <motion.button
@@ -294,13 +294,13 @@ export default function ApiKeysContent({ userId, apiKeys: initialKeys }: { userI
         transition={{ delay: 0.3 }}
       >
         <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-sky-400">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-violet-400">
             <circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" />
           </svg>
           การใช้งาน API
         </h3>
-        <div className="bg-white/[0.02] border border-white/5 rounded-xl p-4">
-          <code className="text-xs text-sky-300/60 font-mono block whitespace-pre">{`curl -X POST https://api.smsok.com/v1/sms/send \\
+        <div className="bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-xl p-4">
+          <code className="text-xs text-cyan-300/60 font-mono block whitespace-pre">{`curl -X POST https://api.smsok.com/v1/sms/send \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{"to": "0812345678", "message": "Hello!"}'`}</code>

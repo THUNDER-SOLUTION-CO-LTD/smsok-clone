@@ -99,8 +99,8 @@ export default function ContactsClient({
     >
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-indigo-300 via-violet-300 to-indigo-400 bg-clip-text text-transparent">รายชื่อผู้ติดต่อ</h2>
-          <p className="text-sm text-white/40 mt-1">
+          <h2 className="text-2xl font-bold tracking-tight gradient-text-mixed">รายชื่อผู้ติดต่อ</h2>
+          <p className="text-sm text-[var(--text-muted)] mt-1">
             จัดการรายชื่อผู้ติดต่อ ({totalContacts} รายชื่อ)
           </p>
         </div>
@@ -143,20 +143,20 @@ export default function ContactsClient({
             transition={{ duration: 0.3 }}
           >
             <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-sky-500/[0.12] to-violet-500/[0.08] border border-sky-500/10 flex items-center justify-center">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-sky-400">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500/[0.12] to-violet-500/[0.08] border border-violet-500/10 flex items-center justify-center">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-violet-400">
                   <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
                   <circle cx="8.5" cy="7" r="4" />
                   <line x1="20" y1="8" x2="20" y2="14" />
                   <line x1="23" y1="11" x2="17" y2="11" />
                 </svg>
               </div>
-              <span className="bg-gradient-to-r from-sky-300 to-violet-300 bg-clip-text text-transparent">เพิ่มรายชื่อใหม่</span>
+              <span className="gradient-text-mixed">เพิ่มรายชื่อใหม่</span>
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs text-white/50 uppercase tracking-wider mb-2">ชื่อ *</label>
+                <label className="block text-xs text-[var(--text-secondary)] uppercase tracking-wider mb-2">ชื่อ *</label>
                 <input
                   type="text"
                   className="input-glass"
@@ -166,7 +166,7 @@ export default function ContactsClient({
                 />
               </div>
               <div>
-                <label className="block text-xs text-white/50 uppercase tracking-wider mb-2">เบอร์โทร *</label>
+                <label className="block text-xs text-[var(--text-secondary)] uppercase tracking-wider mb-2">เบอร์โทร *</label>
                 <input
                   type="text"
                   className="input-glass"
@@ -176,7 +176,7 @@ export default function ContactsClient({
                 />
               </div>
               <div>
-                <label className="block text-xs text-white/50 uppercase tracking-wider mb-2">อีเมล</label>
+                <label className="block text-xs text-[var(--text-secondary)] uppercase tracking-wider mb-2">อีเมล</label>
                 <input
                   type="email"
                   className="input-glass"
@@ -186,7 +186,7 @@ export default function ContactsClient({
                 />
               </div>
               <div>
-                <label className="block text-xs text-white/50 uppercase tracking-wider mb-2">แท็ก</label>
+                <label className="block text-xs text-[var(--text-secondary)] uppercase tracking-wider mb-2">แท็ก</label>
                 <input
                   type="text"
                   className="input-glass"
@@ -233,31 +233,31 @@ export default function ContactsClient({
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-white/5">
-                  <th className="text-left px-5 py-3 text-xs text-white/40 uppercase tracking-wider font-medium">ชื่อ</th>
-                  <th className="text-left px-5 py-3 text-xs text-white/40 uppercase tracking-wider font-medium">เบอร์โทร</th>
-                  <th className="text-left px-5 py-3 text-xs text-white/40 uppercase tracking-wider font-medium hidden md:table-cell">อีเมล</th>
-                  <th className="text-left px-5 py-3 text-xs text-white/40 uppercase tracking-wider font-medium hidden md:table-cell">แท็ก</th>
-                  <th className="w-20 px-5 py-3 text-xs text-white/40 uppercase tracking-wider font-medium text-right">จัดการ</th>
+                <tr className="border-b border-[var(--border-subtle)]">
+                  <th className="text-left px-5 py-3 text-xs text-[var(--text-muted)] uppercase tracking-wider font-medium">ชื่อ</th>
+                  <th className="text-left px-5 py-3 text-xs text-[var(--text-muted)] uppercase tracking-wider font-medium">เบอร์โทร</th>
+                  <th className="text-left px-5 py-3 text-xs text-[var(--text-muted)] uppercase tracking-wider font-medium hidden md:table-cell">อีเมล</th>
+                  <th className="text-left px-5 py-3 text-xs text-[var(--text-muted)] uppercase tracking-wider font-medium hidden md:table-cell">แท็ก</th>
+                  <th className="w-20 px-5 py-3 text-xs text-[var(--text-muted)] uppercase tracking-wider font-medium text-right">จัดการ</th>
                 </tr>
               </thead>
               <motion.tbody variants={stagger} initial="hidden" animate="show">
                 {initialContacts.map((contact) => (
                   <motion.tr key={contact.id} variants={rowVariant} className="table-row">
                     <td className="px-5 py-3.5 text-white/70">{contact.name}</td>
-                    <td className="px-5 py-3.5 text-white/50 font-mono text-xs">{contact.phone}</td>
-                    <td className="px-5 py-3.5 text-white/40 text-xs hidden md:table-cell">{contact.email || "-"}</td>
+                    <td className="px-5 py-3.5 text-[var(--text-secondary)] font-mono text-xs">{contact.phone}</td>
+                    <td className="px-5 py-3.5 text-[var(--text-muted)] text-xs hidden md:table-cell">{contact.email || "-"}</td>
                     <td className="px-5 py-3.5 hidden md:table-cell">
                       {contact.tags ? (
                         <div className="flex gap-1 flex-wrap">
                           {contact.tags.split(",").map((tag) => (
-                            <span key={tag.trim()} className="text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-md bg-sky-500/10 text-sky-400">
+                            <span key={tag.trim()} className="text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-md bg-violet-500/10 text-violet-400">
                               {tag.trim()}
                             </span>
                           ))}
                         </div>
                       ) : (
-                        <span className="text-white/20">-</span>
+                        <span className="text-[var(--text-muted)]">-</span>
                       )}
                     </td>
                     <td className="px-5 py-3.5 text-right">

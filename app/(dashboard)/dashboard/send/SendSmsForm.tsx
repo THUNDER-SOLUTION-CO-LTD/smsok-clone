@@ -74,7 +74,7 @@ export default function SendSmsForm({ userId, senderNames = ["EasySlip"] }: { us
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: "easeOut" }}
     >
-      <h2 className="text-2xl font-bold mb-1 tracking-tight bg-gradient-to-r from-sky-300 via-cyan-300 to-violet-300 bg-clip-text text-transparent">ส่ง SMS</h2>
+      <h2 className="text-2xl font-bold mb-1 tracking-tight gradient-text-mixed">ส่ง SMS</h2>
       <p className="text-sm text-white/40 mb-8">ส่งข้อความ SMS ถึงผู้รับ</p>
 
       {/* Feedback */}
@@ -104,12 +104,12 @@ export default function SendSmsForm({ userId, senderNames = ["EasySlip"] }: { us
           transition={{ delay: 0.1, duration: 0.5 }}
         >
           <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-sky-500/[0.12] to-violet-500/[0.08] border border-sky-500/10 flex items-center justify-center">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-sky-400">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500/[0.12] to-cyan-500/[0.08] border border-violet-500/10 flex items-center justify-center">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-violet-400">
                 <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
               </svg>
             </div>
-            <span className="bg-gradient-to-r from-sky-300 to-violet-300 bg-clip-text text-transparent">เขียนข้อความ</span>
+            <span className="gradient-text-mixed">เขียนข้อความ</span>
           </h3>
 
           <div className="space-y-5">
@@ -137,7 +137,7 @@ export default function SendSmsForm({ userId, senderNames = ["EasySlip"] }: { us
               </div>
               <p className="text-[11px] text-white/20 mt-1.5">
                 {senderName === "EasySlip" ? "ใช้ชื่อค่าเริ่มต้นได้เลย หรือ" : "Sender ที่ผ่านอนุมัติแล้ว — "}{" "}
-                <a href="/dashboard/senders" className="text-sky-400/60 hover:text-sky-400 transition-colors">ขอ Sender Name ใหม่ →</a>
+                <a href="/dashboard/senders" className="text-violet-400/60 hover:text-violet-400 transition-colors">ขอ Sender Name ใหม่ →</a>
               </p>
             </div>
 
@@ -212,7 +212,7 @@ export default function SendSmsForm({ userId, senderNames = ["EasySlip"] }: { us
           <div className="glass p-6">
             <h3 className="text-xs text-white/50 uppercase tracking-wider mb-4">ตัวอย่าง</h3>
             <div className="bg-white/[0.02] border border-white/5 rounded-xl p-4 min-h-[120px]">
-              <div className="text-xs text-sky-400 mb-2">จาก: {senderName || "EasySlip"}</div>
+              <div className="text-xs text-cyan-400 mb-2">จาก: {senderName || "EasySlip"}</div>
               <p className="text-sm text-white/70 whitespace-pre-wrap">
                 {message || "ข้อความจะแสดงที่นี่..."}
               </p>
@@ -241,7 +241,7 @@ export default function SendSmsForm({ userId, senderNames = ["EasySlip"] }: { us
               </div>
               <div className="border-t border-white/5 pt-2 mt-2 flex justify-between font-semibold">
                 <span className="text-white">รวม</span>
-                <span className="bg-gradient-to-r from-sky-300 to-cyan-300 bg-clip-text text-transparent text-lg">฿{totalCost}</span>
+                <span className="gradient-text-cyan text-lg">฿{totalCost}</span>
               </div>
             </div>
 

@@ -19,7 +19,7 @@ type ConfirmDialogProps = {
 const variantConfig: Record<Variant, { icon: string; iconBg: string; iconBorder: string; btnBg: string }> = {
   danger: { icon: "text-red-400", iconBg: "bg-red-500/[0.08]", iconBorder: "border-red-500/10", btnBg: "bg-red-500 hover:bg-red-600" },
   warning: { icon: "text-amber-400", iconBg: "bg-amber-500/[0.08]", iconBorder: "border-amber-500/10", btnBg: "bg-amber-500 hover:bg-amber-600" },
-  info: { icon: "text-sky-400", iconBg: "bg-sky-500/[0.08]", iconBorder: "border-sky-500/10", btnBg: "bg-sky-500 hover:bg-sky-600" },
+  info: { icon: "text-cyan-400", iconBg: "bg-cyan-500/[0.08]", iconBorder: "border-cyan-500/10", btnBg: "bg-cyan-500 hover:bg-cyan-600" },
 };
 
 export default function ConfirmDialog({

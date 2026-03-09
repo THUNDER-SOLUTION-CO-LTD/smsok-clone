@@ -15,7 +15,7 @@ const toastConfig: Record<ToastType, { dot: string; border: string; bg: string; 
   success: { dot: "bg-emerald-400", border: "border-emerald-500/20", bg: "bg-emerald-500/5", text: "text-emerald-400" },
   error: { dot: "bg-red-400", border: "border-red-500/20", bg: "bg-red-500/5", text: "text-red-400" },
   warning: { dot: "bg-amber-400", border: "border-amber-500/20", bg: "bg-amber-500/5", text: "text-amber-400" },
-  info: { dot: "bg-sky-400", border: "border-sky-500/20", bg: "bg-sky-500/5", text: "text-sky-400" },
+  info: { dot: "bg-cyan-400", border: "border-cyan-500/20", bg: "bg-cyan-500/5", text: "text-cyan-400" },
 };
 
 let globalAddToast: ((type: ToastType, message: string) => void) | null = null;

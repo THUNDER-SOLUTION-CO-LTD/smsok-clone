@@ -23,7 +23,7 @@ type Pagination = {
 
 const statusConfig: Record<string, { badge: string; label: string; dot: string }> = {
   delivered: { badge: "bg-emerald-500/10 text-emerald-400", label: "ส่งสำเร็จ", dot: "bg-emerald-400 shadow-[0_0_6px_rgba(16,185,129,0.4)]" },
-  sent: { badge: "bg-blue-500/10 text-blue-400", label: "ส่งแล้ว", dot: "bg-blue-400 shadow-[0_0_6px_rgba(96,165,250,0.4)]" },
+  sent: { badge: "bg-cyan-500/10 text-cyan-400", label: "ส่งแล้ว", dot: "bg-cyan-400 shadow-[0_0_6px_rgba(34,211,238,0.4)]" },
   pending: { badge: "bg-yellow-500/10 text-yellow-400", label: "รอส่ง", dot: "bg-yellow-400 shadow-[0_0_6px_rgba(245,158,11,0.4)]" },
   failed: { badge: "bg-red-500/10 text-red-400", label: "ล้มเหลว", dot: "bg-red-400 shadow-[0_0_6px_rgba(239,68,68,0.4)]" },
 };
@@ -67,10 +67,10 @@ export default function MessagesClient({
     >
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-sky-300 via-violet-300 to-sky-400 bg-clip-text text-transparent">
+          <h2 className="text-2xl font-bold tracking-tight gradient-text-mixed">
             ประวัติการส่ง
           </h2>
-          <p className="text-sm text-white/40 mt-1">
+          <p className="text-sm text-[var(--text-muted)] mt-1">
             ประวัติการส่ง SMS ทั้งหมด ({pagination.total} รายการ)
           </p>
         </div>
@@ -98,7 +98,7 @@ export default function MessagesClient({
           <svg
             width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
             strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-white/20"
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"
           >
             <circle cx="11" cy="11" r="8" />
             <path d="M21 21l-4.35-4.35" />
@@ -117,13 +117,13 @@ export default function MessagesClient({
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
-            <option value="all" className="bg-[#0a0f1a] text-white">ทุกสถานะ</option>
-            <option value="delivered" className="bg-[#0a0f1a] text-white">ส่งสำเร็จ</option>
-            <option value="sent" className="bg-[#0a0f1a] text-white">ส่งแล้ว</option>
-            <option value="pending" className="bg-[#0a0f1a] text-white">รอส่ง</option>
-            <option value="failed" className="bg-[#0a0f1a] text-white">ล้มเหลว</option>
+            <option value="all" className="bg-[var(--bg-elevated)] text-white">ทุกสถานะ</option>
+            <option value="delivered" className="bg-[var(--bg-elevated)] text-white">ส่งสำเร็จ</option>
+            <option value="sent" className="bg-[var(--bg-elevated)] text-white">ส่งแล้ว</option>
+            <option value="pending" className="bg-[var(--bg-elevated)] text-white">รอส่ง</option>
+            <option value="failed" className="bg-[var(--bg-elevated)] text-white">ล้มเหลว</option>
           </select>
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-white/30">
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--text-muted)]">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M6 9l6 6 6-6" />
             </svg>
@@ -143,13 +143,13 @@ export default function MessagesClient({
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-white/5">
-                    <th className="text-left px-5 py-3 text-xs text-white/40 uppercase tracking-wider font-medium">ผู้รับ</th>
-                    <th className="text-left px-5 py-3 text-xs text-white/40 uppercase tracking-wider font-medium hidden md:table-cell">ข้อความ</th>
-                    <th className="text-left px-5 py-3 text-xs text-white/40 uppercase tracking-wider font-medium">ชื่อผู้ส่ง</th>
-                    <th className="text-left px-5 py-3 text-xs text-white/40 uppercase tracking-wider font-medium">สถานะ</th>
-                    <th className="text-left px-5 py-3 text-xs text-white/40 uppercase tracking-wider font-medium">เครดิต</th>
-                    <th className="text-left px-5 py-3 text-xs text-white/40 uppercase tracking-wider font-medium">วันที่</th>
+                  <tr className="border-b border-[var(--border-subtle)]">
+                    <th className="text-left px-5 py-3 text-xs text-[var(--text-muted)] uppercase tracking-wider font-medium">ผู้รับ</th>
+                    <th className="text-left px-5 py-3 text-xs text-[var(--text-muted)] uppercase tracking-wider font-medium hidden md:table-cell">ข้อความ</th>
+                    <th className="text-left px-5 py-3 text-xs text-[var(--text-muted)] uppercase tracking-wider font-medium">ชื่อผู้ส่ง</th>
+                    <th className="text-left px-5 py-3 text-xs text-[var(--text-muted)] uppercase tracking-wider font-medium">สถานะ</th>
+                    <th className="text-left px-5 py-3 text-xs text-[var(--text-muted)] uppercase tracking-wider font-medium">เครดิต</th>
+                    <th className="text-left px-5 py-3 text-xs text-[var(--text-muted)] uppercase tracking-wider font-medium">วันที่</th>
                   </tr>
                 </thead>
                 <motion.tbody variants={stagger} initial="hidden" animate="show">
@@ -167,15 +167,15 @@ export default function MessagesClient({
                             <span className="text-white/70 font-mono text-xs">{msg.recipient}</span>
                           </div>
                         </td>
-                        <td className="px-5 py-3.5 text-white/40 text-xs max-w-[200px] truncate hidden md:table-cell">{msg.content}</td>
-                        <td className="px-5 py-3.5 text-white/50 text-xs">{msg.senderName}</td>
+                        <td className="px-5 py-3.5 text-[var(--text-muted)] text-xs max-w-[200px] truncate hidden md:table-cell">{msg.content}</td>
+                        <td className="px-5 py-3.5 text-[var(--text-secondary)] text-xs">{msg.senderName}</td>
                         <td className="px-5 py-3.5">
                           <span className={`text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-md ${status.badge}`}>
                             {status.label}
                           </span>
                         </td>
-                        <td className="px-5 py-3.5 text-white/50 font-mono text-xs">฿{msg.creditCost}</td>
-                        <td className="px-5 py-3.5 text-white/30 text-xs">
+                        <td className="px-5 py-3.5 text-[var(--text-secondary)] font-mono text-xs">฿{msg.creditCost}</td>
+                        <td className="px-5 py-3.5 text-[var(--text-muted)] text-xs">
                           {new Date(msg.createdAt).toLocaleString("th-TH", {
                             year: "numeric",
                             month: "short",
@@ -192,7 +192,7 @@ export default function MessagesClient({
             </div>
 
             {/* Result count */}
-            <div className="border-t border-white/5 px-5 py-3 flex items-center justify-between text-xs text-white/30">
+            <div className="border-t border-[var(--border-subtle)] px-5 py-3 flex items-center justify-between text-xs text-[var(--text-muted)]">
               <span>
                 {search || statusFilter !== "all"
                   ? `พบ ${filtered.length} จาก ${messages.length} รายการ`
@@ -209,13 +209,13 @@ export default function MessagesClient({
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0 }}
           >
-            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-white/[0.02] border border-white/[0.04] flex items-center justify-center">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-white/10">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] flex items-center justify-center">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--text-muted)]">
                 <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
               </svg>
             </div>
-            <p className="text-sm text-white/25 mb-1">ไม่พบผลลัพธ์</p>
-            <p className="text-xs text-white/15">ลองเปลี่ยนคำค้นหาหรือตัวกรอง</p>
+            <p className="text-sm text-[var(--text-secondary)] mb-1">ไม่พบผลลัพธ์</p>
+            <p className="text-xs text-[var(--text-muted)]">ลองเปลี่ยนคำค้นหาหรือตัวกรอง</p>
           </motion.div>
         ) : (
           <motion.div
@@ -225,13 +225,13 @@ export default function MessagesClient({
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0 }}
           >
-            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-white/[0.02] border border-white/[0.04] flex items-center justify-center">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-white/10">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] flex items-center justify-center">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--text-muted)]">
                 <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
               </svg>
             </div>
-            <p className="text-sm text-white/25 mb-1">ยังไม่มีข้อความ</p>
-            <p className="text-xs text-white/15 mb-5">ส่ง SMS แรกของคุณเลย</p>
+            <p className="text-sm text-[var(--text-secondary)] mb-1">ยังไม่มีข้อความ</p>
+            <p className="text-xs text-[var(--text-muted)] mb-5">ส่ง SMS แรกของคุณเลย</p>
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
               <Link
                 href="/dashboard/send"

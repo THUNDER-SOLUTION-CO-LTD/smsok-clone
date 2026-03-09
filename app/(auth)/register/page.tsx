@@ -22,13 +22,13 @@ export default function RegisterPage() {
         <div className="text-center mb-8 animate-fade-in">
           <Link href="/" className="inline-flex items-center gap-2.5 group">
             <div className="relative">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" className="text-sky-400 transition-all group-hover:drop-shadow-[0_0_8px_rgba(56,189,248,0.6)]">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" className="text-violet-400 transition-all group-hover:drop-shadow-[0_0_8px_rgba(139,92,246,0.6)]">
                 <path d="M12 2L2 7l10 5 10-5-10-5z" fill="currentColor" opacity="0.3" />
                 <path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-              <div className="absolute inset-0 bg-sky-400/20 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="absolute inset-0 bg-violet-400/20 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
-            <span className="text-2xl font-bold neon-blue">SMSOK</span>
+            <span className="text-2xl font-bold gradient-text-mixed">SMSOK</span>
           </Link>
         </div>
 
@@ -85,7 +85,7 @@ export default function RegisterPage() {
 
           <p className="text-center text-white/25 text-sm mt-6">
             มีบัญชีอยู่แล้ว?{" "}
-            <Link href="/login" className="text-sky-400 hover:text-sky-300 transition-colors">
+            <Link href="/login" className="text-violet-400 hover:text-violet-300 transition-colors">
               เข้าสู่ระบบ →
             </Link>
           </p>

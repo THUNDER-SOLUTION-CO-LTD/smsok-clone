@@ -27,6 +27,8 @@ services:
         max-size: "20m"
         max-file: "5"
         tag: "smsok-app"
+    labels:
+      - "com.centurylinklabs.watchtower.scope=smsok"
     deploy:
       resources:
         limits:
@@ -82,6 +84,38 @@ services:
         limits:
           memory: 128M
 
+  # Auto-deploy: watches GHCR for new images, pulls & restarts automatically
+  # No SSH needed after initial setup — push to main → GHCR → Watchtower pulls
+  watchtower:
+    image: containrrr/watchtower:latest
+    environment:
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=60
+      - WATCHTOWER_ROLLING_RESTART=true
+      - WATCHTOWER_INCLUDE_STOPPED=false
+      - WATCHTOWER_SCOPE=smsok
+      - WATCHTOWER_LIFECYCLE_HOOKS=true
+      - WATCHTOWER_HTTP_API_UPDATE=true
+      - WATCHTOWER_HTTP_API_METRICS=true
+      - WATCHTOWER_HTTP_API_TOKEN=${WATCHTOWER_TOKEN:-watchtower-secret-change-me}
+      - WATCHTOWER_NOTIFICATIONS=shoutrrr
+      - WATCHTOWER_NOTIFICATION_URL=${WATCHTOWER_NOTIFY_URL:-}
+    ports:
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - watchtower_config:/config
+    labels:
+      - "com.centurylinklabs.watchtower.scope=smsok"
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+        tag: "smsok-watchtower"
+
 volumes:
   pgdata:
   redisdata:
+  watchtower_config:

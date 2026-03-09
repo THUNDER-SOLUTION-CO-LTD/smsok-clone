@@ -64,11 +64,37 @@
   /* ── GLASS SYSTEM — Clean, Linear-style ── */
 
   .glass {
+    position: relative;
     background: rgba(17,26,46,0.6);
     backdrop-filter: blur(20px) saturate(1.2);
     -webkit-backdrop-filter: blur(20px) saturate(1.2);
     border: 1px solid rgba(148,163,184,0.08);
     border-radius: var(--radius-xl);
+  }
+
+  /* ═══ Glass Card Gradient Ring (hover shimmer) ═══ */
+  .glass::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, #22D3EE, #8B5CF6, #EC4899);
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+  }
+
+  .glass:hover::before {
+    opacity: 0.4;
   }
 
   .glass-elevated {
@@ -353,6 +379,122 @@
   .stagger-children > *:nth-child(7) { animation-delay: 0.28s; }
   .stagger-children > *:nth-child(8) { animation-delay: 0.32s; }
 
+  /* ── CONIC GRADIENT CARD ── */
+
+  .card-conic {
+    position: relative;
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+  }
+
+  .card-conic::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: conic-gradient(from 180deg at 50% 50%, #22D3EE, #8B5CF6, #EC4899, #8B5CF6, #22D3EE);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+  }
+
+  .card-conic:hover::before { opacity: 0.6; }
+
+  .card-conic:hover {
+    box-shadow: 0 0 40px rgba(139,92,246,0.08), 0 8px 32px rgba(0,0,0,0.25);
+    transform: translateY(-4px) scale(1.01);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* ── INNER GLOW VARIANTS ── */
+
+  .glow-cyan { box-shadow: inset 0 1px 24px rgba(34,211,238,0.06), 0 0 0 1px rgba(34,211,238,0.06); }
+  .glow-violet { box-shadow: inset 0 1px 24px rgba(139,92,246,0.06), 0 0 0 1px rgba(139,92,246,0.06); }
+  .glow-emerald { box-shadow: inset 0 1px 24px rgba(16,185,129,0.06), 0 0 0 1px rgba(16,185,129,0.06); }
+  .glow-rose { box-shadow: inset 0 1px 24px rgba(236,72,153,0.06), 0 0 0 1px rgba(236,72,153,0.06); }
+
+  /* ── STATUS DOT PULSE ── */
+
+  .dot-pulse { animation: dot-pulse 2s ease-in-out infinite; }
+
+  /* ── GRADIENT BUTTON ANIMATED ── */
+
+  .btn-gradient {
+    background: linear-gradient(135deg, #8B5CF6, #7C3AED, #6D28D9);
+    background-size: 200% 200%;
+    animation: gradient-shift 3s ease infinite;
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(139,92,246,0.35), inset 0 1px 0 rgba(255,255,255,0.1);
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-gradient::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.12), transparent 60%);
+    pointer-events: none;
+  }
+
+  .btn-gradient:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(139,92,246,0.45), inset 0 1px 0 rgba(255,255,255,0.15);
+  }
+
+  .btn-gradient:active { transform: translateY(0) scale(0.98); }
+
+  /* ── WELCOME BANNER ── */
+
+  .welcome-banner {
+    position: relative;
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    background: linear-gradient(135deg, #0D1526 0%, #111A2E 50%, #0D1526 100%);
+    border: 1px solid rgba(148,163,184,0.08);
+  }
+
+  .welcome-banner::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle 200px at 10% 20%, rgba(34,211,238,0.15) 0%, transparent 70%),
+      radial-gradient(circle 180px at 80% 60%, rgba(139,92,246,0.12) 0%, transparent 70%),
+      radial-gradient(circle 150px at 50% 80%, rgba(236,72,153,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  /* ── TIMELINE ── */
+
+  .timeline-line {
+    position: absolute;
+    left: 15px;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: linear-gradient(to bottom, rgba(139,92,246,0.2), rgba(34,211,238,0.1), transparent);
+  }
+
+  /* ── INPUT FLOATING LABEL ── */
+
+  .input-float-group { position: relative; }
+
+  .input-float-group .input-glass:focus {
+    border-color: rgba(139,92,246,0.5);
+    box-shadow: 0 0 0 3px rgba(139,92,246,0.1), 0 0 20px rgba(139,92,246,0.06);
+  }
+
   /* ── TOAST ── */
   .toast-enter { animation: slide-in-right 0.25s ease-out forwards; }
   .toast-exit { animation: slide-out-right 0.25s ease-in forwards; }
@@ -400,6 +542,53 @@
 @keyframes slide-out-right {
   from { opacity: 1; transform: translateX(0); }
   to { opacity: 0; transform: translateX(100%); }
+}
+
+@keyframes dot-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 currentColor; }
+  50% { opacity: 0.7; box-shadow: 0 0 0 4px transparent; }
+}
+
+/* ═══ Ambient Orbs ═══ */
+@keyframes orb-drift {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.4; }
+  33% { transform: translate(40px, -40px) scale(1.1); opacity: 0.6; }
+  66% { transform: translate(-30px, 30px) scale(0.9); opacity: 0.3; }
+}
+
+.ambient-orb {
+  position: fixed;
+  border-radius: 9999px;
+  filter: blur(80px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.ambient-orb-cyan {
+  background: rgba(34, 211, 238, 0.12);
+  width: 400px;
+  height: 400px;
+  top: -100px;
+  right: -100px;
+  animation: orb-drift 25s ease-in-out infinite;
+}
+
+.ambient-orb-purple {
+  background: rgba(139, 92, 246, 0.10);
+  width: 500px;
+  height: 500px;
+  bottom: -150px;
+  left: -150px;
+  animation: orb-drift 30s ease-in-out infinite reverse;
+}
+
+.ambient-orb-pink {
+  background: rgba(236, 72, 153, 0.07);
+  width: 300px;
+  height: 300px;
+  top: 40%;
+  left: 40%;
+  animation: orb-drift 20s ease-in-out infinite 5s;
 }
 
 /* ── REDUCED MOTION ── */

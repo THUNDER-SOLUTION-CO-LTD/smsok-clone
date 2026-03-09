@@ -49,6 +49,24 @@ export function apiError(error: unknown) {
   if (error instanceof ApiError) {
     return Response.json({ error: error.message }, { status: error.status });
   }
-  const message = error instanceof Error ? error.message : "Internal server error";
-  return Response.json({ error: message }, { status: 500 });
+  if (error instanceof Error) {
+    // Known validation/business logic errors → 400
+    const msg = error.message;
+    const isValidation =
+      msg.includes("ไม่ถูกต้อง") ||
+      msg.includes("ไม่พบ") ||
+      msg.includes("ไม่เพียงพอ") ||
+      msg.includes("มากเกินไป") ||
+      msg.includes("สูงสุด") ||
+      msg.includes("หมดอายุ") ||
+      msg.includes("ยังไม่ได้") ||
+      msg.includes("กรุณา") ||
+      msg.includes("ไม่สำเร็จ") ||
+      error.name === "ZodError";
+    return Response.json(
+      { error: msg },
+      { status: isValidation ? 400 : 500 }
+    );
+  }
+  return Response.json({ error: "Internal server error" }, { status: 500 });
 }

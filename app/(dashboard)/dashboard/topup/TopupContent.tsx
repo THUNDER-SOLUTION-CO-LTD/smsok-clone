@@ -36,27 +36,27 @@ export default function TopupContent({ user, packages }: { user: User; packages:
   return (
     <motion.div className="p-6 md:p-8 max-w-6xl" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: "easeOut" }}>
       <h1 className="text-2xl font-bold tracking-tight mb-1">
-        <span className="gradient-text-sky">เติมเงิน</span>
+        <span className="gradient-text-cyan">เติมเงิน</span>
       </h1>
-      <p className="text-sm text-white/40 mb-8">เลือกแพ็กเกจเพื่อเติมเครดิต SMS</p>
+      <p className="text-sm text-[var(--text-muted)] mb-8">เลือกแพ็กเกจเพื่อเติมเครดิต SMS</p>
 
       {/* Current Credits */}
-      <div className="glass-sky p-6 mb-8">
+      <div className="glass-cyan p-6 mb-8">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-sky-500/[0.08] border border-sky-500/10 flex items-center justify-center">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-sky-400">
+            <div className="w-12 h-12 rounded-xl bg-cyan-500/[0.08] border border-cyan-500/10 flex items-center justify-center">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-cyan-400">
                 <line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
               </svg>
             </div>
             <div>
-              <p className="text-xs text-white/30 uppercase tracking-wider font-medium">เครดิตคงเหลือ</p>
-              <p className="text-3xl font-bold gradient-text-sky">{user.credits.toLocaleString()}</p>
+              <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider font-medium">เครดิตคงเหลือ</p>
+              <p className="text-3xl font-bold gradient-text-cyan">{user.credits.toLocaleString()}</p>
             </div>
           </div>
           <div className="text-right">
-            <p className="text-xs text-white/30">ประมาณ</p>
-            <p className="text-sm text-white/50">{user.credits.toLocaleString()} SMS</p>
+            <p className="text-xs text-[var(--text-muted)]">ประมาณ</p>
+            <p className="text-sm text-[var(--text-secondary)]">{user.credits.toLocaleString()} SMS</p>
           </div>
         </div>
       </div>
@@ -66,7 +66,7 @@ export default function TopupContent({ user, packages }: { user: User; packages:
         {packages.map((pkg, i) => (
           <motion.div
             key={pkg.id ?? i}
-            className={`glass card-glow p-6 flex flex-col ${pkg.isBestSeller ? "glass-sky border-sky-500/30 shadow-[0_0_30px_rgba(56,189,248,0.08)]" : ""}`}
+            className={`glass card-hover p-6 flex flex-col ${pkg.isBestSeller ? "glass-cyan border-cyan-500/30 shadow-[0_0_30px_rgba(34,211,238,0.08)]" : ""}`}
             whileHover={{ y: -6, transition: { duration: 0.3 } }}
           >
             {/* Best Seller Badge */}
@@ -81,30 +81,30 @@ export default function TopupContent({ user, packages }: { user: User; packages:
 
             {/* Price */}
             <div className="mb-4">
-              <span className="text-2xl font-bold gradient-text-sky">{formatPrice(pkg.price)}</span>
-              <span className="text-sm text-white/30 ml-1">บาท</span>
+              <span className="text-2xl font-bold gradient-text-cyan">{formatPrice(pkg.price)}</span>
+              <span className="text-sm text-[var(--text-muted)] ml-1">บาท</span>
             </div>
 
             {/* Details */}
             <div className="space-y-2.5 mb-6 flex-1">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-white/40">เครดิต</span>
+                <span className="text-[var(--text-muted)]">เครดิต</span>
                 <span className="text-white font-semibold">{pkg.totalCredits.toLocaleString()}</span>
               </div>
               {pkg.bonusPercent > 0 && (
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-white/40">โบนัส</span>
+                  <span className="text-[var(--text-muted)]">โบนัส</span>
                   <span className="text-emerald-400 font-semibold">+{pkg.bonusPercent}%</span>
                 </div>
               )}
               <div className="flex items-center justify-between text-sm">
-                <span className="text-white/40">ระยะเวลา</span>
-                <span className="text-white/70">{formatDuration(pkg.durationDays)}</span>
+                <span className="text-[var(--text-muted)]">ระยะเวลา</span>
+                <span className="text-[var(--text-secondary)]">{formatDuration(pkg.durationDays)}</span>
               </div>
               {pkg.maxSenders !== undefined && (
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-white/40">ชื่อผู้ส่ง</span>
-                  <span className="text-white/70">{pkg.maxSenders === -1 ? "ไม่จำกัด" : pkg.maxSenders}</span>
+                  <span className="text-[var(--text-muted)]">ชื่อผู้ส่ง</span>
+                  <span className="text-[var(--text-secondary)]">{pkg.maxSenders === -1 ? "ไม่จำกัด" : pkg.maxSenders}</span>
                 </div>
               )}
             </div>

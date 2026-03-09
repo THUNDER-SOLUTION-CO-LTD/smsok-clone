@@ -15,20 +15,20 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center px-6 mesh-bg relative">
       {/* Extra ambient orb */}
-      <div className="fixed top-[20%] left-[15%] w-[400px] h-[400px] rounded-full pointer-events-none" style={{ background: "radial-gradient(circle, rgba(14,165,233,0.08) 0%, transparent 70%)" }} />
+      <div className="fixed top-[20%] left-[15%] w-[400px] h-[400px] rounded-full pointer-events-none" style={{ background: "radial-gradient(circle, rgba(139,92,246,0.08) 0%, transparent 70%)" }} />
 
       <div className="w-full max-w-md relative z-10">
         {/* Logo */}
         <div className="text-center mb-8 animate-fade-in">
           <Link href="/" className="inline-flex items-center gap-2.5 group">
             <div className="relative">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" className="text-sky-400 transition-all group-hover:drop-shadow-[0_0_8px_rgba(56,189,248,0.6)]">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" className="text-violet-400 transition-all group-hover:drop-shadow-[0_0_8px_rgba(139,92,246,0.6)]">
                 <path d="M12 2L2 7l10 5 10-5-10-5z" fill="currentColor" opacity="0.3" />
                 <path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-              <div className="absolute inset-0 bg-sky-400/20 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="absolute inset-0 bg-violet-400/20 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
-            <span className="text-2xl font-bold neon-blue">SMSOK</span>
+            <span className="text-2xl font-bold gradient-text-mixed">SMSOK</span>
           </Link>
         </div>
 
@@ -77,7 +77,7 @@ export default function LoginPage() {
 
           <p className="text-center text-white/25 text-sm mt-6">
             ยังไม่มีบัญชี?{" "}
-            <Link href="/register" className="text-sky-400 hover:text-sky-300 transition-colors">
+            <Link href="/register" className="text-violet-400 hover:text-violet-300 transition-colors">
               สมัครฟรี →
             </Link>
           </p>

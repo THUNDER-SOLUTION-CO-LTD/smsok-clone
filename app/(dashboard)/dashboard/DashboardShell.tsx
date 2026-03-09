@@ -21,7 +21,7 @@ const sidebarItems = [
         <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
       </svg>
     ),
-    label: "แดชบอร์ด",
+    label: "ภาพรวม",
     href: "/dashboard",
     section: "main",
   },
@@ -48,11 +48,11 @@ const sidebarItems = [
   {
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0110 0v4" />
       </svg>
     ),
-    label: "ตั้งเวลาส่ง",
-    href: "/dashboard/scheduled",
+    label: "บริการ OTP",
+    href: "/dashboard/otp",
     section: "main",
   },
   {
@@ -111,7 +111,7 @@ const sidebarItems = [
         <line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
       </svg>
     ),
-    label: "เติมเงิน",
+    label: "เติมเครดิต",
     href: "/dashboard/topup",
     section: "settings",
   },
@@ -132,7 +132,7 @@ const sidebarItems = [
       </svg>
     ),
     label: "API Docs",
-    href: "/dashboard/api-docs",
+    href: "/dashboard/docs",
     section: "settings",
   },
   {
@@ -151,19 +151,28 @@ function SidebarLink({ item, isActive }: { item: typeof sidebarItems[0]; isActiv
   return (
     <Link href={item.href} className="block relative group">
       {isActive && (
-        <motion.div
-          layoutId="sidebar-active"
-          className="absolute inset-0 rounded-lg bg-gradient-to-r from-violet-500/10 to-cyan-500/5"
-          style={{ boxShadow: "inset 0 0 0 1px rgba(139,92,246,0.12)" }}
-          transition={{ type: "spring", stiffness: 400, damping: 30 }}
-        />
+        <>
+          {/* Active glow line on left */}
+          <motion.div
+            layoutId="sidebar-glow-line"
+            className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-full bg-gradient-to-b from-violet-400 to-cyan-400"
+            style={{ boxShadow: "0 0 8px rgba(139,92,246,0.5)" }}
+            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+          />
+          <motion.div
+            layoutId="sidebar-active"
+            className="absolute inset-0 rounded-lg bg-gradient-to-r from-violet-500/12 to-cyan-500/5"
+            style={{ boxShadow: "inset 0 0 0 1px rgba(139,92,246,0.15), 0 0 20px rgba(139,92,246,0.05)" }}
+            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+          />
+        </>
       )}
       <motion.div
-        className={`sidebar-item relative z-10 ${isActive ? "!text-white" : ""}`}
-        whileHover={{ x: 2 }}
-        transition={{ duration: 0.1 }}
+        className={`sidebar-item relative z-10 ${isActive ? "!text-white font-medium" : ""}`}
+        whileHover={{ x: 3 }}
+        transition={{ duration: 0.15 }}
       >
-        <span className={`flex-shrink-0 transition-colors duration-150 ${isActive ? "text-violet-400" : "group-hover:text-slate-400"}`}>{item.icon}</span>
+        <span className={`flex-shrink-0 transition-colors duration-150 ${isActive ? "text-violet-400 drop-shadow-[0_0_4px_rgba(139,92,246,0.4)]" : "group-hover:text-slate-300"}`}>{item.icon}</span>
         {item.label}
       </motion.div>
     </Link>
@@ -187,7 +196,12 @@ export default function DashboardShell({
   const settingsItems = sidebarItems.filter(i => i.section === "settings");
 
   return (
-    <div className="min-h-screen flex bg-[var(--bg-base)]">
+    <div className="min-h-screen flex bg-[var(--bg-base)] relative">
+      {/* Ambient Orbs — background decoration */}
+      <div className="ambient-orb ambient-orb-cyan" aria-hidden="true" />
+      <div className="ambient-orb ambient-orb-purple" aria-hidden="true" />
+      <div className="ambient-orb ambient-orb-pink" aria-hidden="true" />
+
       {/* Sidebar — Slim, clean */}
       <aside className="hidden md:flex w-[220px] flex-shrink-0 border-r border-[var(--border-subtle)] bg-[#0D1526]/95 backdrop-blur-xl flex-col">
         {/* Logo */}
@@ -202,7 +216,7 @@ export default function DashboardShell({
 
         {/* Navigation */}
         <div className="flex-1 overflow-y-auto py-3 px-3">
-          <div className="text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)] px-3 mb-2 font-medium">หลัก</div>
+          <div className="text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)] px-3 mb-2 font-medium">เมนูหลัก</div>
           <nav className="space-y-0.5 mb-5">
             {mainItems.map((item) => (
               <SidebarLink key={item.label} item={item} isActive={pathname === item.href} />
@@ -251,12 +265,38 @@ export default function DashboardShell({
         {/* Top Bar — Clean, minimal */}
         <header className="sticky top-0 z-40 border-b border-[var(--border-subtle)] bg-[#0B1120]/80 backdrop-blur-xl h-14 flex items-center justify-between px-6 md:px-8">
           <h1 className="text-base font-semibold text-[var(--text-primary)] tracking-tight">
-            {title || sidebarItems.find(i => i.href === pathname)?.label || "แดชบอร์ด"}
+            {title || sidebarItems.find(i => i.href === pathname)?.label || "ภาพรวม"}
           </h1>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
+            {/* Search */}
+            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)] hover:border-violet-500/15 transition-colors min-w-[200px] group">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[var(--text-muted)] group-focus-within:text-violet-400 transition-colors flex-shrink-0">
+                <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
+              </svg>
+              <input
+                type="text"
+                placeholder="ค้นหา..."
+                className="bg-transparent text-xs text-[var(--text-secondary)] placeholder:text-[var(--text-muted)] outline-none w-full"
+              />
+              <kbd className="hidden xl:inline-flex text-[10px] text-[var(--text-muted)] border border-[var(--border-subtle)] px-1.5 py-0.5 rounded font-mono">⌘K</kbd>
+            </div>
+
+            {/* Notification */}
+            <motion.button
+              className="relative w-9 h-9 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)] hover:border-violet-500/15 flex items-center justify-center transition-colors"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[var(--text-muted)]">
+                <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0" />
+              </svg>
+              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-violet-500 border-2 border-[#0B1120]" />
+            </motion.button>
+
+            {/* Credits */}
             <Link
               href="/dashboard/topup"
-              className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)] hover:border-violet-500/20 transition-colors"
+              className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)] hover:border-violet-500/20 transition-colors group"
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-violet-400">
                 <line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
@@ -264,6 +304,8 @@ export default function DashboardShell({
               <span className="text-xs text-[var(--text-muted)]">เครดิต</span>
               <span className="text-sm font-semibold gradient-text-cyan">{user.credits.toLocaleString()}</span>
             </Link>
+
+            {/* Mobile avatar */}
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500/20 to-cyan-500/10 border border-violet-500/15 flex items-center justify-center text-xs font-semibold text-violet-300 md:hidden">
               {user.name.charAt(0)}
             </div>
