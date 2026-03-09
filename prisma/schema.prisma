@@ -27,6 +27,7 @@ model User {
   apiKeys          ApiKey[]
   messageTemplates MessageTemplate[]
   otpRequests      OtpRequest[]
+  campaigns        Campaign[]
   scheduledSms     ScheduledSms[]
 
   @@map("users")
@@ -36,6 +37,8 @@ model Message {
   id          String    @id @default(cuid())
   userId      String    @map("user_id")
   user        User      @relation(fields: [userId], references: [id])
+  campaignId  String?   @map("campaign_id")
+  campaign    Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
   senderName  String    @map("sender_name")
   recipient   String
   content     String
@@ -49,6 +52,7 @@ model Message {
 
   @@index([userId, createdAt])
   @@index([status])
+  @@index([campaignId])
   @@map("messages")
 }
 
@@ -91,6 +95,7 @@ model ContactGroup {
   createdAt DateTime @default(now()) @map("created_at")
 
   members   ContactGroupMember[]
+  campaigns Campaign[]
 
   @@index([userId])
   @@map("contact_groups")
@@ -148,6 +153,8 @@ model MessageTemplate {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  campaigns Campaign[]
+
   @@index([userId])
   @@map("message_templates")
 }
@@ -156,8 +163,9 @@ model OtpRequest {
   id        String   @id @default(cuid())
   userId    String   @map("user_id")
   user      User     @relation(fields: [userId], references: [id])
+  refCode   String   @unique @map("ref_code")
   phone     String
-  code      String
+  code      String   // hashed OTP
   purpose   String   @default("verify") // verify, login, transaction
   attempts  Int      @default(0)
   verified  Boolean  @default(false)
@@ -165,8 +173,37 @@ model OtpRequest {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@index([userId, phone, createdAt])
-  @@index([phone, code])
+  @@index([phone, createdAt])
   @@map("otp_requests")
+}
+
+model Campaign {
+  id              String           @id @default(cuid())
+  userId          String           @map("user_id")
+  user            User             @relation(fields: [userId], references: [id])
+  name            String
+  contactGroupId  String?          @map("contact_group_id")
+  contactGroup    ContactGroup?    @relation(fields: [contactGroupId], references: [id], onDelete: SetNull)
+  templateId      String?          @map("template_id")
+  template        MessageTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  senderName      String?          @map("sender_name")
+  status          String           @default("draft")
+  scheduledAt     DateTime?        @map("scheduled_at")
+  totalRecipients Int              @default(0) @map("total_recipients")
+  sentCount       Int              @default(0) @map("sent_count")
+  deliveredCount  Int              @default(0) @map("delivered_count")
+  failedCount     Int              @default(0) @map("failed_count")
+  creditReserved  Int              @default(0) @map("credit_reserved")
+  creditUsed      Int              @default(0) @map("credit_used")
+  startedAt       DateTime?        @map("started_at")
+  completedAt     DateTime?        @map("completed_at")
+  createdAt       DateTime         @default(now()) @map("created_at")
+
+  messages        Message[]
+
+  @@index([userId, status])
+  @@index([scheduledAt])
+  @@map("campaigns")
 }
 
 model ScheduledSms {

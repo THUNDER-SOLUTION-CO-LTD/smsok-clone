@@ -109,7 +109,7 @@ export async function GET() {
         post: {
           tags: ["OTP"],
           summary: "Send OTP via SMS",
-          description: "Generate 6-digit OTP and send via SMS. Rate limit: 3 req/5min per phone+IP. TTL: 5 min. Max 5 verify attempts then 15-min lockout.",
+          description: "Generate 6-digit OTP, persist it in OtpRequest, and return an opaque ref for verification. Rate limit: 3 req/5min per phone.",
           requestBody: {
             content: { "application/json": { schema: {
               type: "object",
@@ -121,7 +121,7 @@ export async function GET() {
             }}},
           },
           responses: {
-            "201": { description: "OTP sent — returns id, expiresAt, creditUsed" },
+            "201": { description: "OTP sent — returns ref, expiresAt, creditUsed" },
             "429": { description: "Rate limited (3 per 5 min)" },
           },
         },
@@ -141,7 +141,7 @@ export async function GET() {
             }}},
           },
           responses: {
-            "201": { description: "OTP sent — returns id, expiresAt" },
+            "201": { description: "OTP sent — alias for /otp/send" },
             "429": { description: "Rate limited (3 per 5 min)" },
           },
         },
@@ -153,15 +153,15 @@ export async function GET() {
           requestBody: {
             content: { "application/json": { schema: {
               type: "object",
-              required: ["phone", "code"],
+              required: ["ref", "code"],
               properties: {
-                phone: { type: "string" },
+                ref: { type: "string", example: "ABC123EF" },
                 code: { type: "string", example: "123456" },
               },
             }}},
           },
           responses: {
-            "200": { description: "{ verified: true, phone, purpose }" },
+            "200": { description: "{ valid: true, verified: true, ref, phone, purpose }" },
             "400": { description: "Invalid or expired OTP" },
             "429": { description: "Rate limited (10/15min)" },
           },

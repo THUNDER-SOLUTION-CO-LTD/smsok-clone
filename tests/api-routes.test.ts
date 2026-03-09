@@ -7,6 +7,8 @@ const sendRoute = readFileSync(resolve(ROOT, "app/api/v1/sms/send/route.ts"), "u
 const batchRoute = readFileSync(resolve(ROOT, "app/api/v1/sms/batch/route.ts"), "utf-8");
 const balanceRoute = readFileSync(resolve(ROOT, "app/api/v1/balance/route.ts"), "utf-8");
 const sendersRoute = readFileSync(resolve(ROOT, "app/api/v1/senders/route.ts"), "utf-8");
+const otpSendRoute = readFileSync(resolve(ROOT, "app/api/v1/otp/send/route.ts"), "utf-8");
+const otpVerifyRoute = readFileSync(resolve(ROOT, "app/api/v1/otp/verify/route.ts"), "utf-8");
 
 // ==========================================
 // POST /api/v1/sms/send
@@ -114,5 +116,25 @@ describe("API Route: GET /api/v1/senders", () => {
 
   it("returns sender names array", () => {
     expect(sendersRoute).toContain("senders:");
+  });
+});
+
+describe("API Route: POST /api/v1/otp/send", () => {
+  it("exports POST handler", () => {
+    expect(otpSendRoute).toContain("async function POST");
+  });
+
+  it("delegates to OTP send handler", () => {
+    expect(otpSendRoute).toContain("handleSendOtp");
+  });
+});
+
+describe("API Route: POST /api/v1/otp/verify", () => {
+  it("exports POST handler", () => {
+    expect(otpVerifyRoute).toContain("async function POST");
+  });
+
+  it("delegates to OTP verify handler", () => {
+    expect(otpVerifyRoute).toContain("handleVerifyOtp");
   });
 });

@@ -62,6 +62,8 @@ export function apiError(error: unknown) {
       msg.includes("ยังไม่ได้") ||
       msg.includes("กรุณา") ||
       msg.includes("ไม่สำเร็จ") ||
+      msg.includes("ใช้งานแล้ว") ||
+      msg.includes("ถูกล็อค") ||
       error.name === "ZodError";
     return Response.json(
       { error: msg },

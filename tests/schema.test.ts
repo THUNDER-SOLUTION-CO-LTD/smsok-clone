@@ -41,6 +41,14 @@ describe("Prisma Schema: Models", () => {
   it("has Transaction model", () => {
     expect(schema).toContain("model Transaction");
   });
+
+  it("has Campaign model", () => {
+    expect(schema).toContain("model Campaign");
+  });
+
+  it("has OtpRequest model", () => {
+    expect(schema).toContain("model OtpRequest");
+  });
 });
 
 describe("Prisma Schema: User defaults", () => {
@@ -155,5 +163,35 @@ describe("Prisma Schema: Transaction", () => {
 
   it("has expiresAt field", () => {
     expect(schema).toContain("expiresAt");
+  });
+});
+
+describe("Prisma Schema: OTP", () => {
+  it("stores refCode uniquely", () => {
+    const otpBlock = schema.slice(
+      schema.indexOf("model OtpRequest"),
+      schema.indexOf("model ScheduledSms")
+    );
+    expect(otpBlock).toContain("refCode");
+    expect(otpBlock).toContain("@unique");
+  });
+});
+
+describe("Prisma Schema: Campaign", () => {
+  it("has draft default status", () => {
+    const campaignBlock = schema.slice(
+      schema.indexOf("model Campaign"),
+      schema.indexOf("model ScheduledSms")
+    );
+    expect(campaignBlock).toContain('@default("draft")');
+  });
+
+  it("tracks credit reservation", () => {
+    const campaignBlock = schema.slice(
+      schema.indexOf("model Campaign"),
+      schema.indexOf("model ScheduledSms")
+    );
+    expect(campaignBlock).toContain("creditReserved");
+    expect(campaignBlock).toContain("creditUsed");
   });
 });

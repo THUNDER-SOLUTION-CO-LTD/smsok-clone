@@ -75,6 +75,21 @@ export const sendBatchSmsSchema = z.object({
   message: z.string().min(1).max(1000),
 });
 
+export const sendOtpSchema = z.object({
+  phone: z.string().regex(thaiPhoneRegex, "เบอร์โทรไม่ถูกต้อง"),
+  purpose: z.enum(["verify", "login", "transaction"]).default("verify"),
+});
+
+export const verifyOtpSchema = z.object({
+  ref: z
+    .string()
+    .min(6, "ref ไม่ถูกต้อง")
+    .max(32, "ref ไม่ถูกต้อง")
+    .regex(/^[A-Za-z0-9]+$/, "ref ไม่ถูกต้อง")
+    .transform((value) => value.toUpperCase()),
+  code: z.string().regex(/^\d{6}$/, "รหัส OTP ไม่ถูกต้อง"),
+});
+
 // ==========================================
 // Contact Validations
 // ==========================================
