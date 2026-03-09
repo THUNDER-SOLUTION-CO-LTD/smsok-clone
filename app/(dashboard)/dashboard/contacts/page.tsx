@@ -1,14 +1,11 @@
 import { getSession } from "@/lib/auth";
-import { redirect } from "next/navigation";
 import { getContacts } from "@/lib/actions/contacts";
-import DashboardShell from "../DashboardShell";
 import ContactsClient from "./ContactsClient";
 
 export default async function ContactsPage() {
   const user = await getSession();
-  if (!user) redirect("/login");
 
-  const { contacts, pagination } = await getContacts(user.id);
+  const { contacts, pagination } = await getContacts(user!.id);
 
   // Serialize dates for client component
   const serializedContacts = contacts.map((c) => ({
@@ -21,12 +18,10 @@ export default async function ContactsPage() {
   }));
 
   return (
-    <DashboardShell user={user} title="สมุดโทรศัพท์">
-      <ContactsClient
-        userId={user.id}
-        initialContacts={serializedContacts}
-        totalContacts={pagination.total}
-      />
-    </DashboardShell>
+    <ContactsClient
+      userId={user!.id}
+      initialContacts={serializedContacts}
+      totalContacts={pagination.total}
+    />
   );
 }

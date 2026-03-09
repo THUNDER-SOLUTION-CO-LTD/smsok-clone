@@ -2,15 +2,13 @@ import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import PasswordChangeForm from "./PasswordChangeForm";
-import DashboardShell from "../DashboardShell";
 
 export default async function SettingsPage() {
   const user = await getSession();
-  if (!user) redirect("/login");
 
   // Get full user data including phone and createdAt
   const fullUser = await prisma.user.findUnique({
-    where: { id: user.id },
+    where: { id: user!.id },
     select: {
       id: true,
       name: true,
@@ -25,7 +23,6 @@ export default async function SettingsPage() {
   if (!fullUser) redirect("/login");
 
   return (
-    <DashboardShell user={user} title="ตั้งค่า">
     <div className="p-6 md:p-8 max-w-4xl animate-fade-in">
       <h1 className="text-2xl font-bold text-white mb-1 tracking-tight">ตั้งค่า</h1>
       <p className="text-sm text-white/40 mb-8">จัดการบัญชีและข้อมูลส่วนตัว</p>
@@ -103,6 +100,5 @@ export default async function SettingsPage() {
         </div>
       </div>
     </div>
-    </DashboardShell>
   );
 }
