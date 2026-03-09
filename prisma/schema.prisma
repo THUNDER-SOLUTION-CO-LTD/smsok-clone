@@ -8,126 +8,149 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  name         String?
-  credits      Int      @default(0)
-  apiKey       String?  @unique
-  messages     Message[]
-  contacts     Contact[]
-  campaigns    Campaign[]
-  senderNames  SenderName[]
-  transactions Transaction[]
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id            String    @id @default(cuid())
+  email         String    @unique
+  phone         String?
+  name          String
+  password      String
+  credits       Int       @default(500)
+  role          String    @default("user")
+  emailVerified Boolean   @default(false)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  senderNames   SenderName[]
+  contacts      Contact[]
+  contactGroups ContactGroup[]
+  messages      Message[]
+  transactions  Transaction[]
+  apiKeys       ApiKey[]
+
+  @@map("users")
 }
 
 model Message {
-  id         String        @id @default(cuid())
-  to         String
-  body       String
-  status     MessageStatus @default(QUEUED)
-  senderName String        @default("SMSOK")
-  cost       Float         @default(0)
-  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId     String
-  campaign   Campaign?     @relation(fields: [campaignId], references: [id])
-  campaignId String?
-  sentAt     DateTime?
-  deliveredAt DateTime?
-  createdAt  DateTime      @default(now())
+  id          String    @id @default(cuid())
+  userId      String    @map("user_id")
+  user        User      @relation(fields: [userId], references: [id])
+  senderName  String    @map("sender_name")
+  recipient   String
+  content     String
+  status      String    @default("pending")
+  creditCost  Int       @default(1) @map("credit_cost")
+  sentAt      DateTime? @map("sent_at")
+  deliveredAt DateTime? @map("delivered_at")
+  errorCode   String?   @map("error_code")
+  createdAt   DateTime  @default(now()) @map("created_at")
 
-  @@index([userId, status])
-  @@index([campaignId])
+  @@index([userId, createdAt])
+  @@index([status])
+  @@map("messages")
+}
+
+model ApiKey {
+  id        String    @id @default(cuid())
+  userId    String    @map("user_id")
+  user      User      @relation(fields: [userId], references: [id])
+  name      String
+  key       String    @unique
+  isActive  Boolean   @default(true) @map("is_active")
+  lastUsed  DateTime? @map("last_used")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([key])
+  @@map("api_keys")
 }
 
 model Contact {
-  id     String @id @default(cuid())
-  name   String?
-  phone  String
-  group  String @default("default")
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId String
-  createdAt DateTime @default(now())
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id])
+  name      String
+  phone     String
+  email     String?
+  tags      String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  groups    ContactGroupMember[]
 
   @@unique([userId, phone])
-  @@index([userId, group])
+  @@index([userId])
+  @@map("contacts")
 }
 
-model Campaign {
-  id         String         @id @default(cuid())
-  name       String
-  body       String
-  status     CampaignStatus @default(DRAFT)
-  senderName String         @default("SMSOK")
-  totalSent  Int            @default(0)
-  totalCost  Float          @default(0)
-  messages   Message[]
-  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId     String
-  scheduledAt DateTime?
-  completedAt DateTime?
-  createdAt  DateTime       @default(now())
-  updatedAt  DateTime       @updatedAt
+model ContactGroup {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id])
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
 
-  @@index([userId, status])
+  members   ContactGroupMember[]
+
+  @@index([userId])
+  @@map("contact_groups")
+}
+
+model ContactGroupMember {
+  id        String       @id @default(cuid())
+  groupId   String       @map("group_id")
+  group     ContactGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  contactId String       @map("contact_id")
+  contact   Contact      @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, contactId])
+  @@map("contact_group_members")
 }
 
 model SenderName {
-  id       String           @id @default(cuid())
-  name     String
-  status   ApprovalStatus   @default(PENDING)
-  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId   String
-  createdAt DateTime        @default(now())
+  id         String    @id @default(cuid())
+  userId     String    @map("user_id")
+  user       User      @relation(fields: [userId], references: [id])
+  name       String
+  status     String    @default("pending")
+  rejectNote String?   @map("reject_note")
+  approvedAt DateTime? @map("approved_at")
+  approvedBy String?   @map("approved_by")
+  createdAt  DateTime  @default(now()) @map("created_at")
 
   @@unique([userId, name])
+  @@index([status])
+  @@map("sender_names")
+}
+
+model Package {
+  id            String   @id @default(cuid())
+  name          String
+  price         Int
+  bonusPercent  Int      @default(0) @map("bonus_percent")
+  totalCredits  Int      @map("total_credits")
+  maxSenders    Int      @default(5) @map("max_senders")
+  durationDays  Int      @map("duration_days")
+  isActive      Boolean  @default(true) @map("is_active")
+  isBestSeller  Boolean  @default(false) @map("is_best_seller")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("packages")
 }
 
 model Transaction {
-  id       String          @id @default(cuid())
-  type     TransactionType
-  amount   Float
-  credits  Int
-  status   PaymentStatus   @default(PENDING)
-  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId   String
-  createdAt DateTime       @default(now())
+  id          String    @id @default(cuid())
+  userId      String    @map("user_id")
+  user        User      @relation(fields: [userId], references: [id])
+  packageId   String?   @map("package_id")
+  amount      Int
+  credits     Int
+  method      String
+  status      String    @default("pending")
+  slipUrl     String?   @map("slip_url")
+  reference   String?
+  verifiedAt  DateTime? @map("verified_at")
+  verifiedBy  String?   @map("verified_by")
+  expiresAt   DateTime  @map("expires_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
 
-  @@index([userId])
-}
-
-enum MessageStatus {
-  QUEUED
-  SENDING
-  SENT
-  DELIVERED
-  FAILED
-  EXPIRED
-}
-
-enum CampaignStatus {
-  DRAFT
-  SCHEDULED
-  SENDING
-  COMPLETED
-  CANCELLED
-}
-
-enum ApprovalStatus {
-  PENDING
-  APPROVED
-  REJECTED
-}
-
-enum TransactionType {
-  TOPUP
-  USAGE
-  REFUND
-}
-
-enum PaymentStatus {
-  PENDING
-  COMPLETED
-  FAILED
+  @@index([userId, createdAt])
+  @@index([status])
+  @@map("transactions")
 }
