@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { logout } from "@/lib/actions";
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -199,17 +199,7 @@ export default function DashboardShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const router = useRouter();
   const [moreOpen, setMoreOpen] = useState(false);
-
-  // Search
-  const [searchQuery, setSearchQuery] = useState("");
-  function handleSearchKey(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Enter" && searchQuery.trim()) {
-      router.push(`/dashboard/messages?search=${encodeURIComponent(searchQuery.trim())}`);
-      setSearchQuery("");
-    }
-  }
 
   // Notifications
   type Notif = { id: string; type: string; message: string; createdAt: string; read: boolean };
@@ -321,90 +311,99 @@ export default function DashboardShell({
             {title || sidebarItems.find(i => i.href === pathname)?.label || "ภาพรวม"}
           </h1>
           <div className="flex items-center gap-2.5">
-            {/* Search */}
-            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)] hover:border-violet-500/15 transition-colors min-w-[200px] group">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[var(--text-muted)] group-focus-within:text-violet-400 transition-colors flex-shrink-0">
-                <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
-              </svg>
-              <input
-                type="text"
-                placeholder="ค้นหา... (Enter)"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={handleSearchKey}
-                className="bg-transparent text-xs text-[var(--text-secondary)] placeholder:text-[var(--text-muted)] outline-none w-full"
-              />
-              {searchQuery ? (
-                <button type="button" onClick={() => setSearchQuery("")} className="text-[var(--text-muted)] hover:text-white transition-colors">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-                </button>
-              ) : (
-                <kbd className="hidden xl:inline-flex text-[10px] text-[var(--text-muted)] border border-[var(--border-subtle)] px-1.5 py-0.5 rounded font-mono">↵</kbd>
-              )}
-            </div>
-
             {/* Notification */}
             <div className="relative" ref={notifRef}>
               <motion.button
                 onClick={toggleNotif}
-                className="relative w-9 h-9 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)] hover:border-violet-500/15 flex items-center justify-center transition-colors"
+                animate={unreadCount > 0 ? { rotate: [0, -15, 15, -10, 10, -5, 5, 0] } : {}}
+                transition={{ duration: 0.6, repeat: Infinity, repeatDelay: 3 }}
+                className="relative w-9 h-9 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)] hover:border-blue-500/30 flex items-center justify-center transition-colors"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className={notifOpen ? "text-violet-400" : "text-[var(--text-muted)]"}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[var(--text-muted)]">
                   <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0" />
                 </svg>
                 {unreadCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-violet-500 border-2 border-[#0B1120]" />
+                  <motion.span
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 border-2 border-[#0B1120] flex items-center justify-center text-[10px] font-bold text-white leading-none"
+                  >
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </motion.span>
                 )}
               </motion.button>
 
               <AnimatePresence>
                 {notifOpen && (
                   <motion.div
-                    initial={{ opacity: 0, y: -8, scale: 0.97 }}
+                    initial={{ opacity: 0, y: -8, scale: 0.96 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -8, scale: 0.97 }}
+                    exit={{ opacity: 0, y: -8, scale: 0.96 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute right-0 top-11 w-80 glass border border-[var(--border-subtle)] rounded-xl shadow-2xl z-50 overflow-hidden"
+                    className="absolute right-0 top-12 w-80 z-50 rounded-2xl border border-white/10 bg-[#0D1526]/90 backdrop-blur-xl shadow-2xl shadow-black/40 overflow-hidden"
                   >
-                    <div className="px-4 py-3 border-b border-[var(--border-subtle)] flex items-center justify-between">
-                      <span className="text-sm font-semibold text-[var(--text-primary)]">การแจ้งเตือน</span>
-                      {notifs.length > 0 && (
-                        <span className="text-[10px] text-[var(--text-muted)]">{notifs.length} รายการ</span>
-                      )}
+                    {/* Header */}
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
+                      <span className="text-sm font-semibold text-white">การแจ้งเตือน</span>
+                      {unreadCount === 0 && <span className="text-xs text-[var(--text-muted)]">อ่านทั้งหมดแล้ว</span>}
                     </div>
-                    <div className="max-h-80 overflow-y-auto">
+
+                    {/* Items */}
+                    <div className="max-h-72 overflow-y-auto">
                       {notifs.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-10 gap-2">
-                          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="text-[var(--text-muted)]">
-                            <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0" />
-                          </svg>
-                          <p className="text-xs text-[var(--text-muted)]">ยังไม่มีการแจ้งเตือน</p>
-                        </div>
-                      ) : (
-                        notifs.map((n) => (
-                          <div key={n.id} className={`px-4 py-3 border-b border-[var(--border-subtle)] last:border-0 hover:bg-white/[0.02] transition-colors ${!n.read ? "bg-violet-500/[0.03]" : ""}`}>
-                            <div className="flex items-start gap-3">
-                              <div className={`w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 ${!n.read ? "bg-violet-400" : "bg-transparent"}`} />
-                              <div className="flex-1 min-w-0">
-                                <p className="text-xs text-[var(--text-secondary)] leading-relaxed">{n.message}</p>
-                                <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
-                                  {new Date(n.createdAt).toLocaleString("th-TH", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
-                                </p>
-                              </div>
-                            </div>
+                        <motion.div
+                          initial={{ opacity: 0, x: -8 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          className="flex items-start gap-3 px-4 py-3 border-b border-white/5"
+                        >
+                          <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-violet-500/15 text-violet-400">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
                           </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-[var(--text-secondary)] leading-snug">ยินดีต้อนรับสู่ SMSOK!</p>
+                            <p className="text-xs text-[var(--text-muted)] mt-0.5">เริ่มต้นส่ง SMS ได้เลย</p>
+                          </div>
+                        </motion.div>
+                      ) : (
+                        notifs.map((n, i) => (
+                          <motion.div
+                            key={n.id}
+                            initial={{ opacity: 0, x: -8 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: i * 0.04 }}
+                            className={`flex items-start gap-3 px-4 py-3 hover:bg-white/5 transition-colors border-b border-white/5 last:border-0 ${!n.read ? "bg-blue-500/5" : ""}`}
+                          >
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                              n.type === "sms_success" ? "bg-green-500/15 text-green-400" :
+                              n.type === "sms_failed" ? "bg-red-500/15 text-red-400" :
+                              n.type === "topup" ? "bg-blue-500/15 text-blue-400" :
+                              "bg-violet-500/15 text-violet-400"
+                            }`}>
+                              {n.type === "sms_success" && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>}
+                              {n.type === "sms_failed" && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>}
+                              {n.type === "topup" && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><text x="12" y="16" textAnchor="middle" fill="currentColor" stroke="none" fontSize="11" fontWeight="bold">฿</text></svg>}
+                              {(n.type === "welcome" || !["sms_success","sms_failed","topup"].includes(n.type)) && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm text-[var(--text-secondary)] leading-snug">{n.message}</p>
+                              <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                                {new Date(n.createdAt).toLocaleString("th-TH", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                              </p>
+                            </div>
+                            {!n.read && <span className="w-2 h-2 rounded-full bg-blue-400 flex-shrink-0 mt-1.5" />}
+                          </motion.div>
                         ))
                       )}
                     </div>
-                    {notifs.length > 0 && (
-                      <div className="px-4 py-2.5 border-t border-[var(--border-subtle)]">
-                        <Link href="/dashboard/messages" onClick={() => setNotifOpen(false)} className="text-xs text-violet-400 hover:text-violet-300 transition-colors">
-                          ดูทั้งหมด →
-                        </Link>
-                      </div>
-                    )}
+
+                    {/* Footer */}
+                    <div className="px-4 py-3 border-t border-white/5">
+                      <Link href="/dashboard/messages" onClick={() => setNotifOpen(false)} className="text-xs text-blue-400 hover:text-blue-300 transition-colors">
+                        ดูทั้งหมด →
+                      </Link>
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
