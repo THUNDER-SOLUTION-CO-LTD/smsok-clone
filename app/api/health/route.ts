@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/db";
+import { env } from "@/lib/env";
+import { logger } from "@/lib/logger";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +15,9 @@ export async function GET() {
     await prisma.$queryRaw`SELECT 1`;
     checks.database = { status: "ok", latency: Date.now() - dbStart };
   } catch (e) {
-    checks.database = { status: "error", error: e instanceof Error ? e.message : "unknown" };
+    const error = e instanceof Error ? e.message : "unknown";
+    checks.database = { status: "error", error };
+    logger.error("Health check: database unreachable", { error });
   }
 
   // Memory usage
@@ -34,7 +38,7 @@ export async function GET() {
       latency: Date.now() - start,
       memory: memoryMB,
       checks,
-      version: process.env.COMMIT_SHA || "dev",
+      version: env.COMMIT_SHA,
     },
     { status: allHealthy ? 200 : 503 }
   );

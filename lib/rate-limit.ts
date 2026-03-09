@@ -1,0 +1,69 @@
+/**
+ * In-memory rate limiter for API routes
+ * Limits requests per IP/API key within a sliding window
+ */
+
+type RateLimitEntry = {
+  count: number;
+  resetAt: number;
+};
+
+const store = new Map<string, RateLimitEntry>();
+
+// Cleanup stale entries every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of store) {
+    if (entry.resetAt < now) store.delete(key);
+  }
+}, 5 * 60 * 1000);
+
+export type RateLimitConfig = {
+  windowMs: number;  // Time window in ms
+  maxRequests: number; // Max requests per window
+};
+
+const DEFAULTS: Record<string, RateLimitConfig> = {
+  sms: { windowMs: 60_000, maxRequests: 10 },       // 10 SMS/min
+  batch: { windowMs: 60_000, maxRequests: 5 },       // 5 batch/min
+  auth: { windowMs: 15 * 60_000, maxRequests: 10 },  // 10 login attempts/15min
+  api: { windowMs: 60_000, maxRequests: 60 },         // 60 req/min general
+  slip: { windowMs: 60_000, maxRequests: 5 },         // 5 slip verifications/min
+};
+
+export function checkRateLimit(
+  identifier: string,
+  type: keyof typeof DEFAULTS = "api"
+): { allowed: boolean; remaining: number; resetIn: number } {
+  const config = DEFAULTS[type];
+  const key = `${type}:${identifier}`;
+  const now = Date.now();
+
+  const entry = store.get(key);
+
+  if (!entry || entry.resetAt < now) {
+    store.set(key, { count: 1, resetAt: now + config.windowMs });
+    return { allowed: true, remaining: config.maxRequests - 1, resetIn: config.windowMs };
+  }
+
+  entry.count++;
+
+  if (entry.count > config.maxRequests) {
+    return { allowed: false, remaining: 0, resetIn: entry.resetAt - now };
+  }
+
+  return { allowed: true, remaining: config.maxRequests - entry.count, resetIn: entry.resetAt - now };
+}
+
+export function rateLimitResponse(resetIn: number) {
+  return Response.json(
+    { error: "Too many requests. Please try again later." },
+    {
+      status: 429,
+      headers: {
+        "Retry-After": String(Math.ceil(resetIn / 1000)),
+        "X-RateLimit-Reset": String(Math.ceil(resetIn / 1000)),
+      },
+    }
+  );
+}

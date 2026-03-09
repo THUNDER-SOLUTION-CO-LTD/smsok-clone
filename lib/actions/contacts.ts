@@ -160,6 +160,27 @@ export async function importContacts(
 }
 
 // ==========================================
+// Export contacts as JSON (for CSV conversion on client)
+// ==========================================
+
+export async function exportContacts(userId: string) {
+  const contacts = await db.contact.findMany({
+    where: { userId },
+    include: { groups: { include: { group: { select: { name: true } } } } },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return contacts.map((c) => ({
+    name: c.name,
+    phone: c.phone,
+    email: c.email || "",
+    tags: c.tags || "",
+    groups: c.groups.map((g) => g.group.name).join(", "),
+    createdAt: c.createdAt.toISOString(),
+  }));
+}
+
+// ==========================================
 // Add contacts to a group
 // ==========================================
 

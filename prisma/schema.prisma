@@ -19,12 +19,13 @@ model User {
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
-  senderNames   SenderName[]
-  contacts      Contact[]
-  contactGroups ContactGroup[]
-  messages      Message[]
-  transactions  Transaction[]
-  apiKeys       ApiKey[]
+  senderNames      SenderName[]
+  contacts         Contact[]
+  contactGroups    ContactGroup[]
+  messages         Message[]
+  transactions     Transaction[]
+  apiKeys          ApiKey[]
+  messageTemplates MessageTemplate[]
 
   @@map("users")
 }
@@ -133,6 +134,20 @@ model Package {
   createdAt     DateTime @default(now()) @map("created_at")
 
   @@map("packages")
+}
+
+model MessageTemplate {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id])
+  name      String
+  content   String
+  category  String   @default("general")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@map("message_templates")
 }
 
 model Transaction {

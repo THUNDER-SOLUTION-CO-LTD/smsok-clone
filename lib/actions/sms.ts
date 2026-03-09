@@ -73,18 +73,34 @@ export async function sendSms(userId: string, data: unknown) {
         },
       });
     } else {
-      await db.message.update({
-        where: { id: message.id },
-        data: { status: "failed" },
-      });
+      // Gateway returned failure — REFUND credits
+      await db.$transaction([
+        db.message.update({
+          where: { id: message.id },
+          data: { status: "failed", errorCode: result.error?.slice(0, 100) || null },
+        }),
+        db.user.update({
+          where: { id: userId },
+          data: { credits: { increment: smsCount } },
+        }),
+      ]);
       throw new Error(result.error || "ส่ง SMS ไม่สำเร็จ");
     }
   } catch (gatewayError) {
-    // If gateway fails, mark message as failed but don't refund yet
-    await db.message.update({
-      where: { id: message.id },
-      data: { status: "failed" },
-    });
+    // If gateway throws exception — REFUND credits
+    const isSendError = gatewayError instanceof Error && gatewayError.message.includes("ส่ง SMS ไม่สำเร็จ");
+    if (!isSendError) {
+      await db.$transaction([
+        db.message.update({
+          where: { id: message.id },
+          data: { status: "failed" },
+        }),
+        db.user.update({
+          where: { id: userId },
+          data: { credits: { increment: smsCount } },
+        }),
+      ]);
+    }
     throw gatewayError;
   }
 
@@ -149,16 +165,37 @@ export async function sendBatchSms(userId: string, data: unknown) {
     batches.push(normalizedRecipients.slice(i, i + 1000));
   }
 
+  let sentCount = 0;
+  let failedCount = 0;
+
   for (const batch of batches) {
-    await sendSmsBatch({
-      recipients: batch,
-      message: input.message,
-      sender: input.senderName,
+    try {
+      const batchResult = await sendSmsBatch({
+        recipients: batch,
+        message: input.message,
+        sender: input.senderName,
+      });
+      if (batchResult.success) {
+        sentCount += batch.length;
+      } else {
+        failedCount += batch.length;
+      }
+    } catch {
+      failedCount += batch.length;
+    }
+  }
+
+  // Refund credits for failed messages
+  if (failedCount > 0) {
+    const refundCredits = smsCount * failedCount;
+    await db.user.update({
+      where: { id: userId },
+      data: { credits: { increment: refundCredits } },
     });
   }
 
   revalidatePath("/dashboard");
-  return { totalMessages: result.count, totalCredits };
+  return { totalMessages: result.count, totalCredits, sentCount, failedCount };
 }
 
 // ==========================================
