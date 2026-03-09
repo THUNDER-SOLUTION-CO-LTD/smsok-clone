@@ -293,7 +293,6 @@ export default function DashboardContent({ user, stats, senderNames = ["EasySlip
               </div>
             )}
           </div>
-        </div>
     </div>
   );
 }

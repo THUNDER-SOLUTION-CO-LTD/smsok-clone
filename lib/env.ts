@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 const envSchema = z.object({
-  DATABASE_URL: z.url("Invalid DATABASE_URL"),
+  DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
   JWT_SECRET: z.string().min(16, "JWT_SECRET must be at least 16 characters"),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   PORT: z.coerce.number().default(3000),
@@ -14,7 +14,11 @@ const envSchema = z.object({
 
 export type Env = z.infer<typeof envSchema>;
 
-function validateEnv(): Env {
+let _env: Env | null = null;
+
+export function getEnv(): Env {
+  if (_env) return _env;
+
   const result = envSchema.safeParse(process.env);
 
   if (!result.success) {
@@ -25,9 +29,18 @@ function validateEnv(): Env {
     if (process.env.NODE_ENV === "production") {
       process.exit(1);
     }
+
+    // In dev, return raw env to avoid crashing during build
+    return process.env as unknown as Env;
   }
 
-  return result.success ? result.data : (process.env as unknown as Env);
+  _env = result.data;
+  return _env;
 }
 
-export const env = validateEnv();
+// Lazy proxy — validates on first property access at runtime, not at import/build time
+export const env: Env = new Proxy({} as Env, {
+  get(_, prop: string) {
+    return getEnv()[prop as keyof Env];
+  },
+});

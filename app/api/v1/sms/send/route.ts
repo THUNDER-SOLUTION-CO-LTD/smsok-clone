@@ -1,10 +1,15 @@
 import { NextRequest } from "next/server";
 import { authenticateApiKey, apiResponse, apiError } from "@/lib/api-auth";
 import { sendSms } from "@/lib/actions/sms";
+import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
   try {
     const user = await authenticateApiKey(req);
+
+    const limit = checkRateLimit(user.id, "sms");
+    if (!limit.allowed) return rateLimitResponse(limit.resetIn);
+
     const body = await req.json();
 
     const message = await sendSms(user.id, {
