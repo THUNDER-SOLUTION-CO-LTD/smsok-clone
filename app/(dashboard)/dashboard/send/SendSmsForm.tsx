@@ -98,18 +98,29 @@ export default function SendSmsForm({ userId, senderNames = ["EasySlip"] }: { us
             {/* Sender Name */}
             <div>
               <label className="block text-xs text-white/50 uppercase tracking-wider mb-2">Sender Name</label>
-              <select
-                className="input-glass cursor-pointer"
-                value={senderName}
-                onChange={(e) => setSenderName(e.target.value)}
-              >
-                {senderNames.map((name) => (
-                  <option key={name} value={name} className="bg-[#0a0f1a] text-white">
-                    {name}{name === "EasySlip" ? " (Default)" : ""}
-                  </option>
-                ))}
-              </select>
-              <p className="text-[11px] text-white/20 mt-1">เฉพาะ sender ที่ผ่านอนุมัติเท่านั้น</p>
+              <div className="relative">
+                <select
+                  className="input-glass cursor-pointer appearance-none pr-10"
+                  value={senderName}
+                  onChange={(e) => setSenderName(e.target.value)}
+                >
+                  <option value="EasySlip" className="bg-[#0a0f1a] text-white">EasySlip (Default)</option>
+                  {senderNames.filter(n => n !== "EasySlip").map((name) => (
+                    <option key={name} value={name} className="bg-[#0a0f1a] text-white">
+                      {name}
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-white/30">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </div>
+              </div>
+              <p className="text-[11px] text-white/20 mt-1.5">
+                {senderName === "EasySlip" ? "ใช้ชื่อ Default ได้เลย หรือ" : "Sender ที่ผ่านอนุมัติแล้ว — "}{" "}
+                <a href="/dashboard/senders" className="text-sky-400/60 hover:text-sky-400 transition-colors">ขอ Sender Name ใหม่ →</a>
+              </p>
             </div>
 
             {/* Message Type */}
@@ -201,11 +212,11 @@ export default function SendSmsForm({ userId, senderNames = ["EasySlip"] }: { us
               </div>
               <div className="flex justify-between text-white/50">
                 <span>Cost/SMS</span>
-                <span className="text-white">0.22 credits</span>
+                <span className="text-white">฿0.22</span>
               </div>
               <div className="border-t border-white/5 pt-2 mt-2 flex justify-between font-semibold">
                 <span className="text-white">Total</span>
-                <span className="neon-blue">{totalCost} credits</span>
+                <span className="neon-blue">฿{totalCost}</span>
               </div>
             </div>
 

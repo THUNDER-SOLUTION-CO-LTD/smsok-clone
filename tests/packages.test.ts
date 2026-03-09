@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 
 // Import PACKAGES constant directly
-import { PACKAGES } from "@/lib/actions/payments";
+import { PACKAGES } from "@/lib/packages-data";
 
 describe("PACKAGES constant", () => {
   it("has exactly 8 packages", () => {

@@ -9,22 +9,67 @@ export default async function SendersPage() {
 
   const senderNames = await getSenderNames(user.id);
 
-  const statusConfig: Record<string, { badge: string; label: string }> = {
-    pending: { badge: "badge-warning", label: "PENDING" },
-    approved: { badge: "badge-success", label: "APPROVED" },
-    rejected: { badge: "badge-error", label: "REJECTED" },
+  const statusConfig: Record<string, { badge: string; label: string; icon: string }> = {
+    pending: { badge: "badge-warning", label: "รออนุมัติ", icon: "⏳" },
+    approved: { badge: "badge-success", label: "อนุมัติแล้ว", icon: "✓" },
+    rejected: { badge: "badge-error", label: "ถูกปฏิเสธ", icon: "✕" },
   };
+
+  const approvedCount = senderNames.filter(s => s.status === "approved").length;
+  const pendingCount = senderNames.filter(s => s.status === "pending").length;
 
   return (
     <div className="p-6 md:p-8 max-w-6xl animate-fade-in">
       <h1 className="text-2xl font-bold text-white mb-1 tracking-tight">Sender Names</h1>
-      <p className="text-sm text-white/40 mb-8">จัดการชื่อผู้ส่ง SMS ของคุณ</p>
+      <p className="text-sm text-white/40 mb-8">ยื่นคำขอ Sender Name เพื่อใช้ส่ง SMS ในชื่อแบรนด์ของคุณ</p>
 
-      {/* Info Note */}
-      <div className="glass p-4 mb-6">
-        <p className="text-xs text-white/40 leading-relaxed">
-          <span className="text-sky-400 font-semibold">Note:</span> Sender name ต้องผ่านการอนุมัติก่อนใช้งาน (1-2 วันทำการ) ระหว่างรอสามารถใช้ชื่อ <span className="text-sky-300 font-medium">EasySlip</span> (Default) ส่ง SMS ได้เลย
-        </p>
+      {/* Request Process Info */}
+      <div className="glass p-5 mb-6">
+        <div className="flex items-start gap-3">
+          <div className="w-8 h-8 rounded-lg bg-sky-500/[0.08] border border-sky-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-sky-400">
+              <circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" />
+            </svg>
+          </div>
+          <div>
+            <p className="text-sm text-white/60 font-medium mb-2">ขั้นตอนการขอ Sender Name</p>
+            <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-white/35">
+              <div className="flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400 text-[10px] font-bold">1</span>
+                <span>ยื่นคำขอชื่อผู้ส่ง</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-white/15">→</div>
+              <div className="flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 text-[10px] font-bold">2</span>
+                <span>ทีมงานตรวจสอบ (1-2 วันทำการ)</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-white/15">→</div>
+              <div className="flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 text-[10px] font-bold">3</span>
+                <span>อนุมัติแล้ว → ใช้ส่ง SMS ได้</span>
+              </div>
+            </div>
+            <p className="text-[11px] text-white/20 mt-3">
+              ระหว่างรอสามารถใช้ <span className="text-sky-300/60 font-medium">EasySlip</span> (Default) ส่ง SMS ได้เลย
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="glass p-4 text-center">
+          <p className="text-2xl font-bold text-white">{senderNames.length}</p>
+          <p className="text-[11px] text-white/30 mt-1">คำขอทั้งหมด</p>
+        </div>
+        <div className="glass p-4 text-center">
+          <p className="text-2xl font-bold text-emerald-400">{approvedCount}</p>
+          <p className="text-[11px] text-white/30 mt-1">อนุมัติแล้ว</p>
+        </div>
+        <div className="glass p-4 text-center">
+          <p className="text-2xl font-bold text-amber-400">{pendingCount}</p>
+          <p className="text-[11px] text-white/30 mt-1">รออนุมัติ</p>
+        </div>
       </div>
 
       {/* Request New Sender Name */}
@@ -32,10 +77,10 @@ export default async function SendersPage() {
         <h2 className="text-base font-semibold text-white mb-5 flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-sky-500/[0.08] border border-sky-500/10 flex items-center justify-center">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-sky-400">
-              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><path d="M14 2v6h6M12 18v-6M9 15h6" />
             </svg>
           </div>
-          ขอชื่อผู้ส่งใหม่
+          ยื่นคำขอ Sender Name ใหม่
         </h2>
         <SenderNameForm userId={user.id} />
       </div>
@@ -46,10 +91,10 @@ export default async function SendersPage() {
           <h2 className="text-base font-semibold text-white flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-sky-500/[0.08] border border-sky-500/10 flex items-center justify-center">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-sky-400">
-                <path d="M20 7h-9M14 17H5" /><circle cx="17" cy="17" r="3" /><circle cx="7" cy="7" r="3" />
+                <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" /><rect x="9" y="3" width="6" height="4" rx="2" />
               </svg>
             </div>
-            ชื่อผู้ส่งทั้งหมด
+            ประวัติคำขอทั้งหมด
             <span className="text-xs text-white/30 font-normal ml-2">({senderNames.length})</span>
           </h2>
         </div>
@@ -60,15 +105,15 @@ export default async function SendersPage() {
               <thead>
                 <tr className="border-b border-white/5">
                   <th className="text-left px-5 py-3 text-xs text-white/40 uppercase tracking-wider font-medium">ชื่อผู้ส่ง</th>
-                  <th className="text-left px-5 py-3 text-xs text-white/40 uppercase tracking-wider font-medium">สถานะ</th>
-                  <th className="text-left px-5 py-3 text-xs text-white/40 uppercase tracking-wider font-medium">วันที่ขอ</th>
+                  <th className="text-left px-5 py-3 text-xs text-white/40 uppercase tracking-wider font-medium">สถานะคำขอ</th>
+                  <th className="text-left px-5 py-3 text-xs text-white/40 uppercase tracking-wider font-medium">วันที่ยื่นคำขอ</th>
                   <th className="text-left px-5 py-3 text-xs text-white/40 uppercase tracking-wider font-medium">วันที่อนุมัติ</th>
                   <th className="text-left px-5 py-3 text-xs text-white/40 uppercase tracking-wider font-medium">หมายเหตุ</th>
                 </tr>
               </thead>
               <tbody>
                 {senderNames.map((sender) => {
-                  const s = statusConfig[sender.status] ?? { badge: "badge-info", label: sender.status.toUpperCase() };
+                  const s = statusConfig[sender.status] ?? { badge: "badge-info", label: sender.status.toUpperCase(), icon: "?" };
                   return (
                     <tr key={sender.id} className="table-row">
                       <td className="px-5 py-3.5">
@@ -79,7 +124,7 @@ export default async function SendersPage() {
                           <span className="text-white/70 font-mono font-semibold">{sender.name}</span>
                         </div>
                       </td>
-                      <td className="px-5 py-3.5"><span className={`badge ${s.badge}`}>{s.label}</span></td>
+                      <td className="px-5 py-3.5"><span className={`badge ${s.badge}`}>{s.icon} {s.label}</span></td>
                       <td className="px-5 py-3.5 text-white/30 text-xs">{new Date(sender.createdAt).toLocaleDateString("th-TH")}</td>
                       <td className="px-5 py-3.5 text-white/30 text-xs">{sender.approvedAt ? new Date(sender.approvedAt).toLocaleDateString("th-TH") : "-"}</td>
                       <td className="px-5 py-3.5 text-white/30 text-xs">{sender.rejectNote || "-"}</td>
@@ -93,11 +138,11 @@ export default async function SendersPage() {
           <div className="text-center py-14">
             <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-white/[0.02] border border-white/[0.04] flex items-center justify-center">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-white/10">
-                <path d="M20 7h-9M14 17H5" /><circle cx="17" cy="17" r="3" /><circle cx="7" cy="7" r="3" />
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><path d="M14 2v6h6M12 18v-6M9 15h6" />
               </svg>
             </div>
-            <p className="text-sm text-white/25 mb-1">ยังไม่มีชื่อผู้ส่ง</p>
-            <p className="text-xs text-white/15">ขอชื่อผู้ส่งใหม่ด้านบนเพื่อเริ่มต้นใช้งาน</p>
+            <p className="text-sm text-white/25 mb-1">ยังไม่มีคำขอ Sender Name</p>
+            <p className="text-xs text-white/15">ยื่นคำขอด้านบนเพื่อใช้ชื่อแบรนด์ของคุณส่ง SMS</p>
           </div>
         )}
       </div>

@@ -15,7 +15,7 @@ export async function authenticateApiKey(req: NextRequest) {
 
   const apiKey = await db.apiKey.findUnique({
     where: { key },
-    select: { id: true, isActive: true, userId: true, user: { select: { id: true, credits: true } } },
+    select: { id: true, isActive: true, userId: true, user: { select: { id: true, credits: true, role: true } } },
   });
 
   if (!apiKey) {
