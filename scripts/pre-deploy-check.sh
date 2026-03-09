@@ -54,16 +54,17 @@ echo ""
 # --- Database ---
 echo "🗄️  Database"
 check "Prisma client generated" "test -d node_modules/.prisma/client"
-check "Schema in sync" "bunx prisma db push --accept-data-loss 2>&1 | grep -q 'already in sync'"
+check "Schema in sync" "bunx prisma db push --skip-generate 2>&1 | grep -q 'already in sync'"
 echo ""
 
 # --- Environment ---
 echo "🔐 Environment"
 check ".env.production.template exists" "test -f .env.production.template"
-check "JWT_SECRET is set" "test -n '${JWT_SECRET:-}'"
-check "DATABASE_URL is set" "test -n '${DATABASE_URL:-}'"
-warn_check "REDIS_URL is set" "test -n '${REDIS_URL:-}'"
-warn_check "SMS API configured" "test -n '${SMS_API_URL:-}'"
+check ".env file exists" "test -f .env"
+check "JWT_SECRET in .env" "grep -q '^JWT_SECRET=' .env"
+check "DATABASE_URL in .env" "grep -q '^DATABASE_URL=' .env"
+warn_check "REDIS_URL in .env" "grep -q 'REDIS_URL' .env"
+warn_check "SMS API in .env" "grep -q 'SMS_API' .env"
 echo ""
 
 # --- Docker ---

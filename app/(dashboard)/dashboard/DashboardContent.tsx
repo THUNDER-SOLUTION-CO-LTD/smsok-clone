@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { sendSms } from "@/lib/actions/sms";
 
@@ -21,10 +21,11 @@ type DashboardStats = {
 
 function AnimatedCounter({ value, duration = 1.2 }: { value: string; duration?: number }) {
   const numericValue = Number.parseInt(value.replace(/,/g, ""), 10);
-  const [display, setDisplay] = useState("0");
+  const isNumeric = !Number.isNaN(numericValue);
+  const [display, setDisplay] = useState(isNumeric ? "0" : value);
 
   useEffect(() => {
-    if (Number.isNaN(numericValue)) { setDisplay(value); return; }
+    if (!isNumeric) return;
     const end = numericValue;
     const startTime = performance.now();
 
