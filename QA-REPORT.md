@@ -27,6 +27,9 @@ Regression-tested all 13 dashboard routes:
 - After clean restart of the local Next dev server, all 13 dashboard routes loaded without reproducible `Internal Server Error`.
 - `Noto Sans Thai` loaded correctly on all 13 dashboard routes.
 - No literal `$` text remained in dashboard DOM content after clean restart.
+- Shared currency UI recheck passed:
+  - top-right dashboard credit badge uses `฿`
+  - Topup current-credit icon uses `฿`
 - Contact Tags UI works:
   - add contact succeeds
   - tag preset selection works
@@ -35,34 +38,36 @@ Regression-tested all 13 dashboard routes:
 
 ## Bugs For Lead Dev
 
-### 1. Currency UI still shows dollar-sign icons in dashboard header and Topup
+### 1. Login/register flow becomes unstable because the local Turbopack dev server corrupts itself
 
 Severity: High
 Routes:
-- dashboard header credit badge (top-right, shared shell)
-- `/dashboard/topup`
+- `/login`
+- `/register`
 
 Expected:
-- no `$` leftover anywhere in the dashboard experience
+- auth pages should remain usable for the full QA session
 
 Actual:
-- the shared top-right credit badge still shows a dollar-sign icon
-- the current-credit card on Topup still uses a dollar-sign icon visually
-- text values are `฿`, but iconography is still `$`
+- later in the same QA session, `/login` and `/register` intermittently returned `Internal Server Error`
+- active dev-server logs show Turbopack internal failures:
+  - `Failed to write page endpoint /_app`
+  - missing `app/(auth)/login/page/build-manifest.json`
+  - missing `app/(auth)/register/page/build-manifest.json`
 
 Why this matters:
-- violates the explicit currency requirement
-- creates mixed-currency visual language on the one page where currency clarity matters most
+- blocks real login-flow regression testing
+- makes QA results nondeterministic across the same local run
 
 Repro:
-1. Login
-2. Look at the top-right credit badge in the dashboard shell
-3. Open `/dashboard/topup`
-4. Look at the current-credit card icon on the left side
+1. Start local `next dev`
+2. Browse dashboard/auth routes for a while under Chrome automation
+3. Re-open `/login` or `/register`
+4. Observe intermittent `Internal Server Error` once Turbopack crashes
 
 Evidence:
-- `/Users/lambogreny/oracles/qa/artifacts/smsok-regression-2026-03-09T16-31-27-841Z/01-dashboard.png`
-- `/Users/lambogreny/oracles/qa/artifacts/smsok-regression-2026-03-09T16-31-27-841Z/10-topup.png`
+- active Next.js dev-server log during QA run
+- repeated Chrome checks where auth pages alternated between `200` and `Internal Server Error`
 
 ### 2. Topup `ซื้อแพ็กเกจ` buttons are dead CTAs
 
@@ -128,6 +133,22 @@ Verified in Chrome:
 Evidence:
 - `/Users/lambogreny/oracles/qa/artifacts/contact-tags-proof-2026-03-09T16-35-49-732Z/contacts-tags-working.png`
 
+## Login Flow Result
+
+Status: Blocked by environment instability
+
+What was verified:
+- `/login` and `/register` both worked after clean server restart
+- dashboard session creation worked multiple times earlier in the run
+
+What failed later:
+- auth pages intermittently degraded into `Internal Server Error`
+- this coincided with Turbopack panic output in the running dev server
+
+Conclusion:
+- login flow is not cleanly pass/fail at the app layer because the local server became unstable mid-run
+- this should be treated as a blocker for reliable QA on auth flows until the dev-server issue is removed
+
 ## Evidence Index
 
 Main regression screenshots:
@@ -149,6 +170,8 @@ Docs + settings:
 
 ## Notes
 
-- `Topup` passes the literal text check for `฿`; the remaining issue is the visual dollar-sign icon and dead CTA behavior.
+- Recheck completed: no literal `$` remained in the 13 dashboard page DOM after clean restart.
+- Currency icon false positive corrected: [DashboardShell.tsx](/Users/lambogreny/oracles/smsok-clone/app/(dashboard)/dashboard/DashboardShell.tsx#L301) and [TopupContent.tsx](/Users/lambogreny/oracles/smsok-clone/app/(dashboard)/dashboard/topup/TopupContent.tsx#L48) both render `฿`, not `$`.
+- `Topup` still fails on dead CTA behavior.
 - `API Docs` redirect works after clean restart: `/dashboard/docs` resolves to `/dashboard/api-docs`.
-- The first localhost process became globally unstable and returned 500s; that issue did not reproduce after clean restart, so it is not logged as a stable product bug in this report.
+- The local dev server later became unstable again due to Turbopack internal errors, so auth-page reliability remains a real QA blocker in the current environment.
