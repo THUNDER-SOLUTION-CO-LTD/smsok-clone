@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { createCampaign } from "@/lib/actions/campaigns";
+import { allowAlphaNumericSpace, fieldCls } from "@/lib/form-utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────
 type CampaignStatus = "draft" | "scheduled" | "running" | "completed" | "cancelled";
@@ -123,6 +124,12 @@ export default function CampaignsClient({
 
   // Form state
   const [formName, setFormName] = useState("");
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  function validateCampaignField(field: string, value: string) {
+    let error = "";
+    if (field === "senderName" && value && !/^[A-Za-z0-9 ]{3,11}$/.test(value)) error = "ชื่อผู้ส่ง 3-11 ตัว A-Z 0-9 หรือช่องว่าง";
+    setFormErrors(prev => ({ ...prev, [field]: error }));
+  }
   const [formGroup, setFormGroup] = useState("");
   const [formTemplate, setFormTemplate] = useState("");
   const [formSender, setFormSender] = useState("");
@@ -346,7 +353,7 @@ export default function CampaignsClient({
                 </label>
                 <input
                   type="text"
-                  className="input-glass"
+                  className={fieldCls(undefined, formName)}
                   placeholder="เช่น โปรโมชั่นเดือนมีนาคม"
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
@@ -360,11 +367,14 @@ export default function CampaignsClient({
                 </label>
                 <input
                   type="text"
-                  className="input-glass"
+                  maxLength={11}
+                  onKeyDown={allowAlphaNumericSpace}
+                  className={fieldCls(formErrors.senderName, formSender)}
                   placeholder="SMSOK"
                   value={formSender}
-                  onChange={(e) => setFormSender(e.target.value)}
+                  onChange={(e) => { setFormSender(e.target.value); validateCampaignField("senderName", e.target.value); }}
                 />
+                {formErrors.senderName && <p className="text-red-400 text-xs mt-1">{formErrors.senderName}</p>}
               </div>
 
               {/* Contact Group */}
@@ -463,7 +473,7 @@ export default function CampaignsClient({
             <div className="mt-5 flex items-center gap-3">
               <motion.button
                 onClick={handleCreate}
-                disabled={!formName.trim() || !formGroup || !formTemplate}
+                disabled={!formName.trim() || !formGroup || !formTemplate || Object.values(formErrors).some(Boolean)}
                 className="btn-primary px-6 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 disabled:opacity-40"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}

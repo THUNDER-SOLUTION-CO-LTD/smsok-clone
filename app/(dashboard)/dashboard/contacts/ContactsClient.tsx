@@ -14,6 +14,7 @@ import {
 import { useRouter } from "next/navigation";
 import EmptyState from "@/app/components/ui/EmptyState";
 import { useToast } from "@/app/components/ui/Toast";
+import { blockNonNumeric, blockThai, fieldCls } from "@/lib/form-utils";
 
 // ==========================================
 // Types
@@ -302,6 +303,15 @@ export default function ContactsClient({
   const [formPhone, setFormPhone] = useState("");
   const [formEmail, setFormEmail] = useState("");
   const [formTags, setFormTags] = useState<string[]>([]);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  function validateContactField(field: string, value: string) {
+    let error = "";
+    if (field === "name" && value && value.trim().length < 2) error = "ชื่อต้องมีอย่างน้อย 2 ตัวอักษร";
+    if (field === "phone" && value && !/^0[689]\d{8}$/.test(value)) error = "เบอร์โทรไม่ถูกต้อง (เช่น 0891234567)";
+    if (field === "email" && value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) error = "อีเมลไม่ถูกต้อง";
+    setFormErrors(prev => ({ ...prev, [field]: error }));
+  }
 
   // Filter / search state
   const [searchQuery, setSearchQuery] = useState("");
@@ -1170,23 +1180,28 @@ export default function ContactsClient({
                 </label>
                 <input
                   type="text"
-                  className="input-glass"
+                  className={fieldCls(formErrors.name, formName)}
                   placeholder="ชื่อ-นามสกุล"
                   value={formName}
-                  onChange={(e) => setFormName(e.target.value)}
+                  onChange={(e) => { setFormName(e.target.value); validateContactField("name", e.target.value); }}
                 />
+                {formErrors.name && <p className="text-red-400 text-xs mt-1">{formErrors.name}</p>}
               </div>
               <div>
                 <label className="block text-xs text-[var(--text-secondary)] uppercase tracking-wider mb-2">
                   เบอร์โทร *
                 </label>
                 <input
-                  type="text"
-                  className="input-glass"
+                  type="tel"
+                  inputMode="numeric"
+                  maxLength={10}
+                  onKeyDown={blockNonNumeric}
+                  className={fieldCls(formErrors.phone, formPhone)}
                   placeholder="0891234567"
                   value={formPhone}
-                  onChange={(e) => setFormPhone(e.target.value)}
+                  onChange={(e) => { setFormPhone(e.target.value); validateContactField("phone", e.target.value); }}
                 />
+                {formErrors.phone && <p className="text-red-400 text-xs mt-1">{formErrors.phone}</p>}
               </div>
               <div>
                 <label className="block text-xs text-[var(--text-secondary)] uppercase tracking-wider mb-2">
@@ -1194,11 +1209,13 @@ export default function ContactsClient({
                 </label>
                 <input
                   type="email"
-                  className="input-glass"
+                  onKeyDown={blockThai}
+                  className={fieldCls(formErrors.email, formEmail)}
                   placeholder="email@example.com"
                   value={formEmail}
-                  onChange={(e) => setFormEmail(e.target.value)}
+                  onChange={(e) => { setFormEmail(e.target.value); validateContactField("email", e.target.value); }}
                 />
+                {formErrors.email && <p className="text-red-400 text-xs mt-1">{formErrors.email}</p>}
               </div>
               <div>
                 <label className="block text-xs text-[var(--text-secondary)] uppercase tracking-wider mb-2">
@@ -1216,7 +1233,7 @@ export default function ContactsClient({
               <motion.button
                 onClick={handleSave}
                 disabled={
-                  isPending || !formName.trim() || !formPhone.trim()
+                  isPending || !formName.trim() || !formPhone.trim() || Object.values(formErrors).some(Boolean)
                 }
                 className="btn-primary px-6 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 disabled:opacity-40"
                 whileHover={{ scale: 1.02 }}

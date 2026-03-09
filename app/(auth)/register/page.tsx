@@ -2,7 +2,9 @@
 
 import { register } from "@/lib/actions";
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
+import { registerSchema } from "@/lib/validations";
+import { blockNonNumeric, blockThai, fieldCls } from "@/lib/form-utils";
 
 export default function RegisterPage() {
   const [state, formAction, pending] = useActionState(
@@ -12,9 +14,30 @@ export default function RegisterPage() {
     null
   );
 
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  function validate(field: string, value: string) {
+    const partial: Record<string, string> = { name, email, phone: phone || undefined, password, [field]: value } as never;
+    const result = registerSchema.partial().safeParse(partial);
+    const fieldErrors: Record<string, string> = {};
+    if (!result.success) {
+      for (const issue of result.error.issues) {
+        const key = String(issue.path[0]);
+        if (!fieldErrors[key]) fieldErrors[key] = issue.message;
+      }
+    }
+    setErrors(prev => ({ ...prev, [field]: fieldErrors[field] ?? "" }));
+  }
+
+  const hasErrors = Object.values(errors).some(Boolean);
+  const isComplete = name.trim() && email.trim() && password.trim();
+
   return (
     <div className="min-h-screen flex items-center justify-center px-6 mesh-bg relative">
-      {/* Extra ambient orb */}
       <div className="fixed top-[30%] right-[10%] w-[350px] h-[350px] rounded-full pointer-events-none" style={{ background: "radial-gradient(circle, rgba(129,140,248,0.08) 0%, transparent 70%)" }} />
 
       <div className="w-full max-w-md relative z-10">
@@ -46,25 +69,72 @@ export default function RegisterPage() {
           )}
 
           <form action={formAction} className="space-y-4">
+            {/* ชื่อ */}
             <div>
               <label className="block text-xs text-white/40 uppercase tracking-wider mb-2 font-medium">ชื่อ-นามสกุล</label>
-              <input type="text" name="name" required className="input-glass" placeholder="สมชาย ใจดี" />
+              <input
+                type="text" name="name" required
+                value={name}
+                onChange={(e) => { setName(e.target.value); validate("name", e.target.value); }}
+                className={fieldCls(errors.name, name)}
+                placeholder="สมชาย ใจดี"
+              />
+              {errors.name && <p className="text-red-400 text-xs mt-1">{errors.name}</p>}
             </div>
+
+            {/* อีเมล */}
             <div>
               <label className="block text-xs text-white/40 uppercase tracking-wider mb-2 font-medium">อีเมล</label>
-              <input type="email" name="email" required className="input-glass" placeholder="you@example.com" />
+              <input
+                type="email" name="email" required
+                value={email}
+                onKeyDown={blockThai}
+                onChange={(e) => { setEmail(e.target.value); validate("email", e.target.value); }}
+                className={fieldCls(errors.email, email)}
+                placeholder="you@example.com"
+              />
+              {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email}</p>}
             </div>
+
+            {/* เบอร์โทร */}
             <div>
-              <label className="block text-xs text-white/40 uppercase tracking-wider mb-2 font-medium">เบอร์โทร</label>
-              <input type="tel" name="phone" className="input-glass" placeholder="0891234567" />
+              <label className="block text-xs text-white/40 uppercase tracking-wider mb-2 font-medium">เบอร์โทร <span className="normal-case opacity-60">(ไม่บังคับ)</span></label>
+              <input
+                type="tel" name="phone"
+                inputMode="numeric"
+                maxLength={10}
+                onKeyDown={blockNonNumeric}
+                value={phone}
+                onChange={(e) => { setPhone(e.target.value); validate("phone", e.target.value); }}
+                className={fieldCls(errors.phone, phone)}
+                placeholder="0891234567"
+              />
+              {errors.phone && <p className="text-red-400 text-xs mt-1">{errors.phone}</p>}
             </div>
+
+            {/* รหัสผ่าน */}
             <div>
               <label className="block text-xs text-white/40 uppercase tracking-wider mb-2 font-medium">รหัสผ่าน (8 ตัวขึ้นไป)</label>
-              <input type="password" name="password" required minLength={8} className="input-glass" placeholder="••••••••" />
+              <input
+                type="password" name="password" required minLength={8}
+                value={password}
+                onChange={(e) => { setPassword(e.target.value); validate("password", e.target.value); }}
+                className={fieldCls(errors.password, password)}
+                placeholder="••••••••"
+              />
+              {errors.password && <p className="text-red-400 text-xs mt-1">{errors.password}</p>}
+              {password && !errors.password && (
+                <div className="flex gap-1 mt-1.5">
+                  {[/[A-Z]/, /[0-9]/, /.{8}/].map((re, i) => (
+                    <div key={i} className={`h-1 flex-1 rounded-full transition-colors ${re.test(password) ? "bg-emerald-500" : "bg-white/10"}`} />
+                  ))}
+                </div>
+              )}
             </div>
+
             <button
               type="submit"
-              disabled={pending}
+              disabled={pending || hasErrors || !isComplete}
               className="w-full btn-primary py-3 rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {pending ? (
@@ -89,7 +159,6 @@ export default function RegisterPage() {
               เข้าสู่ระบบ →
             </Link>
           </p>
-
         </div>
       </div>
     </div>

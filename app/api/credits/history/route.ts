@@ -2,23 +2,34 @@ import { NextRequest } from "next/server";
 import { apiError, apiResponse } from "@/lib/api-auth";
 import { authenticateRequestUser } from "@/lib/request-auth";
 import { prisma } from "@/lib/db";
+import { creditHistoryQuerySchema } from "@/lib/validations";
 
 export async function GET(req: NextRequest) {
   try {
     const user = await authenticateRequestUser(req);
     const { searchParams } = new URL(req.url);
-
-    const from = searchParams.get("from");
-    const to = searchParams.get("to");
-    const type = searchParams.get("type");
-    const page = Math.max(1, Number(searchParams.get("page") ?? "1"));
-    const limit = Math.min(Number(searchParams.get("limit") ?? "20"), 100);
+    const query = creditHistoryQuerySchema.parse({
+      from: searchParams.get("from") ?? undefined,
+      to: searchParams.get("to") ?? undefined,
+      type: searchParams.get("type") ?? undefined,
+      page: searchParams.get("page") ?? undefined,
+      limit: searchParams.get("limit") ?? undefined,
+    });
+    const page = query.page;
+    const limit = query.limit;
     const offset = (page - 1) * limit;
 
     const where = {
       userId: user.id,
-      ...(from || to ? { createdAt: { ...(from ? { gte: new Date(from) } : {}), ...(to ? { lte: new Date(`${to}T23:59:59`) } : {}) } } : {}),
-      ...(type ? { type } : {}),
+      ...(query.from || query.to
+        ? {
+            createdAt: {
+              ...(query.from ? { gte: new Date(query.from) } : {}),
+              ...(query.to ? { lte: new Date(`${query.to}T23:59:59`) } : {}),
+            },
+          }
+        : {}),
+      ...(query.type ? { type: query.type } : {}),
     };
 
     const [entries, total] = await Promise.all([

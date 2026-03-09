@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { logout } from "@/lib/actions";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 type User = {
@@ -199,7 +199,50 @@ export default function DashboardShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [moreOpen, setMoreOpen] = useState(false);
+
+  // Search
+  const [searchQuery, setSearchQuery] = useState("");
+  function handleSearchKey(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter" && searchQuery.trim()) {
+      router.push(`/dashboard/messages?search=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery("");
+    }
+  }
+
+  // Notifications
+  type Notif = { id: string; type: string; message: string; createdAt: string; read: boolean };
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifs, setNotifs] = useState<Notif[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const notifRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    fetch("/api/notifications").then(r => r.json()).then(d => {
+      setNotifs(d.items ?? []);
+      setUnreadCount(d.unreadCount ?? 0);
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setNotifOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  function toggleNotif() {
+    setNotifOpen(v => !v);
+    if (!notifOpen && unreadCount > 0) {
+      fetch("/api/notifications/read", { method: "POST" }).catch(() => {});
+      setUnreadCount(0);
+      setNotifs(prev => prev.map(n => ({ ...n, read: true })));
+    }
+  }
 
   const mainItems = sidebarItems.filter(i => i.section === "main");
   const manageItems = sidebarItems.filter(i => i.section === "manage");
@@ -285,23 +328,87 @@ export default function DashboardShell({
               </svg>
               <input
                 type="text"
-                placeholder="ค้นหา..."
+                placeholder="ค้นหา... (Enter)"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={handleSearchKey}
                 className="bg-transparent text-xs text-[var(--text-secondary)] placeholder:text-[var(--text-muted)] outline-none w-full"
               />
-              <kbd className="hidden xl:inline-flex text-[10px] text-[var(--text-muted)] border border-[var(--border-subtle)] px-1.5 py-0.5 rounded font-mono">⌘K</kbd>
+              {searchQuery ? (
+                <button type="button" onClick={() => setSearchQuery("")} className="text-[var(--text-muted)] hover:text-white transition-colors">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                </button>
+              ) : (
+                <kbd className="hidden xl:inline-flex text-[10px] text-[var(--text-muted)] border border-[var(--border-subtle)] px-1.5 py-0.5 rounded font-mono">↵</kbd>
+              )}
             </div>
 
             {/* Notification */}
-            <motion.button
-              className="relative w-9 h-9 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)] hover:border-violet-500/15 flex items-center justify-center transition-colors"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[var(--text-muted)]">
-                <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0" />
-              </svg>
-              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-violet-500 border-2 border-[#0B1120]" />
-            </motion.button>
+            <div className="relative" ref={notifRef}>
+              <motion.button
+                onClick={toggleNotif}
+                className="relative w-9 h-9 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-subtle)] hover:border-violet-500/15 flex items-center justify-center transition-colors"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className={notifOpen ? "text-violet-400" : "text-[var(--text-muted)]"}>
+                  <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0" />
+                </svg>
+                {unreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-violet-500 border-2 border-[#0B1120]" />
+                )}
+              </motion.button>
+
+              <AnimatePresence>
+                {notifOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -8, scale: 0.97 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 top-11 w-80 glass border border-[var(--border-subtle)] rounded-xl shadow-2xl z-50 overflow-hidden"
+                  >
+                    <div className="px-4 py-3 border-b border-[var(--border-subtle)] flex items-center justify-between">
+                      <span className="text-sm font-semibold text-[var(--text-primary)]">การแจ้งเตือน</span>
+                      {notifs.length > 0 && (
+                        <span className="text-[10px] text-[var(--text-muted)]">{notifs.length} รายการ</span>
+                      )}
+                    </div>
+                    <div className="max-h-80 overflow-y-auto">
+                      {notifs.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-10 gap-2">
+                          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="text-[var(--text-muted)]">
+                            <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0" />
+                          </svg>
+                          <p className="text-xs text-[var(--text-muted)]">ยังไม่มีการแจ้งเตือน</p>
+                        </div>
+                      ) : (
+                        notifs.map((n) => (
+                          <div key={n.id} className={`px-4 py-3 border-b border-[var(--border-subtle)] last:border-0 hover:bg-white/[0.02] transition-colors ${!n.read ? "bg-violet-500/[0.03]" : ""}`}>
+                            <div className="flex items-start gap-3">
+                              <div className={`w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 ${!n.read ? "bg-violet-400" : "bg-transparent"}`} />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs text-[var(--text-secondary)] leading-relaxed">{n.message}</p>
+                                <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
+                                  {new Date(n.createdAt).toLocaleString("th-TH", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                    {notifs.length > 0 && (
+                      <div className="px-4 py-2.5 border-t border-[var(--border-subtle)]">
+                        <Link href="/dashboard/messages" onClick={() => setNotifOpen(false)} className="text-xs text-violet-400 hover:text-violet-300 transition-colors">
+                          ดูทั้งหมด →
+                        </Link>
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
 
             {/* Credits */}
             <Link

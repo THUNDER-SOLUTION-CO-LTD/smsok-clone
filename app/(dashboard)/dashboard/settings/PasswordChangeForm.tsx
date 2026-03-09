@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { changePasswordForSession } from "@/lib/actions/settings";
+import { fieldCls } from "@/lib/form-utils";
 
 export default function PasswordChangeForm() {
   const [currentPassword, setCurrentPassword] = useState("");
@@ -49,7 +50,7 @@ export default function PasswordChangeForm() {
           <label className="block text-xs text-slate-300 uppercase tracking-wider mb-2 font-medium">รหัสผ่านปัจจุบัน</label>
           <input
             type="password"
-            className="input-glass"
+            className={fieldCls(undefined, currentPassword)}
             placeholder="กรอกรหัสผ่านปัจจุบัน"
             value={currentPassword}
             onChange={(e) => setCurrentPassword(e.target.value)}
@@ -60,27 +61,31 @@ export default function PasswordChangeForm() {
             <label className="block text-xs text-slate-300 uppercase tracking-wider mb-2 font-medium">รหัสผ่านใหม่</label>
             <input
               type="password"
-              className="input-glass"
+              className={fieldCls(newPassword && (newPassword.length < 8 || !/[A-Z]/.test(newPassword) || !/[0-9]/.test(newPassword)) ? "error" : undefined, newPassword)}
               placeholder="อย่างน้อย 8 ตัวอักษร"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               minLength={8}
             />
-            {newPassword.length > 0 && newPassword.length < 8 && (
-              <p className="text-xs text-red-400 mt-1">ต้องมีอย่างน้อย 8 ตัวอักษร</p>
+            {newPassword.length > 0 && (
+              <div className="flex gap-1 mt-1.5">
+                {[{ re: /.{8}/, label: "8+ ตัว" }, { re: /[A-Z]/, label: "A-Z" }, { re: /[0-9]/, label: "0-9" }].map(({ re, label }) => (
+                  <span key={label} className={`text-[10px] px-1.5 py-0.5 rounded ${re.test(newPassword) ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/10 text-red-400"}`}>{label}</span>
+                ))}
+              </div>
             )}
           </div>
           <div>
             <label className="block text-xs text-slate-300 uppercase tracking-wider mb-2 font-medium">ยืนยันรหัสผ่านใหม่</label>
             <input
               type="password"
-              className="input-glass"
+              className={fieldCls(confirmPassword && newPassword !== confirmPassword ? "error" : undefined, confirmPassword)}
               placeholder="กรอกรหัสผ่านใหม่อีกครั้ง"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
             />
             {confirmPassword.length > 0 && newPassword !== confirmPassword && (
-              <p className="text-xs text-red-400 mt-1">รหัสผ่านไม่ตรงกัน</p>
+              <p className="text-red-400 text-xs mt-1">รหัสผ่านไม่ตรงกัน</p>
             )}
           </div>
         </div>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { requestSenderName } from "@/lib/actions/sender-names";
+import { allowAlphaNumericSpace, fieldCls } from "@/lib/form-utils";
 
 export default function SenderNameForm({ userId }: { userId: string }) {
   const [name, setName] = useState("");
@@ -10,7 +11,7 @@ export default function SenderNameForm({ userId }: { userId: string }) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
-  const isValid = /^[A-Za-z0-9]{3,11}$/.test(name);
+  const isValid = /^[A-Za-z0-9 ]{3,11}$/.test(name);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,19 +44,20 @@ export default function SenderNameForm({ userId }: { userId: string }) {
           <label className="block text-xs text-slate-300 uppercase tracking-wider mb-2 font-medium">ชื่อผู้ส่ง (3-11 ตัวอักษร, A-Z, 0-9)</label>
           <input
             type="text"
-            className="input-glass"
+            onKeyDown={allowAlphaNumericSpace}
+            className={fieldCls(name.length > 0 && !isValid ? "error" : undefined, name && isValid ? name : "")}
             placeholder="เช่น MyBrand"
             value={name}
-            onChange={(e) => setName(e.target.value.replace(/[^A-Za-z0-9]/g, ""))}
+            onChange={(e) => setName(e.target.value)}
             maxLength={11}
             minLength={3}
           />
           <div className="flex items-center gap-3 mt-2">
-            <span className={`text-xs ${name.length >= 3 && name.length <= 11 ? "text-emerald-400" : "text-slate-300"}`}>
+            <span className={`text-xs ${isValid ? "text-emerald-400" : "text-[var(--text-muted)]"}`}>
               {name.length}/11 ตัวอักษร
             </span>
             {name.length > 0 && !isValid && (
-              <span className="text-xs text-red-400">ต้องมี 3-11 ตัวอักษร (A-Z, 0-9 เท่านั้น)</span>
+              <span className="text-xs text-red-400">3-11 ตัว A-Z 0-9 หรือช่องว่าง</span>
             )}
           </div>
         </div>

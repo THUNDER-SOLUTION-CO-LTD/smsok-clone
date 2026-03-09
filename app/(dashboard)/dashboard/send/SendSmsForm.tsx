@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { sendSms, sendBatchSms } from "@/lib/actions/sms";
+import { smsCounterText } from "@/lib/form-utils";
 
 type MsgType = "english" | "thai" | "unicode";
 
@@ -35,6 +36,9 @@ export default function SendSmsForm({ userId, senderNames = ["EasySlip"] }: { us
     .filter(Boolean);
   const recipientCount = recipientList.length;
   const totalCost = (recipientCount * smsCount * 0.22).toFixed(2);
+
+  const invalidPhones = recipientList.filter(r => !/^0[689]\d{8}$/.test(r.replace(/[^0-9]/g, "")));
+  const phoneError = invalidPhones.length > 0 ? `เบอร์ไม่ถูกต้อง: ${invalidPhones.slice(0, 3).join(", ")}${invalidPhones.length > 3 ? ` +${invalidPhones.length - 3} เบอร์` : ""}` : "";
 
   const handleSend = () => {
     if (!recipients.trim() || !message.trim()) return;
@@ -169,13 +173,14 @@ export default function SendSmsForm({ userId, senderNames = ["EasySlip"] }: { us
               <textarea
                 value={recipients}
                 onChange={(e) => setRecipients(e.target.value)}
-                className="input-glass resize-none"
+                className={`input-glass resize-none${phoneError ? " border-red-500/60" : recipientCount > 0 && !phoneError ? " border-emerald-500/40" : ""}`}
                 rows={3}
                 placeholder={"0891234567\n0891234568, 0891234569"}
               />
-              <p className="text-[11px] text-slate-300 mt-1">
-                {recipientCount} เบอร์ — คั่นด้วยเครื่องหมายจุลภาค หรือขึ้นบรรทัดใหม่
-              </p>
+              {phoneError
+                ? <p className="text-red-400 text-xs mt-1">{phoneError}</p>
+                : <p className="text-[11px] text-[var(--text-muted)] mt-1">{recipientCount} เบอร์ — คั่นด้วยจุลภาค หรือขึ้นบรรทัดใหม่</p>
+              }
             </div>
 
             {/* Message */}
@@ -189,14 +194,9 @@ export default function SendSmsForm({ userId, senderNames = ["EasySlip"] }: { us
                 placeholder="พิมพ์ข้อความ SMS ที่นี่..."
                 maxLength={1000}
               />
-              <div className="flex justify-between text-[11px] text-slate-300 mt-1.5">
-                <span>
-                  {charCount} ตัวอักษร | {smsCount} ส่วน SMS
-                </span>
-                <span>
-                  {msgType === "english" ? "160" : "70"} ตัวอักษร/SMS
-                </span>
-              </div>
+              <p className="text-[11px] text-[var(--text-muted)] mt-1.5 text-right">
+                {smsCounterText(message) || `0 chars • 0 SMS (${msgType === "english" ? "EN: 160/SMS" : "Thai: 70/SMS"})`}
+              </p>
             </div>
           </div>
         </motion.div>
@@ -248,7 +248,7 @@ export default function SendSmsForm({ userId, senderNames = ["EasySlip"] }: { us
             <div className="mt-5">
               <motion.button
                 onClick={handleSend}
-                disabled={isPending || !recipients.trim() || !message.trim()}
+                disabled={isPending || !recipients.trim() || !message.trim() || !!phoneError}
                 className="w-full btn-primary py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-40"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}

@@ -41,11 +41,13 @@ const rowVariant = {
 export default function MessagesClient({
   messages,
   pagination,
+  initialSearch,
 }: {
   messages: Message[];
   pagination: Pagination;
+  initialSearch?: string;
 }) {
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(initialSearch ?? "");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const filtered = messages.filter((msg) => {

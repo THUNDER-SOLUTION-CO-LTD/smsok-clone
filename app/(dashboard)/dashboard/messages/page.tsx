@@ -3,16 +3,21 @@ import { redirect } from "next/navigation";
 import { getMessages } from "@/lib/actions/sms";
 import MessagesClient from "./MessagesClient";
 
-export default async function MessagesPage() {
+export default async function MessagesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ search?: string; page?: string }>;
+}) {
   const user = await getSession();
   if (!user) redirect("/login");
 
-  const { messages, pagination } = await getMessages(user.id, {
-    page: 1,
-    limit: 50,
-  });
+  const params = await searchParams;
+  const search = params.search?.trim() || undefined;
+  const page = Number(params.page ?? "1") || 1;
+
+  const { messages, pagination } = await getMessages(user.id, { page, limit: 50, search });
 
   return (
-    <MessagesClient messages={messages} pagination={pagination} />
+    <MessagesClient messages={messages} pagination={pagination} initialSearch={search} />
   );
 }

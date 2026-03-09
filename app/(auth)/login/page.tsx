@@ -2,7 +2,8 @@
 
 import { login } from "@/lib/actions";
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
+import { blockThai, fieldCls } from "@/lib/form-utils";
 
 export default function LoginPage() {
   const [state, formAction, pending] = useActionState(
@@ -12,9 +13,20 @@ export default function LoginPage() {
     null
   );
 
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  function validateEmail(v: string) {
+    const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+    setErrors(prev => ({ ...prev, email: v && !isValid ? "อีเมลไม่ถูกต้อง" : "" }));
+  }
+
+  const hasErrors = Object.values(errors).some(Boolean);
+  const isComplete = email.trim() && password.trim();
+
   return (
     <div className="min-h-screen flex items-center justify-center px-6 mesh-bg relative">
-      {/* Extra ambient orb */}
       <div className="fixed top-[20%] left-[15%] w-[400px] h-[400px] rounded-full pointer-events-none" style={{ background: "radial-gradient(circle, rgba(139,92,246,0.08) 0%, transparent 70%)" }} />
 
       <div className="w-full max-w-md relative z-10">
@@ -48,15 +60,29 @@ export default function LoginPage() {
           <form action={formAction} className="space-y-5">
             <div>
               <label className="block text-xs text-white/40 uppercase tracking-wider mb-2 font-medium">อีเมล</label>
-              <input type="email" name="email" required className="input-glass" placeholder="you@example.com" />
+              <input
+                type="email" name="email" required
+                value={email}
+                onKeyDown={blockThai}
+                onChange={(e) => { setEmail(e.target.value); validateEmail(e.target.value); }}
+                className={fieldCls(errors.email, email)}
+                placeholder="you@example.com"
+              />
+              {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email}</p>}
             </div>
             <div>
               <label className="block text-xs text-white/40 uppercase tracking-wider mb-2 font-medium">รหัสผ่าน</label>
-              <input type="password" name="password" required className="input-glass" placeholder="••••••••" />
+              <input
+                type="password" name="password" required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className={fieldCls(errors.password, password)}
+                placeholder="••••••••"
+              />
             </div>
             <button
               type="submit"
-              disabled={pending}
+              disabled={pending || hasErrors || !isComplete}
               className="w-full btn-primary py-3 rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {pending ? (
@@ -81,7 +107,6 @@ export default function LoginPage() {
               สมัครฟรี →
             </Link>
           </p>
-
         </div>
 
         {/* Testimonial */}

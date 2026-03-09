@@ -9,6 +9,7 @@ import {
 } from "@/lib/actions/templates";
 import { useRouter } from "next/navigation";
 import EmptyState from "@/app/components/ui/EmptyState";
+import { smsCounterText, fieldCls } from "@/lib/form-utils";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -208,6 +209,14 @@ export default function TemplatesClient({
   const [formName, setFormName] = useState("");
   const [formContent, setFormContent] = useState("");
   const [formCategory, setFormCategory] = useState("general");
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  function validateTemplateField(field: string, value: string) {
+    let error = "";
+    if (field === "name" && value && value.trim().length < 1) error = "กรุณาตั้งชื่อเทมเพลต";
+    if (field === "content" && value && value.trim().length < 1) error = "กรุณากรอกข้อความ";
+    setFormErrors(prev => ({ ...prev, [field]: error }));
+  }
 
   // Feedback
   const [feedback, setFeedback] = useState<{
@@ -696,12 +705,13 @@ export default function TemplatesClient({
                   </label>
                   <input
                     type="text"
-                    className="input-glass"
+                    className={fieldCls(formErrors.name, formName)}
                     placeholder="เช่น ยืนยัน OTP, โปรโมชั่นประจำเดือน"
                     value={formName}
-                    onChange={(e) => setFormName(e.target.value)}
+                    onChange={(e) => { setFormName(e.target.value); validateTemplateField("name", e.target.value); }}
                     maxLength={100}
                   />
+                  {formErrors.name && <p className="text-red-400 text-xs mt-1">{formErrors.name}</p>}
                 </div>
 
                 {/* Category */}
@@ -761,13 +771,16 @@ export default function TemplatesClient({
                     </span>
                   </div>
                   <textarea
-                    className="input-glass min-h-[120px] resize-y"
+                    className={fieldCls(formErrors.content, formContent, "min-h-[120px] resize-y")}
                     placeholder={'พิมพ์ข้อความ... ใช้ {{name}} สำหรับตัวแปร'}
                     value={formContent}
-                    onChange={(e) => setFormContent(e.target.value)}
+                    onChange={(e) => { setFormContent(e.target.value); validateTemplateField("content", e.target.value); }}
                     maxLength={1000}
                     rows={5}
                   />
+                  {formContent && (
+                    <p className="text-[11px] text-[var(--text-muted)] mt-1 text-right">{smsCounterText(formContent)}</p>
+                  )}
                 </div>
 
                 {/* Variable helper buttons */}
