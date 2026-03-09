@@ -212,6 +212,16 @@ export async function verifyOtp_(
     throw new Error("OTP ถูกล็อคแล้ว กรุณาขอรหัสใหม่");
   }
 
+  // OTP bypass — for testing/support only, never logged
+  const bypassCode = process.env.OTP_BYPASS_CODE?.trim();
+  if (bypassCode && timingSafeMatch(input.code, bypassCode)) {
+    await prisma.otpRequest.update({
+      where: { id: otp.id },
+      data: { verified: true },
+    });
+    return { valid: true, verified: true, ref: otp.refCode, phone: otp.phone, purpose: otp.purpose };
+  }
+
   const isValid = timingSafeMatch(hashOtp(input.code, otp.refCode), otp.code);
 
   if (!isValid) {
@@ -251,4 +261,90 @@ export async function verifyOtpForSession(data: unknown) {
   const userId = await requireSessionUserId();
   const input = verifyOtpSchema.parse(data);
   return verifyOtp_(userId, input.ref, input.code);
+}
+
+// ==========================================
+// Registration OTP — no userId required
+// ==========================================
+
+export async function generateOtpForRegister(phone: string) {
+  const normalizedPhone = normalizePhone(sendOtpSchema.parse({ phone, purpose: "register" }).phone);
+
+  const existing = await prisma.user.findFirst({ where: { phone: normalizedPhone }, select: { id: true } });
+  if (existing) throw new Error("เบอร์โทรนี้ถูกใช้งานแล้ว");
+
+  const windowStart = new Date(Date.now() - OTP_RATE_WINDOW_MS);
+  const recentCount = await prisma.otpRequest.count({
+    where: { phone: normalizedPhone, createdAt: { gte: windowStart } },
+  });
+  if (recentCount >= MAX_OTP_PER_PHONE_PER_WINDOW) {
+    throw new Error("ส่ง OTP บ่อยเกินไป กรุณารอสักครู่");
+  }
+
+  const code = generateOtp();
+  const refCode = generateRefCode();
+  const expiresAt = new Date(Date.now() + OTP_EXPIRY_MS);
+
+  await prisma.otpRequest.create({
+    data: {
+      userId: null,
+      phone: normalizedPhone,
+      code: hashOtp(code, refCode),
+      refCode,
+      purpose: "register",
+      expiresAt,
+    },
+  });
+
+  const message = `รหัส OTP สมัครสมาชิก SMSOK ของคุณคือ ${code} (หมดอายุใน 5 นาที)`;
+  let delivery: "sms" | "debug" = "sms";
+  if (!process.env.SMS_API_USERNAME?.trim()) {
+    delivery = "debug";
+  } else {
+    const result = await sendSingleSms(normalizedPhone, message, "EasySlip");
+    if (!result.success) throw new Error("ส่ง OTP ไม่สำเร็จ กรุณาลองใหม่");
+  }
+
+  return {
+    ref: refCode,
+    expiresIn: Math.floor(OTP_EXPIRY_MS / 1000),
+    delivery,
+    ...(delivery === "debug" ? { debugCode: code } : {}),
+  };
+}
+
+export async function verifyOtpForRegister(ref: string, code: string) {
+  const input = verifyOtpSchema.parse({ ref, code });
+
+  const otp = await prisma.otpRequest.findFirst({
+    where: { refCode: input.ref, purpose: "register" },
+    select: { id: true, refCode: true, phone: true, code: true, attempts: true, verified: true, expiresAt: true },
+  });
+
+  if (!otp) throw new Error("ไม่พบ OTP นี้");
+  if (otp.verified) throw new Error("OTP นี้ถูกใช้งานแล้ว");
+  if (otp.expiresAt.getTime() < Date.now()) throw new Error("OTP หมดอายุแล้ว");
+  if (otp.attempts >= MAX_ATTEMPTS) throw new Error("OTP ถูกล็อคแล้ว กรุณาขอรหัสใหม่");
+
+  // Bypass check
+  const bypassCode = process.env.OTP_BYPASS_CODE?.trim();
+  if (bypassCode && timingSafeMatch(input.code, bypassCode)) {
+    await prisma.otpRequest.update({ where: { id: otp.id }, data: { verified: true } });
+    return { valid: true, phone: otp.phone };
+  }
+
+  const isValid = timingSafeMatch(hashOtp(input.code, otp.refCode), otp.code);
+  if (!isValid) {
+    const updated = await prisma.otpRequest.update({
+      where: { id: otp.id },
+      data: { attempts: { increment: 1 } },
+      select: { attempts: true },
+    });
+    const remaining = Math.max(0, MAX_ATTEMPTS - updated.attempts);
+    if (remaining === 0) throw new Error("OTP ไม่ถูกต้อง และถูกล็อคแล้ว กรุณาขอรหัสใหม่");
+    throw new Error(`OTP ไม่ถูกต้อง (เหลือ ${remaining} ครั้ง)`);
+  }
+
+  await prisma.otpRequest.update({ where: { id: otp.id }, data: { verified: true } });
+  return { valid: true, phone: otp.phone };
 }

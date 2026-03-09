@@ -227,10 +227,10 @@ export default function DashboardShell({
 
   function toggleNotif() {
     setNotifOpen(v => !v);
-    if (!notifOpen && unreadCount > 0) {
-      fetch("/api/notifications/read", { method: "POST" }).catch(() => {});
+    if (unreadCount > 0) {
       setUnreadCount(0);
       setNotifs(prev => prev.map(n => ({ ...n, read: true })));
+      fetch("/api/notifications/read", { method: "POST" }).catch(() => {});
     }
   }
 

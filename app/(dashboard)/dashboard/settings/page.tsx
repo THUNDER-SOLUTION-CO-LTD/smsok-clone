@@ -2,11 +2,18 @@ import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import PasswordChangeForm from "./PasswordChangeForm";
+import ForceChangeModal from "./ForceChangeModal";
 import Link from "next/link";
 
-export default async function SettingsPage() {
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ forceChange?: string }>;
+}) {
   const user = await getSession();
   if (!user) redirect("/login");
+
+  const { forceChange } = await searchParams;
 
   const fullUser = await prisma.user.findUnique({
     where: { id: user.id },
@@ -31,6 +38,8 @@ export default async function SettingsPage() {
   });
 
   return (
+    <>
+      {forceChange === "true" && <ForceChangeModal userId={fullUser.id} />}
     <div className="p-6 md:p-8 max-w-4xl animate-fade-in-up">
       <h1 className="text-2xl font-bold tracking-tight mb-1"><span className="gradient-text-cyan">ตั้งค่า</span></h1>
       <p className="text-sm text-[var(--text-muted)] mb-8">จัดการบัญชีและข้อมูลส่วนตัว</p>
@@ -144,5 +153,6 @@ export default async function SettingsPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }

@@ -13,9 +13,11 @@ model User {
   phone         String?
   name          String
   password      String
-  credits       Int       @default(15)
-  role          String    @default("user")
-  emailVerified Boolean   @default(false)
+  credits             Int       @default(15)
+  role                String    @default("user")
+  emailVerified       Boolean   @default(false)
+  phoneVerified       Boolean   @default(false) @map("phone_verified")
+  mustChangePassword  Boolean   @default(false) @map("must_change_password")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
@@ -191,12 +193,12 @@ model MessageTemplate {
 
 model OtpRequest {
   id        String   @id @default(cuid())
-  userId    String   @map("user_id")
-  user      User     @relation(fields: [userId], references: [id])
+  userId    String?  @map("user_id")           // nullable for pre-registration OTP
+  user      User?    @relation(fields: [userId], references: [id])
   refCode   String   @unique @map("ref_code")
   phone     String
   code      String   // hashed OTP
-  purpose   String   @default("verify") // verify, login, transaction
+  purpose   String   @default("verify") // verify, login, transaction, register
   attempts  Int      @default(0)
   verified  Boolean  @default(false)
   expiresAt DateTime @map("expires_at")

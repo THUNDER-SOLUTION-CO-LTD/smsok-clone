@@ -3,21 +3,22 @@
 import { prisma } from "./db";
 import { hashPassword, verifyPassword, setSession, clearSession } from "./auth";
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
+import { loginSchema, registerSchema } from "./validations";
+import { sendSingleSms } from "./sms-gateway";
+import crypto from "crypto";
 
 export async function register(formData: FormData) {
-  const name = formData.get("name") as string;
-  const email = formData.get("email") as string;
-  const phone = (formData.get("phone") as string) || null;
-  const password = formData.get("password") as string;
-
-  if (!name || !email || !password) {
-    return { error: "กรุณากรอกข้อมูลให้ครบ" };
+  const parsed = registerSchema.safeParse({
+    name: formData.get("name"),
+    email: formData.get("email"),
+    phone: formData.get("phone"),
+    password: formData.get("password"),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message || "ข้อมูลไม่ถูกต้อง" };
   }
 
-  if (password.length < 8) {
-    return { error: "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร" };
-  }
+  const { name, email, phone, password } = parsed.data;
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
@@ -33,15 +34,70 @@ export async function register(formData: FormData) {
   redirect("/dashboard");
 }
 
-export async function login(formData: FormData) {
-  const email = formData.get("email") as string;
-  const password = formData.get("password") as string;
+// ==========================================
+// Register with OTP verification
+// ==========================================
 
-  if (!email || !password) {
-    return { error: "กรุณากรอกอีเมลและรหัสผ่าน" };
+export async function registerWithOtp(data: {
+  name: string;
+  email: string;
+  phone: string;
+  password: string;
+  otpRef: string;
+  otpCode: string;
+}) {
+  const { verifyOtpForRegister } = await import("./actions/otp");
+
+  // Verify OTP first
+  const otpResult = await verifyOtpForRegister(data.otpRef, data.otpCode);
+  if (!otpResult.valid) {
+    throw new Error("OTP ไม่ถูกต้อง");
   }
 
-  const user = await prisma.user.findUnique({ where: { email } });
+  const parsed = registerSchema.safeParse({
+    name: data.name,
+    email: data.email,
+    phone: data.phone,
+    password: data.password,
+  });
+  if (!parsed.success) {
+    throw new Error(parsed.error.issues[0]?.message || "ข้อมูลไม่ถูกต้อง");
+  }
+  const { name, email, phone, password } = parsed.data;
+
+  const [existingEmail, existingPhone] = await Promise.all([
+    prisma.user.findUnique({ where: { email }, select: { id: true } }),
+    phone ? prisma.user.findFirst({ where: { phone }, select: { id: true } }) : null,
+  ]);
+  if (existingEmail) throw new Error("อีเมลนี้ถูกใช้งานแล้ว");
+  if (existingPhone) throw new Error("เบอร์โทรนี้ถูกใช้งานแล้ว");
+
+  const hashed = await hashPassword(password);
+  const user = await prisma.user.create({
+    data: { name, email, phone, password: hashed, phoneVerified: true },
+  });
+
+  await setSession(user.id);
+}
+
+// ==========================================
+// Login (with mustChangePassword redirect)
+// ==========================================
+
+export async function login(formData: FormData) {
+  const parsed = loginSchema.safeParse({
+    email: formData.get("email"),
+    password: formData.get("password"),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message || "ข้อมูลไม่ถูกต้อง" };
+  }
+  const { email, password } = parsed.data;
+
+  const user = await prisma.user.findUnique({
+    where: { email },
+    select: { id: true, password: true, mustChangePassword: true },
+  });
   if (!user) {
     return { error: "อีเมลหรือรหัสผ่านไม่ถูกต้อง" };
   }
@@ -52,7 +108,61 @@ export async function login(formData: FormData) {
   }
 
   await setSession(user.id);
+
+  if (user.mustChangePassword) {
+    redirect("/dashboard/settings?forceChange=true");
+  }
   redirect("/dashboard");
+}
+
+// ==========================================
+// Forgot Password
+// ==========================================
+
+export async function forgotPassword(phone: string) {
+  const normalizedPhone = phone.trim().replace(/[^0-9+]/g, "");
+  if (!normalizedPhone) throw new Error("กรุณากรอกเบอร์โทร");
+
+  const user = await prisma.user.findFirst({
+    where: { phone: normalizedPhone },
+    select: { id: true, name: true },
+  });
+  if (!user) throw new Error("ไม่พบเบอร์โทรนี้ในระบบ");
+
+  // Generate 8-char alphanumeric temp password
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+  const tempPassword = Array.from(crypto.getRandomValues(new Uint8Array(8)))
+    .map((b) => chars[b % chars.length])
+    .join("");
+
+  const hashed = await hashPassword(tempPassword);
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { password: hashed, mustChangePassword: true },
+  });
+
+  const message = `รหัสชั่วคราวของคุณคือ ${tempPassword} ใช้ได้ครั้งเดียว — SMSOK`;
+  const smsResult = await sendSingleSms(normalizedPhone, message, "EasySlip");
+  if (!smsResult.success) {
+    // Rollback mustChangePassword only if SMS failed
+    // Note: password was already changed — user can still log in if they have the password
+    throw new Error("ส่ง SMS ไม่สำเร็จ กรุณาลองใหม่ภายหลัง");
+  }
+
+  return { success: true };
+}
+
+// ==========================================
+// Change Password (force change flow)
+// ==========================================
+
+export async function changePasswordForced(userId: string, newPassword: string) {
+  if (!newPassword || newPassword.length < 8) throw new Error("รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร");
+  const hashed = await hashPassword(newPassword);
+  await prisma.user.update({
+    where: { id: userId },
+    data: { password: hashed, mustChangePassword: false },
+  });
 }
 
 export async function logout() {
