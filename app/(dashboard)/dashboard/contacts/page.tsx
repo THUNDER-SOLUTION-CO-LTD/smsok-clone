@@ -21,7 +21,7 @@ export default async function ContactsPage() {
   }));
 
   return (
-    <DashboardShell user={user} title="Contacts">
+    <DashboardShell user={user} title="สมุดโทรศัพท์">
       <ContactsClient
         userId={user.id}
         initialContacts={serializedContacts}

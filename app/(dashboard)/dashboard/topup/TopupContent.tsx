@@ -100,7 +100,7 @@ export default function TopupContent({ user, packages }: { user: User; packages:
               </div>
               {pkg.maxSenders !== undefined && (
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-white/40">Sender Names</span>
+                  <span className="text-white/40">ชื่อผู้ส่ง</span>
                   <span className="text-white/70">{pkg.maxSenders === -1 ? "ไม่จำกัด" : pkg.maxSenders}</span>
                 </div>
               )}

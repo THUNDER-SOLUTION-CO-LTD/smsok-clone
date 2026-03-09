@@ -11,7 +11,7 @@ export default async function SendPage() {
   const senderNames = await getApprovedSenderNames(user.id);
 
   return (
-    <DashboardShell user={user} title="Send SMS">
+    <DashboardShell user={user} title="ส่ง SMS">
       <SendSmsForm userId={user.id} senderNames={senderNames.map(s => s.name)} />
     </DashboardShell>
   );

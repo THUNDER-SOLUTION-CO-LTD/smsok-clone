@@ -27,7 +27,7 @@ export async function purchasePackage(
   packageId: string,
   method: "bank_transfer" | "promptpay"
 ) {
-  idSchema.parse({ id: packageId });
+  if (!packageId || typeof packageId !== "string") throw new Error("กรุณาเลือกแพ็กเกจ");
 
   const pkg = await db.package.findUnique({ where: { id: packageId } });
   if (!pkg || !pkg.isActive) throw new Error("ไม่พบแพ็กเกจ");

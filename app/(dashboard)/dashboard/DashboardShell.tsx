@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { logout } from "@/lib/actions";
+import { useState } from "react";
 
 type User = {
   id: string;
@@ -19,7 +20,7 @@ const sidebarItems = [
         <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" />
       </svg>
     ),
-    label: "Dashboard",
+    label: "แดชบอร์ด",
     href: "/dashboard",
     section: "main",
   },
@@ -49,7 +50,7 @@ const sidebarItems = [
         <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
       </svg>
     ),
-    label: "Campaigns",
+    label: "แคมเปญ",
     href: "/dashboard/campaigns",
     section: "main",
   },
@@ -69,7 +70,7 @@ const sidebarItems = [
         <path d="M20 7h-9M14 17H5" /><circle cx="17" cy="17" r="3" /><circle cx="7" cy="7" r="3" />
       </svg>
     ),
-    label: "Sender Names",
+    label: "ชื่อผู้ส่ง",
     href: "/dashboard/senders",
     section: "manage",
   },
@@ -89,7 +90,7 @@ const sidebarItems = [
         <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
       </svg>
     ),
-    label: "API Keys",
+    label: "คีย์ API",
     href: "/dashboard/api-keys",
     section: "settings",
   },
@@ -107,14 +108,15 @@ const sidebarItems = [
 
 export default function DashboardShell({
   user,
-  title,
+  title = "",
   children,
 }: {
   user: User;
-  title: string;
+  title?: string;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const [moreOpen, setMoreOpen] = useState(false);
 
   return (
     <div className="min-h-screen flex bg-[var(--bg-base)]">
@@ -130,7 +132,7 @@ export default function DashboardShell({
         </Link>
 
         {/* Main */}
-        <div className="text-[10px] uppercase tracking-[0.15em] text-white/15 px-4 mb-2 font-semibold">Main</div>
+        <div className="text-[10px] uppercase tracking-[0.15em] text-white/15 px-4 mb-2 font-semibold">หลัก</div>
         <nav className="space-y-0.5 mb-6">
           {sidebarItems.filter(i => i.section === "main").map((item) => (
             <Link key={item.label} href={item.href} className={`sidebar-item ${pathname === item.href ? "active" : ""}`}>
@@ -141,7 +143,7 @@ export default function DashboardShell({
         </nav>
 
         {/* Management */}
-        <div className="text-[10px] uppercase tracking-[0.15em] text-white/15 px-4 mb-2 font-semibold">Management</div>
+        <div className="text-[10px] uppercase tracking-[0.15em] text-white/15 px-4 mb-2 font-semibold">จัดการ</div>
         <nav className="space-y-0.5 mb-6">
           {sidebarItems.filter(i => i.section === "manage").map((item) => (
             <Link key={item.label} href={item.href} className={`sidebar-item ${pathname === item.href ? "active" : ""}`}>
@@ -152,7 +154,7 @@ export default function DashboardShell({
         </nav>
 
         {/* Settings */}
-        <div className="text-[10px] uppercase tracking-[0.15em] text-white/15 px-4 mb-2 font-semibold">Settings</div>
+        <div className="text-[10px] uppercase tracking-[0.15em] text-white/15 px-4 mb-2 font-semibold">ตั้งค่า</div>
         <nav className="space-y-0.5 flex-1">
           {sidebarItems.filter(i => i.section === "settings").map((item) => (
             <Link key={item.label} href={item.href} className={`sidebar-item ${pathname === item.href ? "active" : ""}`}>
@@ -188,7 +190,7 @@ export default function DashboardShell({
       <main className="flex-1 overflow-auto">
         {/* Top Bar */}
         <header className="sticky top-0 z-40 border-b border-white/[0.04] bg-[var(--bg-base)]/80 backdrop-blur-2xl px-6 md:px-8 h-14 flex items-center justify-between">
-          <h1 className="text-lg font-semibold text-white tracking-tight">{title}</h1>
+          <h1 className="text-lg font-semibold text-white tracking-tight">{title || sidebarItems.find(i => i.href === pathname)?.label || "แดชบอร์ด"}</h1>
           <div className="flex items-center gap-4">
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-sky-500/[0.06] border border-sky-500/10">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-sky-400">
@@ -209,10 +211,47 @@ export default function DashboardShell({
         <footer className="border-t border-white/[0.03] px-8 py-4 mt-8">
           <div className="flex items-center justify-between text-[11px] text-white/15">
             <span>v1.0</span>
-            <span>&copy; SMSOK — SMS Sending Platform</span>
+            <span>&copy; SMSOK — แพลตฟอร์มส่ง SMS</span>
           </div>
         </footer>
       </main>
+
+      {/* Mobile More Menu Overlay */}
+      {moreOpen && (
+        <div className="md:hidden fixed inset-0 z-[60]">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMoreOpen(false)} />
+          <div className="absolute bottom-0 left-0 right-0 glass rounded-t-2xl border-t border-white/10 p-4 pb-8 animate-slide-up">
+            <div className="w-10 h-1 rounded-full bg-white/10 mx-auto mb-4" />
+            <div className="grid grid-cols-3 gap-3">
+              {sidebarItems.filter(i => !["/dashboard", "/dashboard/send", "/dashboard/messages"].includes(i.href)).map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMoreOpen(false)}
+                  className={`flex flex-col items-center gap-2 p-3 rounded-xl transition-all min-h-[72px] ${
+                    pathname === item.href
+                      ? "bg-sky-500/10 text-sky-400 border border-sky-500/20"
+                      : "bg-white/[0.02] text-white/40 hover:bg-white/[0.04] border border-white/[0.04]"
+                  }`}
+                >
+                  <span className="flex-shrink-0">{item.icon}</span>
+                  <span className="text-[11px] font-medium text-center leading-tight">{item.label}</span>
+                </Link>
+              ))}
+            </div>
+            <div className="mt-4 pt-4 border-t border-white/5">
+              <form action={logout}>
+                <button className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-red-400/60 hover:text-red-400 hover:bg-red-500/5 transition-all text-sm">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
+                  </svg>
+                  ออกจากระบบ
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Mobile Bottom Nav */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-white/[0.04] bg-[var(--bg-base)]/90 backdrop-blur-2xl flex items-center justify-around px-2 py-2 safe-area-bottom">
@@ -220,14 +259,14 @@ export default function DashboardShell({
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" />
           </svg>
-          <span className="text-[10px]">Home</span>
+          <span className="text-[10px]">หน้าหลัก</span>
           {pathname === "/dashboard" && <div className="w-1 h-1 rounded-full bg-sky-400 shadow-[0_0_4px_rgba(56,189,248,0.6)]" />}
         </Link>
         <Link href="/dashboard/send" className={`flex flex-col items-center gap-1 py-1 px-3 ${pathname === "/dashboard/send" ? "text-sky-400" : "text-white/30"}`}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
           </svg>
-          <span className="text-[10px]">Send</span>
+          <span className="text-[10px]">ส่ง SMS</span>
         </Link>
         <Link href="/dashboard/send" className="flex items-center justify-center w-12 h-12 -mt-5 rounded-full bg-gradient-to-br from-sky-400 to-sky-600 shadow-[0_0_25px_rgba(56,189,248,0.4),0_4px_12px_rgba(0,0,0,0.3)]">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
@@ -238,13 +277,13 @@ export default function DashboardShell({
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
           </svg>
-          <span className="text-[10px]">Msgs</span>
+          <span className="text-[10px]">ข้อความ</span>
         </Link>
-        <button className="flex flex-col items-center gap-1 py-1 px-3 text-white/30 cursor-pointer">
+        <button onClick={() => setMoreOpen(true)} className="flex flex-col items-center gap-1 py-1 px-3 text-white/30 cursor-pointer min-w-[44px] min-h-[44px]">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="1" /><circle cx="12" cy="5" r="1" /><circle cx="12" cy="19" r="1" />
           </svg>
-          <span className="text-[10px]">More</span>
+          <span className="text-[10px]">เพิ่มเติม</span>
         </button>
       </nav>
     </div>

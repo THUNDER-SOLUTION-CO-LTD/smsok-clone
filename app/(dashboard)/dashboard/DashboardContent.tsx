@@ -27,7 +27,7 @@ const sidebarItems = [
         <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" />
       </svg>
     ),
-    label: "Dashboard",
+    label: "แดชบอร์ด",
     href: "/dashboard",
     active: true,
     section: "main",
@@ -58,7 +58,7 @@ const sidebarItems = [
         <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
       </svg>
     ),
-    label: "Campaigns",
+    label: "แคมเปญ",
     href: "/dashboard/campaigns",
     section: "main",
   },
@@ -78,7 +78,7 @@ const sidebarItems = [
         <path d="M20 7h-9M14 17H5" /><circle cx="17" cy="17" r="3" /><circle cx="7" cy="7" r="3" />
       </svg>
     ),
-    label: "Sender Names",
+    label: "ชื่อผู้ส่ง",
     href: "/dashboard/senders",
     section: "manage",
   },
@@ -98,7 +98,7 @@ const sidebarItems = [
         <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
       </svg>
     ),
-    label: "API Keys",
+    label: "คีย์ API",
     href: "/dashboard/api-keys",
     section: "settings",
   },
@@ -116,7 +116,7 @@ const sidebarItems = [
 
 const statCards = [
   {
-    label: "Credits",
+    label: "เครดิต",
     key: "credits" as const,
     delta: "+1,000",
     deltaColor: "text-emerald-400",
@@ -129,7 +129,7 @@ const statCards = [
     ),
   },
   {
-    label: "Messages Sent",
+    label: "ส่งแล้ว",
     key: "sent" as const,
     delta: "+23.5%",
     deltaColor: "text-emerald-400",
@@ -141,7 +141,7 @@ const statCards = [
     ),
   },
   {
-    label: "Delivered",
+    label: "สำเร็จ",
     key: "delivered" as const,
     delta: "98.2%",
     deltaColor: "text-emerald-400",
@@ -153,7 +153,7 @@ const statCards = [
     ),
   },
   {
-    label: "Failed",
+    label: "ล้มเหลว",
     key: "failed" as const,
     delta: "1.8%",
     deltaColor: "text-red-400",
@@ -186,18 +186,20 @@ function Sparkline({ data, color = "#38BDF8" }: { data: number[]; color?: string
   );
 }
 
-export default function DashboardContent({ user, stats }: { user: User; stats?: DashboardStats }) {
+export default function DashboardContent({ user, stats, senderNames = ["EasySlip"] }: { user: User; stats?: DashboardStats; senderNames?: string[] }) {
   const [phone, setPhone] = useState("");
   const [message, setMessage] = useState("");
+  const [senderName, setSenderName] = useState(senderNames[0] || "EasySlip");
   const [sending, setSending] = useState(false);
   const [sendResult, setSendResult] = useState<string | null>(null);
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
 
   const handleQuickSend = async () => {
     if (!phone || !message) return;
     setSending(true);
     setSendResult(null);
     try {
-      await sendSms(user.id, { senderName: "EasySlip", recipient: phone, message });
+      await sendSms(user.id, { senderName, recipient: phone, message });
       setSendResult("ส่งสำเร็จ!");
       setPhone("");
       setMessage("");
@@ -228,8 +230,8 @@ export default function DashboardContent({ user, stats }: { user: User; stats?: 
           <span className="text-lg font-bold neon-blue">SMSOK</span>
         </Link>
 
-        {/* Main */}
-        <div className="text-[10px] uppercase tracking-[0.15em] text-white/15 px-4 mb-2 font-semibold">Main</div>
+        {/* หลัก */}
+        <div className="text-[10px] uppercase tracking-[0.15em] text-white/15 px-4 mb-2 font-semibold">หลัก</div>
         <nav className="space-y-0.5 mb-6">
           {sidebarItems.filter(i => i.section === "main").map((item) => (
             <a key={item.label} href={item.href} className={`sidebar-item ${item.active ? "active" : ""}`}>
@@ -239,8 +241,8 @@ export default function DashboardContent({ user, stats }: { user: User; stats?: 
           ))}
         </nav>
 
-        {/* Management */}
-        <div className="text-[10px] uppercase tracking-[0.15em] text-white/15 px-4 mb-2 font-semibold">Management</div>
+        {/* จัดการ */}
+        <div className="text-[10px] uppercase tracking-[0.15em] text-white/15 px-4 mb-2 font-semibold">จัดการ</div>
         <nav className="space-y-0.5 mb-6">
           {sidebarItems.filter(i => i.section === "manage").map((item) => (
             <a key={item.label} href={item.href} className="sidebar-item">
@@ -250,8 +252,8 @@ export default function DashboardContent({ user, stats }: { user: User; stats?: 
           ))}
         </nav>
 
-        {/* Settings */}
-        <div className="text-[10px] uppercase tracking-[0.15em] text-white/15 px-4 mb-2 font-semibold">Settings</div>
+        {/* ตั้งค่า */}
+        <div className="text-[10px] uppercase tracking-[0.15em] text-white/15 px-4 mb-2 font-semibold">ตั้งค่า</div>
         <nav className="space-y-0.5 flex-1">
           {sidebarItems.filter(i => i.section === "settings").map((item) => (
             <a key={item.label} href={item.href} className="sidebar-item">
@@ -283,11 +285,11 @@ export default function DashboardContent({ user, stats }: { user: User; stats?: 
         </div>
       </aside>
 
-      {/* Main Content */}
+      {/* หลัก Content */}
       <main className="flex-1 overflow-auto">
         {/* Top Bar */}
         <header className="sticky top-0 z-40 border-b border-white/[0.04] bg-[var(--bg-base)]/80 backdrop-blur-2xl px-6 md:px-8 h-14 flex items-center justify-between">
-          <h1 className="text-lg font-semibold text-white tracking-tight">Dashboard</h1>
+          <h1 className="text-lg font-semibold text-white tracking-tight">แดชบอร์ด</h1>
           <div className="flex items-center gap-4">
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-sky-500/[0.06] border border-sky-500/10">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-sky-400">
@@ -341,9 +343,30 @@ export default function DashboardContent({ user, stats }: { user: User; stats?: 
                   <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
                 </svg>
               </div>
-              Quick Send
+              ส่งด่วน
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs text-white/30 uppercase tracking-wider mb-2 font-medium">ชื่อผู้ส่ง</label>
+                <div className="relative">
+                  <select
+                    className="input-glass cursor-pointer appearance-none pr-10"
+                    value={senderName}
+                    onChange={(e) => setSenderName(e.target.value)}
+                  >
+                    {senderNames.map((name) => (
+                      <option key={name} value={name} className="bg-[#0a0f1a] text-white">
+                        {name === "EasySlip" ? "EasySlip (ค่าเริ่มต้น)" : name}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-white/30">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M6 9l6 6 6-6" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
               <div>
                 <label className="block text-xs text-white/30 uppercase tracking-wider mb-2 font-medium">เบอร์ปลายทาง</label>
                 <input
@@ -359,7 +382,7 @@ export default function DashboardContent({ user, stats }: { user: User; stats?: 
                 <input
                   type="text"
                   className="input-glass"
-                  placeholder="Your OTP is {code}"
+                  placeholder="รหัส OTP ของคุณคือ {code}"
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                 />
@@ -381,7 +404,7 @@ export default function DashboardContent({ user, stats }: { user: User; stats?: 
                   </span>
                 ) : (
                   <>
-                    Send SMS
+                    ส่ง SMS
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M5 12h14M12 5l7 7-7 7" />
                     </svg>
@@ -400,10 +423,10 @@ export default function DashboardContent({ user, stats }: { user: User; stats?: 
                     <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
                   </svg>
                 </div>
-                Recent Messages
+                ข้อความล่าสุด
               </h2>
               <a href="/dashboard/messages" className="text-xs text-sky-400/80 hover:text-sky-300 transition-colors flex items-center gap-1">
-                View All
+                ดูทั้งหมด
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M5 12h14M12 5l7 7-7 7" />
                 </svg>
@@ -442,10 +465,10 @@ export default function DashboardContent({ user, stats }: { user: User; stats?: 
                     <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
                   </svg>
                 </div>
-                <p className="text-sm text-white/25 mb-1">No messages yet</p>
+                <p className="text-sm text-white/25 mb-1">ยังไม่มีข้อความ</p>
                 <p className="text-xs text-white/15 mb-5">ส่ง SMS แรกของคุณเลย</p>
                 <a href="/dashboard/send" className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold">
-                  Send SMS
+                  ส่ง SMS
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M5 12h14M12 5l7 7-7 7" />
                   </svg>
@@ -459,7 +482,7 @@ export default function DashboardContent({ user, stats }: { user: User; stats?: 
         <footer className="border-t border-white/[0.03] px-8 py-4 mt-8">
           <div className="flex items-center justify-between text-[11px] text-white/15">
             <span>v1.0</span>
-            <span>&copy; SMSOK — SMS Sending Platform</span>
+            <span>&copy; SMSOK — แพลตฟอร์มส่ง SMS</span>
           </div>
         </footer>
       </main>
@@ -470,14 +493,14 @@ export default function DashboardContent({ user, stats }: { user: User; stats?: 
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" />
           </svg>
-          <span className="text-[10px]">Home</span>
+          <span className="text-[10px]">หน้าหลัก</span>
           <div className="w-1 h-1 rounded-full bg-sky-400 shadow-[0_0_4px_rgba(56,189,248,0.6)]" />
         </a>
         <a href="/dashboard/send" className="flex flex-col items-center gap-1 py-1 px-3 text-white/30">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
           </svg>
-          <span className="text-[10px]">Send</span>
+          <span className="text-[10px]">ส่ง</span>
         </a>
         <a href="/dashboard/send" className="flex items-center justify-center w-12 h-12 -mt-5 rounded-full bg-gradient-to-br from-sky-400 to-sky-600 shadow-[0_0_25px_rgba(56,189,248,0.4),0_4px_12px_rgba(0,0,0,0.3)]">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
@@ -488,14 +511,51 @@ export default function DashboardContent({ user, stats }: { user: User; stats?: 
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
           </svg>
-          <span className="text-[10px]">Msgs</span>
+          <span className="text-[10px]">ข้อความ</span>
         </a>
-        <button className="flex flex-col items-center gap-1 py-1 px-3 text-white/30 cursor-pointer">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="1" /><circle cx="12" cy="5" r="1" /><circle cx="12" cy="19" r="1" />
-          </svg>
-          <span className="text-[10px]">More</span>
-        </button>
+        <div className="relative">
+          <button
+            onClick={() => setMoreMenuOpen(!moreMenuOpen)}
+            className="flex flex-col items-center gap-1 py-1 px-3 text-white/30 cursor-pointer"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="1" /><circle cx="12" cy="5" r="1" /><circle cx="12" cy="19" r="1" />
+            </svg>
+            <span className="text-[10px]">เพิ่มเติม</span>
+          </button>
+          {moreMenuOpen && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setMoreMenuOpen(false)} />
+              <div className="absolute bottom-full right-0 mb-2 w-48 glass rounded-xl overflow-hidden z-50 animate-fade-in">
+                <a href="/dashboard/contacts" className="flex items-center gap-3 px-4 py-3 text-sm text-white/60 hover:bg-white/5 transition-colors">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M4 19.5A2.5 2.5 0 016.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" /></svg>
+                  สมุดโทรศัพท์
+                </a>
+                <a href="/dashboard/campaigns" className="flex items-center gap-3 px-4 py-3 text-sm text-white/60 hover:bg-white/5 transition-colors">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /></svg>
+                  แคมเปญ
+                </a>
+                <a href="/dashboard/senders" className="flex items-center gap-3 px-4 py-3 text-sm text-white/60 hover:bg-white/5 transition-colors">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M20 7h-9M14 17H5" /><circle cx="17" cy="17" r="3" /><circle cx="7" cy="7" r="3" /></svg>
+                  ชื่อผู้ส่ง
+                </a>
+                <a href="/dashboard/topup" className="flex items-center gap-3 px-4 py-3 text-sm text-white/60 hover:bg-white/5 transition-colors">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" /></svg>
+                  เติมเงิน
+                </a>
+                <div className="border-t border-white/5" />
+                <a href="/dashboard/api-keys" className="flex items-center gap-3 px-4 py-3 text-sm text-white/60 hover:bg-white/5 transition-colors">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" /></svg>
+                  คีย์ API
+                </a>
+                <a href="/dashboard/settings" className="flex items-center gap-3 px-4 py-3 text-sm text-white/60 hover:bg-white/5 transition-colors">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.32 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" /></svg>
+                  ตั้งค่า
+                </a>
+              </div>
+            </>
+          )}
+        </div>
       </nav>
     </div>
   );

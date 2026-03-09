@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getPackages } from "@/lib/actions/payments";
 import { PACKAGES } from "@/lib/packages-data";
 import TopupContent from "./TopupContent";
+import DashboardShell from "../DashboardShell";
 
 export default async function TopupPage() {
   const user = await getSession();
@@ -30,5 +31,9 @@ export default async function TopupPage() {
     }));
   }
 
-  return <TopupContent user={user} packages={packages} />;
+  return (
+    <DashboardShell user={user} title="เติมเงิน">
+      <TopupContent user={user} packages={packages} />
+    </DashboardShell>
+  );
 }

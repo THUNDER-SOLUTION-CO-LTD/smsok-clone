@@ -4,3 +4,4 @@ export { requestSenderName, getSenderNames, getApprovedSenderNames, adminApprove
 export { purchasePackage, uploadSlip, adminVerifyTransaction, getUserTransactions, adminGetPendingTransactions, getPackages } from "./payments";
 export { PACKAGES } from "../packages-data";
 export { createApiKey, getApiKeys, toggleApiKey, deleteApiKey } from "./api-keys";
+export { updateProfile, changePassword, getProfile } from "./settings";

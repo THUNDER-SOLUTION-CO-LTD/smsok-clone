@@ -120,7 +120,7 @@ export const approveSenderNameSchema = z.object({
 // ==========================================
 
 export const purchasePackageSchema = z.object({
-  packageId: z.string().cuid(),
+  packageId: z.string().min(1, "กรุณาเลือกแพ็กเกจ"),
   method: z.enum(["bank_transfer", "promptpay"]),
 });
 

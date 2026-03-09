@@ -2,6 +2,7 @@ import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { getSenderNames } from "@/lib/actions/sender-names";
 import SenderNameForm from "./SenderNameForm";
+import DashboardShell from "../DashboardShell";
 
 export default async function SendersPage() {
   const user = await getSession();
@@ -19,8 +20,9 @@ export default async function SendersPage() {
   const pendingCount = senderNames.filter(s => s.status === "pending").length;
 
   return (
+    <DashboardShell user={user} title="ชื่อผู้ส่ง">
     <div className="p-6 md:p-8 max-w-6xl animate-fade-in">
-      <h1 className="text-2xl font-bold text-white mb-1 tracking-tight">Sender Names</h1>
+      <h1 className="text-2xl font-bold text-white mb-1 tracking-tight">ชื่อผู้ส่ง</h1>
       <p className="text-sm text-white/40 mb-8">ยื่นคำขอ Sender Name เพื่อใช้ส่ง SMS ในชื่อแบรนด์ของคุณ</p>
 
       {/* Request Process Info */}
@@ -147,5 +149,6 @@ export default async function SendersPage() {
         )}
       </div>
     </div>
+    </DashboardShell>
   );
 }
