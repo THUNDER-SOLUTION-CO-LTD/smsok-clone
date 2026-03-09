@@ -239,7 +239,7 @@ const statCardStyles = [
     iconBg: "from-cyan-500/20 to-cyan-400/5",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-cyan-400">
-        <line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
+        <circle cx="12" cy="12" r="10" /><text x="12" y="16" textAnchor="middle" fill="currentColor" stroke="none" fontSize="12" fontWeight="bold">฿</text>
       </svg>
     ),
   },
@@ -288,7 +288,7 @@ const quickActions = [
   },
   {
     label: "เติมเครดิต", href: "/dashboard/topup", desc: "เพิ่มเครดิตได้เลย",
-    icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" /></svg>,
+    icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="12" r="10" /><text x="12" y="16" textAnchor="middle" fill="currentColor" stroke="none" fontSize="12" fontWeight="bold">฿</text></svg>,
     gradient: "from-cyan-500 to-teal-600", shadow: "shadow-cyan-500/20",
     ring: "ring-cyan-500/10",
   },
@@ -472,7 +472,7 @@ export default function DashboardContent({ user, stats, senderNames = ["EasySlip
                 )}
                 <span className="flex items-center gap-1.5">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-cyan-400/60">
-                    <line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
+                    <circle cx="12" cy="12" r="10" /><text x="12" y="16" textAnchor="middle" fill="currentColor" stroke="none" fontSize="12" fontWeight="bold">฿</text>
                   </svg>
                   เครดิต <span className="text-cyan-400 font-semibold">{(stats?.user.credits ?? user.credits).toLocaleString()}</span>
                 </span>
