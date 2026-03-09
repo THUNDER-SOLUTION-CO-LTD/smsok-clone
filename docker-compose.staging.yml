@@ -1,0 +1,56 @@
+services:
+  app:
+    image: ghcr.io/lambogreny/smsok-clone:latest
+    ports:
+      - "3459:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://smsok:staging_pass_2026@postgres:5432/smsok_staging
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=staging-secret-not-for-production-use-32chars
+      - COMMIT_SHA=${COMMIT_SHA:-staging}
+      - NEXT_PUBLIC_APP_URL=http://localhost:3459
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health/ready"]
+      interval: 15s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: smsok
+      POSTGRES_PASSWORD: staging_pass_2026
+      POSTGRES_DB: smsok_staging
+    volumes:
+      - staging_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U smsok"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --maxmemory 32mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  staging_pgdata:
