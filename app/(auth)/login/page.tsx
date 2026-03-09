@@ -1,21 +1,17 @@
 "use client";
 
-import { login } from "@/lib/actions";
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { blockThai, fieldCls } from "@/lib/form-utils";
 
 export default function LoginPage() {
-  const [state, formAction, pending] = useActionState(
-    async (_prev: { error?: string } | null, formData: FormData) => {
-      return await login(formData);
-    },
-    null
-  );
-
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [serverError, setServerError] = useState("");
 
   function validateEmail(v: string) {
     const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
@@ -24,6 +20,29 @@ export default function LoginPage() {
 
   const hasErrors = Object.values(errors).some(Boolean);
   const isComplete = email.trim() && password.trim();
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!isComplete || hasErrors) return;
+    setServerError("");
+    startTransition(async () => {
+      try {
+        const res = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setServerError(data.error || "เกิดข้อผิดพลาด กรุณาลองใหม่");
+          return;
+        }
+        router.push(data.redirectTo ?? "/dashboard");
+      } catch {
+        setServerError("ไม่สามารถเชื่อมต่อได้ กรุณาลองใหม่");
+      }
+    });
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center px-6 mesh-bg relative">
@@ -51,13 +70,13 @@ export default function LoginPage() {
             <p className="text-white/30 text-sm">เข้าสู่ระบบเพื่อจัดการการส่ง SMS ของคุณ</p>
           </div>
 
-          {state?.error && (
+          {serverError && (
             <div className="mb-6 p-3 rounded-xl bg-red-500/8 border border-red-500/15 text-red-400 text-sm text-center animate-shake">
-              {state.error}
+              {serverError}
             </div>
           )}
 
-          <form action={formAction} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="block text-xs text-white/40 uppercase tracking-wider mb-2 font-medium">อีเมล</label>
               <input
@@ -80,12 +99,17 @@ export default function LoginPage() {
                 placeholder="••••••••"
               />
             </div>
+            <div className="flex justify-end">
+              <Link href="/forgot-password" className="text-xs text-violet-400/70 hover:text-violet-400 transition-colors">
+                ลืมรหัสผ่าน?
+              </Link>
+            </div>
             <button
               type="submit"
-              disabled={pending || hasErrors || !isComplete}
+              disabled={isPending || hasErrors || !isComplete}
               className="w-full btn-primary py-3 rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {pending ? (
+              {isPending ? (
                 <span className="flex items-center gap-2">
                   <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>
                   กำลังเข้าสู่ระบบ...

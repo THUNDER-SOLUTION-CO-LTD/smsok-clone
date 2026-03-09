@@ -11,7 +11,6 @@ import {
   reportFilterSchema,
 } from "../validations";
 import { sendSingleSms, sendSmsBatch } from "../sms-gateway";
-import { createCreditLedgerEntry } from "./payments";
 
 // ==========================================
 // Send single SMS
@@ -83,13 +82,15 @@ export async function sendSms(userId: string, data: unknown) {
           },
         });
 
-        await createCreditLedgerEntry(tx, {
-          userId,
-          amount: -smsCount,
-          balance: updatedUser.credits,
-          type: "SMS_SEND",
-          description: `SMS sent to ${normalizePhone(input.recipient)}`,
-          refId: message.id,
+        await tx.creditTransaction.create({
+          data: {
+            userId,
+            amount: -smsCount,
+            balance: updatedUser.credits,
+            type: "SMS_SEND",
+            description: `SMS sent to ${normalizePhone(input.recipient)}`,
+            refId: message.id,
+          },
         });
       });
     } else {
