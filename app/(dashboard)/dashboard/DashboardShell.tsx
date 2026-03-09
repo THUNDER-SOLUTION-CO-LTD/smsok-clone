@@ -145,6 +145,16 @@ const sidebarItems = [
     href: "/dashboard/settings",
     section: "settings",
   },
+  {
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 2v20l3-2 2 2 3-2 3 2 2-2 3 2V2l-3 2-2-2-3 2-3-2-2 2-3-2z" /><line x1="8" y1="9" x2="16" y2="9" /><line x1="8" y1="13" x2="14" y2="13" /><line x1="8" y1="17" x2="12" y2="17" />
+      </svg>
+    ),
+    label: "ประวัติเครดิต",
+    href: "/dashboard/credits",
+    section: "settings",
+  },
 ];
 
 function SidebarLink({ item, isActive }: { item: typeof sidebarItems[0]; isActive: boolean }) {

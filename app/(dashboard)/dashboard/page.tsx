@@ -13,5 +13,6 @@ export default async function DashboardPage() {
     getApprovedSenderNames(user.id),
   ]);
 
-  return <DashboardContent user={user} stats={stats} senderNames={senderNames.map(s => s.name)} />;
+  const names = senderNames.map(s => s.name);
+  return <DashboardContent user={user} stats={stats} senderNames={names.length > 0 ? names : ["EasySlip"]} />;
 }

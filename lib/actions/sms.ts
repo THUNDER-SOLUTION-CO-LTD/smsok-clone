@@ -11,6 +11,7 @@ import {
   reportFilterSchema,
 } from "../validations";
 import { sendSingleSms, sendSmsBatch } from "../sms-gateway";
+import { createCreditLedgerEntry } from "./payments";
 
 // ==========================================
 // Send single SMS
@@ -39,8 +40,8 @@ export async function sendSms(userId: string, data: unknown) {
   }
 
   // Create message + deduct credits in transaction
-  const [message] = await db.$transaction([
-    db.message.create({
+  const { message, updatedUser } = await db.$transaction(async (tx: Omit<PrismaClient, "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">) => {
+    const createdMessage = await tx.message.create({
       data: {
         userId,
         recipient: normalizePhone(input.recipient),
@@ -49,12 +50,19 @@ export async function sendSms(userId: string, data: unknown) {
         creditCost: smsCount,
         status: "pending",
       },
-    }),
-    db.user.update({
+    });
+
+    const nextUser = await tx.user.update({
       where: { id: userId },
       data: { credits: { decrement: smsCount } },
-    }),
-  ]);
+      select: { credits: true },
+    });
+
+    return {
+      message: createdMessage,
+      updatedUser: nextUser,
+    };
+  });
 
   // Send via EasyThunder SMS Gateway
   try {
@@ -65,13 +73,24 @@ export async function sendSms(userId: string, data: unknown) {
     );
 
     if (result.success) {
-      await db.message.update({
-        where: { id: message.id },
-        data: {
-          status: "sent",
-          sentAt: new Date(),
-          gatewayId: result.jobId || null,
-        },
+      await db.$transaction(async (tx: Omit<PrismaClient, "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">) => {
+        await tx.message.update({
+          where: { id: message.id },
+          data: {
+            status: "sent",
+            sentAt: new Date(),
+            gatewayId: result.jobId || null,
+          },
+        });
+
+        await createCreditLedgerEntry(tx, {
+          userId,
+          amount: -smsCount,
+          balance: updatedUser.credits,
+          type: "SMS_SEND",
+          description: `SMS sent to ${normalizePhone(input.recipient)}`,
+          refId: message.id,
+        });
       });
     } else {
       // Gateway returned failure — REFUND credits
@@ -192,6 +211,20 @@ export async function sendBatchSms(userId: string, data: unknown) {
     await db.user.update({
       where: { id: userId },
       data: { credits: { increment: refundCredits } },
+    });
+  }
+
+  if (sentCount > 0) {
+    const consumedCredits = smsCount * sentCount;
+    const balance = user.credits - consumedCredits;
+    await db.creditTransaction.create({
+      data: {
+        userId,
+        amount: -consumedCredits,
+        balance,
+        type: "SMS_SEND",
+        description: `Batch SMS sent to ${sentCount} recipients`,
+      },
     });
   }
 

@@ -84,7 +84,7 @@ export async function verifySlipByBase64(base64Image: string): Promise<SlipVerif
       Authorization: `Bearer ${EASYSLIP_API_KEY}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ image: base64Image }),
+    body: JSON.stringify({ payload: base64Image }),
   });
 
   if (!res.ok) {

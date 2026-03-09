@@ -13,7 +13,7 @@ model User {
   phone         String?
   name          String
   password      String
-  credits       Int       @default(500)
+  credits       Int       @default(15)
   role          String    @default("user")
   emailVerified Boolean   @default(false)
   createdAt     DateTime  @default(now()) @map("created_at")
@@ -27,9 +27,10 @@ model User {
   transactions     Transaction[]
   apiKeys          ApiKey[]
   messageTemplates MessageTemplate[]
-  otpRequests      OtpRequest[]
-  campaigns        Campaign[]
-  scheduledSms     ScheduledSms[]
+  otpRequests         OtpRequest[]
+  campaigns           Campaign[]
+  scheduledSms        ScheduledSms[]
+  creditTransactions  CreditTransaction[]
 
   @@map("users")
 }
@@ -252,6 +253,22 @@ model ScheduledSms {
   @@index([userId, scheduledAt])
   @@index([status, scheduledAt])
   @@map("scheduled_sms")
+}
+
+model CreditTransaction {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  user        User     @relation(fields: [userId], references: [id])
+  amount      Int      // positive = credit added, negative = deducted
+  balance     Int      // credits remaining after this transaction
+  type        String   // TOPUP | SMS_SEND | REFUND | BONUS | ADJUSTMENT
+  description String
+  refId       String?  @map("ref_id") // transactionId or messageId
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([userId, createdAt])
+  @@index([type])
+  @@map("credit_transactions")
 }
 
 model Transaction {

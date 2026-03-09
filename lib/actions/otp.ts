@@ -18,14 +18,9 @@ type GenerateOtpOptions = {
 };
 
 function getOtpHashSecret(): string {
-  const explicitSecret = process.env.OTP_HASH_SECRET?.trim();
-  if (explicitSecret) return explicitSecret;
-
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("OTP_HASH_SECRET is not configured");
-  }
-
-  return process.env.JWT_SECRET || "smsok-otp-dev-secret";
+  const secret = process.env.OTP_HASH_SECRET?.trim();
+  if (!secret) throw new Error("OTP_HASH_SECRET is not configured");
+  return secret;
 }
 
 function generateOtp(): string {

@@ -1,9 +1,34 @@
 "use server";
 
 import { prisma as db } from "../db";
+import type { PrismaClient } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { idSchema } from "../validations";
-import { verifySlipByUrl } from "../easyslip";
+import { verifySlipByBase64, verifySlipByUrl } from "../easyslip";
+
+type DbTx = Omit<PrismaClient, "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">;
+
+type CreditLedgerEntry = {
+  userId: string;
+  amount: number;
+  balance: number;
+  type: "TOPUP" | "SMS_SEND" | "REFUND";
+  description: string;
+  refId?: string | null;
+};
+
+export async function createCreditLedgerEntry(tx: DbTx, entry: CreditLedgerEntry) {
+  return tx.creditTransaction.create({
+    data: {
+      userId: entry.userId,
+      amount: entry.amount,
+      balance: entry.balance,
+      type: entry.type,
+      description: entry.description,
+      refId: entry.refId ?? null,
+    },
+  });
+}
 
 // ==========================================
 // Get active packages from DB
@@ -13,6 +38,14 @@ export async function getPackages() {
   return db.package.findMany({
     where: { isActive: true },
     orderBy: { price: "asc" },
+  });
+}
+
+export async function getCreditHistory(userId: string) {
+  return db.creditTransaction.findMany({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+    take: 100,
   });
 }
 
@@ -77,7 +110,8 @@ export async function uploadSlip(transactionId: string, slipUrl: string) {
   const slipResult = await verifySlipByUrl(slipUrl);
 
   if (slipResult.success && slipResult.data) {
-    const slipAmount = slipResult.data.amount * 100; // Convert baht to satang
+    const slipData = slipResult.data;
+    const slipAmount = slipData.amount * 100; // Convert baht to satang
     const expectedAmount = transaction.amount;
 
     // Verify amount matches (allow 1 satang tolerance)
@@ -85,7 +119,7 @@ export async function uploadSlip(transactionId: string, slipUrl: string) {
       // Check reference not already used
       const existingRef = await db.transaction.findFirst({
         where: {
-          reference: slipResult.data.transRef,
+          reference: slipData.transRef,
           status: "verified",
           id: { not: transactionId },
         },
@@ -97,21 +131,32 @@ export async function uploadSlip(transactionId: string, slipUrl: string) {
       }
 
       // Auto-approve: add credits
-      await db.$transaction([
-        db.transaction.update({
+      await db.$transaction(async (tx) => {
+        await tx.transaction.update({
           where: { id: transactionId },
           data: {
             status: "verified",
-            reference: slipResult.data.transRef,
+            reference: slipData.transRef,
             verifiedAt: new Date(),
             verifiedBy: "easyslip-auto",
           },
-        }),
-        db.user.update({
+        });
+
+        const updatedUser = await tx.user.update({
           where: { id: transaction.userId },
           data: { credits: { increment: transaction.credits } },
-        }),
-      ]);
+          select: { credits: true },
+        });
+
+        await createCreditLedgerEntry(tx, {
+          userId: transaction.userId,
+          amount: transaction.credits,
+          balance: updatedUser.credits,
+          type: "TOPUP",
+          description: `Topup verified from slip ${slipData.transRef}`,
+          refId: transactionId,
+        });
+      });
 
       revalidatePath("/dashboard/topup");
       revalidatePath("/dashboard");
@@ -120,7 +165,7 @@ export async function uploadSlip(transactionId: string, slipUrl: string) {
       // Amount mismatch — needs manual review
       await db.transaction.update({
         where: { id: transactionId },
-        data: { reference: slipResult.data.transRef },
+        data: { reference: slipData.transRef },
       });
     }
   }
@@ -154,20 +199,31 @@ export async function adminVerifyTransaction(
   if (transaction.status !== "pending") throw new Error("รายการนี้ดำเนินการแล้ว");
 
   if (action === "verify") {
-    await db.$transaction([
-      db.transaction.update({
+    await db.$transaction(async (tx) => {
+      await tx.transaction.update({
         where: { id: transactionId },
         data: {
           status: "verified",
           verifiedAt: new Date(),
           verifiedBy: adminUserId,
         },
-      }),
-      db.user.update({
+      });
+
+      const updatedUser = await tx.user.update({
         where: { id: transaction.userId },
         data: { credits: { increment: transaction.credits } },
-      }),
-    ]);
+        select: { credits: true },
+      });
+
+      await createCreditLedgerEntry(tx, {
+        userId: transaction.userId,
+        amount: transaction.credits,
+        balance: updatedUser.credits,
+        type: "TOPUP",
+        description: `Topup approved by admin ${adminUserId}`,
+        refId: transactionId,
+      });
+    });
   } else {
     await db.transaction.update({
       where: { id: transactionId },
@@ -202,4 +258,83 @@ export async function adminGetPendingTransactions() {
     },
     orderBy: { createdAt: "asc" },
   });
+}
+
+export async function verifyTopupSlip(userId: string, payload: string) {
+  if (!payload || typeof payload !== "string") {
+    throw new Error("กรุณาแนบสลิปแบบ base64");
+  }
+
+  const slipResult = await verifySlipByBase64(payload);
+  if (!slipResult.success || !slipResult.data) {
+    throw new Error(slipResult.error || "ตรวจสอบสลิปไม่สำเร็จ");
+  }
+  const slipData = slipResult.data;
+
+  const duplicate = await db.transaction.findFirst({
+    where: {
+      reference: slipData.transRef,
+      status: "verified",
+    },
+    select: { id: true },
+  });
+  if (duplicate) {
+    throw new Error("สลิปนี้ถูกใช้ไปแล้ว");
+  }
+
+  const amountSatang = Math.round(slipData.amount * 100);
+  const matchedPackage = await db.package.findFirst({
+    where: { price: amountSatang, isActive: true },
+    orderBy: { totalCredits: "desc" },
+  });
+  const creditsToAdd = matchedPackage
+    ? matchedPackage.totalCredits
+    : Math.max(1, Math.round(slipData.amount));
+
+  const result = await db.$transaction(async (tx) => {
+    const topupTransaction = await tx.transaction.create({
+      data: {
+        userId,
+        packageId: matchedPackage?.id ?? null,
+        amount: amountSatang,
+        credits: creditsToAdd,
+        method: "slip_verify",
+        status: "verified",
+        reference: slipData.transRef,
+        verifiedAt: new Date(),
+        verifiedBy: "easyslip-api",
+        expiresAt: new Date(),
+      },
+    });
+
+    const updatedUser = await tx.user.update({
+      where: { id: userId },
+      data: { credits: { increment: creditsToAdd } },
+      select: { credits: true },
+    });
+
+    await createCreditLedgerEntry(tx, {
+      userId,
+      amount: creditsToAdd,
+      balance: updatedUser.credits,
+      type: "TOPUP",
+      description: matchedPackage
+        ? `Topup from verified slip for package ${matchedPackage.name}`
+        : `Topup from verified slip amount ฿${slipData.amount.toFixed(2)}`,
+      refId: topupTransaction.id,
+    });
+
+    return {
+      transactionId: topupTransaction.id,
+      reference: slipData.transRef,
+      amount: slipData.amount,
+      creditsAdded: creditsToAdd,
+      creditsBalance: updatedUser.credits,
+      matchedPackage: matchedPackage?.name ?? null,
+    };
+  });
+
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/topup");
+  return result;
 }
