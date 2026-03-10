@@ -9,8 +9,8 @@ import { Prisma } from "@prisma/client";
 
 const OTP_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
 const MAX_ATTEMPTS = 5;
-const MAX_OTP_PER_PHONE_PER_WINDOW = 3; // 3 per 5 min (architect spec #100)
-const OTP_RATE_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
+const MAX_OTP_PER_PHONE_PER_WINDOW = 3; // 3 per 10 min
+const OTP_RATE_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
 const OTP_CREDIT_COST = 1;
 
 type GenerateOtpOptions = {
@@ -76,7 +76,7 @@ export async function generateOtp_(
   });
 
   if (recentCount >= MAX_OTP_PER_PHONE_PER_WINDOW) {
-    throw new Error("ส่ง OTP มากเกินไป กรุณารอ 5 นาที");
+    throw new Error("ส่ง OTP มากเกินไป กรุณารอ 10 นาที");
   }
 
   // Check user credits
@@ -278,7 +278,7 @@ export async function generateOtpForRegister(phone: string) {
     where: { phone: normalizedPhone, createdAt: { gte: windowStart } },
   });
   if (recentCount >= MAX_OTP_PER_PHONE_PER_WINDOW) {
-    throw new Error("ส่ง OTP บ่อยเกินไป กรุณารอสักครู่");
+    throw new Error("ส่ง OTP บ่อยเกินไป กรุณารอ 10 นาที");
   }
 
   const code = generateOtp();

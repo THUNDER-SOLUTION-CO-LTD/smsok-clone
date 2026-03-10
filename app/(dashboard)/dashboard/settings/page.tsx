@@ -76,13 +76,18 @@ export default async function SettingsPage({
               <p className="text-[10px] text-[var(--text-muted)] mt-1">อีเมลไม่สามารถเปลี่ยนแปลงได้</p>
             </div>
             <div>
-              <label className="block text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1.5 font-medium">เบอร์โทรศัพท์</label>
-              <div className="input-glass bg-[var(--bg-surface)] cursor-default text-[var(--text-secondary)] font-mono">
+              <label className="block text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1.5 font-medium flex items-center gap-1.5">
+                เบอร์โทรศัพท์
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-amber-400/70">
+                  <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0110 0v4" />
+                </svg>
+              </label>
+              <div className="input-glass bg-[var(--bg-surface)] cursor-not-allowed text-[var(--text-secondary)] font-mono select-none" aria-readonly="true">
                 {fullUser.phone || "ไม่ได้ระบุ"}
               </div>
               <p className="text-[10px] text-[var(--text-muted)] mt-1">
-                หากต้องการเปลี่ยนเบอร์โทร{" "}
-                <span className="text-cyan-400">กรุณาติดต่อ support</span>
+                เบอร์โทรไม่สามารถเปลี่ยนได้หลังสมัคร{" "}
+                <span className="text-cyan-400">ติดต่อ support หากจำเป็น</span>
               </p>
             </div>
           </div>
