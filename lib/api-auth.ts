@@ -90,6 +90,8 @@ export function apiError(error: unknown) {
       msg.includes("ไม่ถูกต้อง") ||
       msg.includes("ไม่พบ") ||
       msg.includes("ไม่เพียงพอ") ||
+      msg.includes("ไม่อยู่") ||
+      msg.includes("ไม่มี") ||
       msg.includes("มากเกินไป") ||
       msg.includes("สูงสุด") ||
       msg.includes("หมดอายุ") ||
