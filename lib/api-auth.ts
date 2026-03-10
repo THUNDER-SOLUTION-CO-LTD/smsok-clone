@@ -1,6 +1,6 @@
 import { prisma as db } from "./db";
 import { NextRequest } from "next/server";
-import { startApiLog, setApiLogUser, finishApiLog } from "./api-log";
+import { startApiLog, setApiLogUser, finishApiLog, ERROR_CODES } from "./api-log";
 
 /**
  * Authenticate API request via Bearer token
@@ -14,7 +14,7 @@ export async function authenticateApiKey(req: NextRequest) {
   const headerApiKey = req.headers.get("x-api-key")?.trim();
 
   if (authHeader && !authHeader.startsWith("Bearer ")) {
-    throw new ApiError(401, "Missing or invalid Authorization header");
+    throw new ApiError(401, "Missing or invalid Authorization header", ERROR_CODES.AUTH_MISSING);
   }
 
   const key = authHeader?.startsWith("Bearer ")
@@ -22,7 +22,7 @@ export async function authenticateApiKey(req: NextRequest) {
     : headerApiKey;
 
   if (!key) {
-    throw new ApiError(401, "Missing or invalid Authorization header");
+    throw new ApiError(401, "Missing or invalid Authorization header", ERROR_CODES.AUTH_MISSING);
   }
 
   const apiKey = await db.apiKey.findUnique({
@@ -31,11 +31,11 @@ export async function authenticateApiKey(req: NextRequest) {
   });
 
   if (!apiKey) {
-    throw new ApiError(401, "Invalid API key");
+    throw new ApiError(401, "Invalid API key", ERROR_CODES.AUTH_INVALID);
   }
 
   if (!apiKey.isActive) {
-    throw new ApiError(401, "API key is disabled");
+    throw new ApiError(401, "API key is disabled", ERROR_CODES.AUTH_DISABLED);
   }
 
   // Update lastUsed (fire and forget)
@@ -50,7 +50,8 @@ export async function authenticateApiKey(req: NextRequest) {
 export class ApiError extends Error {
   constructor(
     public status: number,
-    message: string
+    message: string,
+    public code?: string,
   ) {
     super(message);
   }
@@ -63,8 +64,8 @@ export function apiResponse(data: unknown, status = 200) {
 
 export function apiError(error: unknown) {
   if (error instanceof ApiError) {
-    const body = { error: error.message };
-    finishApiLog(error.status, body, "CLIENT_ERROR", error.message);
+    const body = { error: error.message, code: error.code || ERROR_CODES.BAD_REQUEST };
+    finishApiLog(error.status, body, body.code, error.message);
     return Response.json(body, { status: error.status });
   }
   if (error instanceof Error) {
@@ -75,14 +76,14 @@ export function apiError(error: unknown) {
       console.error("[apiError]", error.name, ":", error.message);
     }
 
-    // Zod validation errors → always return generic Thai message (never expose field details)
+    // Zod validation errors → generic Thai message, error code 1001
     if (error.name === "ZodError") {
-      const body = { error: "ข้อมูลไม่ถูกต้อง กรุณาตรวจสอบและลองใหม่", code: "VALIDATION_ERROR" };
-      finishApiLog(400, body, "VALIDATION_ERROR", body.error);
+      const body = { error: "ข้อมูลไม่ถูกต้อง กรุณาตรวจสอบและลองใหม่", code: ERROR_CODES.VALIDATION };
+      finishApiLog(400, body, ERROR_CODES.VALIDATION, body.error, error.stack);
       return Response.json(body, { status: 400 });
     }
 
-    // Known Thai validation/business logic errors → 400, expose message
+    // Known Thai validation/business logic errors → 400
     const msg = error.message;
     const isThaiValidation =
       msg.includes("ไม่ถูกต้อง") ||
@@ -98,13 +99,26 @@ export function apiError(error: unknown) {
       msg.includes("ถูกล็อค") ||
       msg.includes("หากเบอร์") ||
       msg.includes("ระบบยังไม่พร้อม");
+
+    // Classify error code
+    let code: string = ERROR_CODES.INTERNAL;
+    if (isThaiValidation) {
+      if (msg.includes("ไม่พบ")) code = ERROR_CODES.NOT_FOUND;
+      else if (msg.includes("เครดิตไม่เพียงพอ")) code = ERROR_CODES.CREDITS;
+      else if (msg.includes("มากเกินไป") || msg.includes("บ่อยเกินไป")) code = ERROR_CODES.RATE_LIMIT;
+      else code = ERROR_CODES.BUSINESS;
+    }
+
     const status = isThaiValidation ? 400 : 500;
-    const body = { error: isThaiValidation ? msg : "เกิดข้อผิดพลาดภายในระบบ กรุณาลองใหม่" };
-    finishApiLog(status, body, status >= 500 ? "INTERNAL_ERROR" : "CLIENT_ERROR", body.error);
+    const body = {
+      error: isThaiValidation ? msg : "เกิดข้อผิดพลาดภายในระบบ กรุณาลองใหม่",
+      code,
+    };
+    finishApiLog(status, body, code, body.error, error.stack);
     return Response.json(body, { status });
   }
   console.error("[apiError] unknown error type:", typeof error, error);
-  const body = { error: "Internal server error" };
-  finishApiLog(500, body, "INTERNAL_ERROR", body.error);
+  const body = { error: "Internal server error", code: ERROR_CODES.INTERNAL };
+  finishApiLog(500, body, ERROR_CODES.INTERNAL, body.error);
   return Response.json(body, { status: 500 });
 }

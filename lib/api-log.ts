@@ -3,6 +3,26 @@ import { NextRequest } from "next/server";
 import { prisma } from "./db";
 
 // ==========================================
+// Error code mapping
+// ==========================================
+
+export const ERROR_CODES = {
+  VALIDATION: "1001",      // Zod validation error
+  BAD_REQUEST: "1002",     // Missing/invalid fields
+  NOT_FOUND: "2004",       // Resource not found
+  AUTH_MISSING: "3001",    // No auth header/key
+  AUTH_INVALID: "3002",    // Invalid API key
+  AUTH_DISABLED: "3003",   // API key disabled
+  AUTH_FAILED: "3004",     // Wrong password
+  FORBIDDEN: "3005",       // Insufficient permissions
+  RATE_LIMIT: "4001",      // Rate limit exceeded
+  CREDITS: "4002",         // Insufficient credits
+  BUSINESS: "4003",        // Business logic error (Thai validation)
+  INTERNAL: "5001",        // Unexpected server error
+  GATEWAY: "5002",         // SMS gateway error
+} as const;
+
+// ==========================================
 // Masking utilities
 // ==========================================
 
@@ -57,6 +77,14 @@ function truncate(str: string | null): string | null {
     : str;
 }
 
+function extractIp(req: NextRequest): string {
+  return (
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    req.headers.get("x-real-ip") ||
+    "unknown"
+  );
+}
+
 // ==========================================
 // AsyncLocalStorage context per request
 // ==========================================
@@ -64,7 +92,9 @@ function truncate(str: string | null): string | null {
 type ApiLogContext = {
   startTime: number;
   method: string;
-  url: string;
+  url: string;       // full URL with query
+  endpoint: string;  // path only
+  ipAddress: string;
   reqHeaders: Record<string, string>;
   reqBody: unknown;
   userId: string | null;
@@ -72,35 +102,30 @@ type ApiLogContext = {
 
 const logStore = new AsyncLocalStorage<ApiLogContext>();
 
-/** Call at the start of request handling (inside authenticateApiKey). */
+/** Call at the start of request handling (inside authenticateApiKey or startApiLog). */
 export function startApiLog(req: NextRequest) {
-  let reqBody: unknown = null;
-  // Body is already consumed by route handler, so we read from clone
-  // Note: this must be called BEFORE req.json() in the route
-  // Since authenticateApiKey runs first and doesn't consume body, this is safe
+  const parsed = new URL(req.url);
 
   const ctx: ApiLogContext = {
     startTime: Date.now(),
     method: req.method,
-    url: new URL(req.url).pathname,
+    url: parsed.pathname + parsed.search,
+    endpoint: parsed.pathname,
+    ipAddress: extractIp(req),
     reqHeaders: maskHeaders(req),
-    reqBody: null, // filled async below
+    reqBody: null,
     userId: null,
   };
 
   logStore.enterWith(ctx);
 
-  // Read body async (fire and forget for logging)
+  // Read body async (fire and forget)
   if (req.method !== "GET" && req.method !== "HEAD") {
     req
       .clone()
       .json()
-      .then((body) => {
-        ctx.reqBody = maskBody(body);
-      })
-      .catch(() => {
-        // non-JSON or empty body — ok
-      });
+      .then((body) => { ctx.reqBody = maskBody(body); })
+      .catch(() => {});
   }
 
   return ctx;
@@ -113,9 +138,15 @@ export function setApiLogUser(userId: string) {
 }
 
 /** Log the API response. Called from apiResponse/apiError. */
-export function finishApiLog(resStatus: number, resBody: unknown, errorCode?: string | null, errorMsg?: string | null) {
+export function finishApiLog(
+  resStatus: number,
+  resBody: unknown,
+  errorCode?: string | null,
+  errorMsg?: string | null,
+  stackTrace?: string | null,
+) {
   const ctx = logStore.getStore();
-  if (!ctx) return; // no context = not an API-logged request
+  if (!ctx) return;
 
   const latencyMs = Date.now() - ctx.startTime;
 
@@ -125,13 +156,16 @@ export function finishApiLog(resStatus: number, resBody: unknown, errorCode?: st
         userId: ctx.userId,
         method: ctx.method,
         url: ctx.url,
+        endpoint: ctx.endpoint,
         reqHeaders: truncate(JSON.stringify(ctx.reqHeaders)),
         reqBody: truncate(JSON.stringify(ctx.reqBody)),
         resStatus,
         resBody: truncate(JSON.stringify(resBody)),
         latencyMs,
+        ipAddress: ctx.ipAddress,
         errorCode: errorCode || null,
         errorMsg: errorMsg || null,
+        stackTrace: stackTrace ? truncate(stackTrace) : null,
       },
     })
     .catch((err) => {
@@ -152,6 +186,5 @@ export function withApiLog(handler: RouteHandler): RouteHandler {
   return async (req, ctx) => {
     startApiLog(req);
     return handler(req, ctx);
-    // apiResponse/apiError will call finishApiLog automatically
   };
 }

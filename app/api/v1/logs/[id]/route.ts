@@ -19,12 +19,30 @@ export async function GET(
       return apiResponse({ error: "ไม่พบ log" }, 404);
     }
 
-    return apiResponse({
-      ...log,
+    // Parse JSON fields for structured response
+    const result: Record<string, unknown> = {
+      id: log.id,
+      userId: log.userId,
+      method: log.method,
+      url: log.url,
+      endpoint: log.endpoint,
       reqHeaders: log.reqHeaders ? JSON.parse(log.reqHeaders) : null,
       reqBody: log.reqBody ? JSON.parse(log.reqBody) : null,
+      resStatus: log.resStatus,
       resBody: log.resBody ? JSON.parse(log.resBody) : null,
-    });
+      latencyMs: log.latencyMs,
+      ipAddress: log.ipAddress,
+      errorCode: log.errorCode,
+      errorMsg: log.errorMsg,
+      createdAt: log.createdAt,
+    };
+
+    // stackTrace: only for admin or log owner
+    if (user.role === "admin" && log.stackTrace) {
+      result.stackTrace = log.stackTrace;
+    }
+
+    return apiResponse(result);
   } catch (error) {
     return apiError(error);
   }

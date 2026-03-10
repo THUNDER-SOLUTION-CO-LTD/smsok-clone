@@ -292,20 +292,24 @@ model ApiLog {
   id         String   @id @default(cuid())
   userId     String?  @map("user_id")
   user       User?    @relation(fields: [userId], references: [id])
-  method     String   // GET, POST, DELETE
-  url        String   // /api/v1/sms/send
-  reqHeaders String?  @map("req_headers")  // JSON — masked
-  reqBody    String?  @map("req_body")     // JSON — masked
-  resStatus  Int      @map("res_status")   // 200, 400, 500
+  method     String   // GET, POST, PUT, DELETE
+  url        String   // Full URL with query params
+  endpoint   String   // Path only e.g. /api/v1/sms/send
+  reqHeaders String?  @map("req_headers")  // JSON — masked Authorization/API key
+  reqBody    String?  @map("req_body")     // JSON
+  resStatus  Int      @map("res_status")   // 200, 400, 401, 500
   resBody    String?  @map("res_body")     // JSON
-  latencyMs  Int      @map("latency_ms")   // response time
-  errorCode  String?  @map("error_code")   // VALIDATION_ERROR, INTERNAL_ERROR
+  latencyMs  Int      @map("latency_ms")   // response time ms
+  ipAddress  String?  @map("ip_address")   // caller IP
+  errorCode  String?  @map("error_code")   // 1001, 2004, 3001 etc
   errorMsg   String?  @map("error_msg")    // generic error message
+  stackTrace String?  @map("stack_trace")  // INTERNAL ONLY — never sent to client
   createdAt  DateTime @default(now()) @map("created_at")
 
   @@index([userId, createdAt])
   @@index([resStatus])
-  @@index([url])
+  @@index([endpoint])
+  @@index([ipAddress])
   @@map("api_logs")
 }
 

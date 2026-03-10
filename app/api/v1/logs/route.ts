@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { authenticateApiKey, apiResponse, apiError } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 
-// GET /api/v1/logs?page=1&limit=20&status=400&endpoint=/sms/send&method=POST&from=2026-03-01&to=2026-03-10
+// GET /api/v1/logs?page=1&limit=20&status=400&endpoint=/sms/send&method=POST&from=2026-03-01&to=2026-03-10&search=0812345678
 export async function GET(req: NextRequest) {
   try {
     const user = await authenticateApiKey(req);
@@ -16,6 +16,8 @@ export async function GET(req: NextRequest) {
     const from = searchParams.get("from");
     const to = searchParams.get("to");
     const errorCode = searchParams.get("errorCode");
+    const search = searchParams.get("search");
+    const ip = searchParams.get("ip");
     const offset = (page - 1) * limit;
 
     const where: Record<string, unknown> = { userId: user.id };
@@ -24,13 +26,24 @@ export async function GET(req: NextRequest) {
       where.resStatus = parseInt(status, 10);
     }
     if (endpoint) {
-      where.url = { contains: endpoint };
+      where.endpoint = { contains: endpoint };
     }
     if (method) {
       where.method = method.toUpperCase();
     }
     if (errorCode) {
       where.errorCode = errorCode;
+    }
+    if (ip) {
+      where.ipAddress = ip;
+    }
+    if (search) {
+      where.OR = [
+        { url: { contains: search } },
+        { reqBody: { contains: search } },
+        { resBody: { contains: search } },
+        { errorMsg: { contains: search } },
+      ];
     }
     if (from || to) {
       where.createdAt = {
@@ -49,8 +62,10 @@ export async function GET(req: NextRequest) {
           id: true,
           method: true,
           url: true,
+          endpoint: true,
           resStatus: true,
           latencyMs: true,
+          ipAddress: true,
           errorCode: true,
           errorMsg: true,
           createdAt: true,
