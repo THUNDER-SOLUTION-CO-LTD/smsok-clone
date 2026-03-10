@@ -216,11 +216,15 @@ export async function addContactsToGroup(
   });
   if (!group) throw new Error("ไม่พบกลุ่ม");
 
-  // Verify contacts ownership
+  // Verify contacts ownership — reject if any contact doesn't belong to user
   const contacts = await db.contact.findMany({
     where: { id: { in: contactIds }, userId },
     select: { id: true },
   });
+
+  if (contacts.length !== contactIds.length) {
+    throw new Error("ไม่พบรายชื่อบางรายการ");
+  }
 
   await db.contactGroupMember.createMany({
     data: contacts.map((c: { id: string }) => ({ groupId, contactId: c.id })),

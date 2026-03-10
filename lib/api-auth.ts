@@ -65,14 +65,17 @@ export function apiError(error: unknown) {
       console.error("[apiError]", error.name, ":", error.message);
     }
 
-    const zodIssues =
-      error.name === "ZodError" && "issues" in error && Array.isArray((error as { issues?: unknown[] }).issues)
-        ? ((error as { issues: Array<{ message?: string }> }).issues)
-        : null;
+    // Zod validation errors → always return generic Thai message (never expose field details)
+    if (error.name === "ZodError") {
+      return Response.json(
+        { error: "ข้อมูลไม่ถูกต้อง กรุณาตรวจสอบและลองใหม่", code: "VALIDATION_ERROR" },
+        { status: 400 }
+      );
+    }
 
-    // Known validation/business logic errors → 400, expose message
-    const msg = zodIssues?.[0]?.message || error.message;
-    const isValidation =
+    // Known Thai validation/business logic errors → 400, expose message
+    const msg = error.message;
+    const isThaiValidation =
       msg.includes("ไม่ถูกต้อง") ||
       msg.includes("ไม่พบ") ||
       msg.includes("ไม่เพียงพอ") ||
@@ -85,11 +88,11 @@ export function apiError(error: unknown) {
       msg.includes("ใช้งานแล้ว") ||
       msg.includes("ถูกล็อค") ||
       msg.includes("หากเบอร์") ||
-      error.name === "ZodError";
+      msg.includes("ระบบยังไม่พร้อม");
     // For unexpected server errors (5xx), never expose raw message — may leak internals
     return Response.json(
-      { error: isValidation ? msg : "เกิดข้อผิดพลาดภายในระบบ กรุณาลองใหม่" },
-      { status: isValidation ? 400 : 500 }
+      { error: isThaiValidation ? msg : "เกิดข้อผิดพลาดภายในระบบ กรุณาลองใหม่" },
+      { status: isThaiValidation ? 400 : 500 }
     );
   }
   console.error("[apiError] unknown error type:", typeof error, error);

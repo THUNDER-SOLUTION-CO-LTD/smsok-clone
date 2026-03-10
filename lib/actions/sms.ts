@@ -269,6 +269,15 @@ export async function sendBatchSms(userId: string, data: unknown, channel: "WEB"
         db.user.update({
           where: { id: userId },
           data: { credits: { increment: refundCredits } },
+        }),
+        db.creditTransaction.create({
+          data: {
+            userId,
+            amount: refundCredits,
+            balance: finalBalance + refundCredits,
+            type: "REFUND",
+            description: `Batch SMS failed for ${failedCount} recipients — credits refunded`,
+          },
         })
       );
     }

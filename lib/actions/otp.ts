@@ -206,7 +206,11 @@ export async function verifyOtp_(
   ref: string,
   code: string
 ) {
-  const input = verifyOtpSchema.parse({ ref, code });
+  const parsed = verifyOtpSchema.safeParse({ ref, code });
+  if (!parsed.success) {
+    throw new Error("OTP ไม่ถูกต้อง กรุณาตรวจสอบและลองใหม่");
+  }
+  const input = parsed.data;
 
   const otp = await prisma.otpRequest.findFirst({
     where: {
@@ -347,7 +351,12 @@ export async function generateOtpForRegister(phone: string) {
 }
 
 export async function verifyOtpForRegister(ref: string, code: string) {
-  const input = verifyOtpSchema.parse({ ref, code });
+  const parsed = verifyOtpSchema.safeParse({ ref, code });
+  if (!parsed.success) {
+    // Unified error — don't reveal whether format is wrong vs code is wrong
+    throw new Error("OTP ไม่ถูกต้อง กรุณาตรวจสอบและลองใหม่");
+  }
+  const input = parsed.data;
 
   const otp = await prisma.otpRequest.findFirst({
     where: { refCode: input.ref, purpose: "verify" },
