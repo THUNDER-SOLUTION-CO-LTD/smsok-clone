@@ -1,7 +1,6 @@
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { getContacts } from "@/lib/actions/contacts";
-import { getTags } from "@/lib/actions/tags";
 import ContactsClient from "./ContactsClient";
 
 const VALID_LIMITS = [20, 50, 100] as const;
@@ -19,10 +18,7 @@ export default async function ContactsPage({
   const limitParsed = parseInt(limitParam ?? "20") || 20;
   const limit = (VALID_LIMITS as readonly number[]).includes(limitParsed) ? limitParsed : 20;
 
-  const [{ contacts, pagination }, tags] = await Promise.all([
-    getContacts(user.id, { page, limit }),
-    getTags(user.id),
-  ]);
+  const { contacts, pagination } = await getContacts(user.id, { page, limit });
 
   // Serialize dates for client component
   const serializedContacts = contacts.map((c: typeof contacts[number]) => ({
@@ -39,7 +35,6 @@ export default async function ContactsPage({
       userId={user.id}
       initialContacts={serializedContacts}
       totalContacts={pagination.total}
-      initialTags={tags}
       initialPage={page}
       initialLimit={limit}
       totalPages={pagination.totalPages}

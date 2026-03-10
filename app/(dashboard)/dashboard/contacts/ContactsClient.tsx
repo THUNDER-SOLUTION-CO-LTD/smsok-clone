@@ -14,7 +14,6 @@ import { useRouter } from "next/navigation";
 import EmptyState from "@/app/components/ui/EmptyState";
 import { useToast } from "@/app/components/ui/Toast";
 import { blockNonNumeric, blockThai, fieldCls } from "@/lib/form-utils";
-import TagsPanel, { type Tag as DbTag } from "./TagsPanel";
 
 // ==========================================
 // Types
@@ -279,7 +278,6 @@ export default function ContactsClient({
   userId,
   initialContacts,
   totalContacts,
-  initialTags,
   initialPage = 1,
   initialLimit = 20,
   totalPages = 1,
@@ -287,7 +285,6 @@ export default function ContactsClient({
   userId: string;
   initialContacts: Contact[];
   totalContacts: number;
-  initialTags: DbTag[];
   initialPage?: number;
   initialLimit?: number;
   totalPages?: number;
@@ -817,10 +814,7 @@ export default function ContactsClient({
         </div>
       </div>
 
-      {/* Tag Management Panel */}
-      <div className="mb-4">
-        <TagsPanel userId={userId} initialTags={initialTags} />
-      </div>
+
 
       {/* Tag Filter Chips */}
       {allTags.size > 0 && (
