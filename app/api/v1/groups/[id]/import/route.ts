@@ -4,35 +4,34 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { prisma } from "@/lib/db";
 import { normalizePhone } from "@/lib/validations";
 
-// POST /api/v1/contacts/import — Import CSV/text contacts
-// Accepts: multipart/form-data (file) or application/json (contacts array)
-export async function POST(req: NextRequest) {
+// POST /api/v1/groups/:id/import — Import CSV directly into a group
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const user = await authenticateApiKey(req);
+    const { id: groupId } = await params;
     const limit = checkRateLimit(user.id, "import");
     if (!limit.allowed) return rateLimitResponse(limit.resetIn);
 
-    let rows: { name?: string; phone: string }[] = [];
-    let groupId: string | null = null;
+    // Verify group ownership
+    const group = await prisma.contactGroup.findFirst({
+      where: { id: groupId, userId: user.id },
+    });
+    if (!group) throw new Error("ไม่พบกลุ่ม");
 
+    let rows: { name?: string; phone: string }[] = [];
     const contentType = req.headers.get("content-type") || "";
 
     if (contentType.includes("multipart/form-data")) {
-      // File upload (CSV)
       const formData = await req.formData();
       const file = formData.get("file") as File | null;
-      groupId = formData.get("groupId") as string | null;
-
       if (!file) throw new Error("กรุณาอัพโหลดไฟล์");
-      const text = await file.text();
-      rows = parseCsv(text);
+      rows = parseCsv(await file.text());
     } else {
-      // JSON body
       const body = await req.json();
-      groupId = body.groupId || null;
-
       if (typeof body.data === "string") {
-        // Comma-separated or newline-separated
         rows = parseCsv(body.data);
       } else if (Array.isArray(body.contacts)) {
         rows = body.contacts;
@@ -43,14 +42,6 @@ export async function POST(req: NextRequest) {
 
     if (rows.length === 0) throw new Error("ไม่มีรายชื่อที่จะนำเข้า");
     if (rows.length > 10000) throw new Error("นำเข้าได้สูงสุด 10,000 รายชื่อต่อครั้ง");
-
-    // Verify group if specified
-    if (groupId) {
-      const group = await prisma.contactGroup.findFirst({
-        where: { id: groupId, userId: user.id },
-      });
-      if (!group) throw new Error("ไม่พบกลุ่มรายชื่อ");
-    }
 
     let imported = 0;
     let duplicates = 0;
@@ -75,24 +66,31 @@ export async function POST(req: NextRequest) {
         createdIds.push(contact.id);
         imported++;
       } catch {
-        duplicates++;
+        // Duplicate phone — find existing and add to group
+        const existing = await prisma.contact.findUnique({
+          where: { userId_phone: { userId: user.id, phone } },
+          select: { id: true },
+        });
+        if (existing) {
+          createdIds.push(existing.id);
+          duplicates++;
+        } else {
+          duplicates++;
+        }
       }
     }
 
-    // Add to group if specified
-    if (groupId && createdIds.length > 0) {
+    // Add all (new + existing) to group
+    if (createdIds.length > 0) {
       await prisma.contactGroupMember.createMany({
-        data: createdIds.map((contactId) => ({
-          groupId: groupId!,
-          contactId,
-        })),
+        data: createdIds.map((contactId) => ({ groupId, contactId })),
         skipDuplicates: true,
       });
     }
 
     return apiResponse({
       imported,
-      skipped: duplicates,
+      addedToGroup: createdIds.length,
       duplicates,
       invalid,
       total: rows.length,
@@ -106,7 +104,6 @@ function parseCsv(text: string): { name?: string; phone: string }[] {
   const lines = text.split(/[\n\r]+/).map((l) => l.trim()).filter(Boolean);
   if (lines.length === 0) return [];
 
-  // Detect header
   const firstLine = lines[0].toLowerCase();
   const hasHeader = firstLine.includes("name") || firstLine.includes("phone") || firstLine.includes("เบอร์");
   const dataLines = hasHeader ? lines.slice(1) : lines;
@@ -116,7 +113,6 @@ function parseCsv(text: string): { name?: string; phone: string }[] {
     if (parts.length >= 2) {
       return { name: parts[0], phone: parts[1] };
     }
-    // Single column = phone only
     return { phone: parts[0] };
   });
 }
