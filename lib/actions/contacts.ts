@@ -235,6 +235,28 @@ export async function addContactsToGroup(
 }
 
 // ==========================================
+// Bulk delete contacts
+// ==========================================
+
+export async function bulkDeleteContacts(userId: string, contactIds: string[]) {
+  if (contactIds.length === 0) throw new Error("กรุณาเลือกรายชื่อ");
+
+  const contacts = await db.contact.findMany({
+    where: { id: { in: contactIds }, userId },
+    select: { id: true },
+  });
+
+  if (contacts.length === 0) throw new Error("ไม่พบรายชื่อ");
+
+  await db.contact.deleteMany({
+    where: { id: { in: contacts.map((c: { id: string }) => c.id) }, userId },
+  });
+
+  revalidatePath("/dashboard/contacts");
+  return { deleted: contacts.length };
+}
+
+// ==========================================
 // Get contacts by group
 // ==========================================
 

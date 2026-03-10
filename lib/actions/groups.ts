@@ -88,6 +88,19 @@ export async function removeContactFromGroup(userId: string, groupId: string, co
   revalidatePath("/dashboard/groups");
 }
 
+export async function bulkRemoveFromGroup(userId: string, groupId: string, contactIds: string[]) {
+  const group = await db.contactGroup.findFirst({ where: { id: groupId, userId } });
+  if (!group) throw new Error("ไม่พบกลุ่ม");
+  if (contactIds.length === 0) throw new Error("กรุณาเลือกรายชื่อ");
+
+  await db.contactGroupMember.deleteMany({
+    where: { groupId, contactId: { in: contactIds } },
+  });
+
+  revalidatePath("/dashboard/groups");
+  return { removed: contactIds.length };
+}
+
 export async function getContactsNotInGroup(userId: string, groupId: string, search?: string) {
   const group = await db.contactGroup.findFirst({ where: { id: groupId, userId } });
   if (!group) throw new Error("ไม่พบกลุ่ม");

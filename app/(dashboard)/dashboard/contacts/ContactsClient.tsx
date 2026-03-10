@@ -10,6 +10,8 @@ import {
   deleteContact,
   importContacts,
   exportContacts,
+  bulkDeleteContacts,
+  addContactsToGroup,
 } from "@/lib/actions/contacts";
 import { useRouter } from "next/navigation";
 import EmptyState from "@/app/components/ui/EmptyState";
@@ -20,12 +22,15 @@ import { blockNonNumeric, blockThai, fieldCls } from "@/lib/form-utils";
 // Types
 // ==========================================
 
+type ContactGroup = { id: string; name: string; memberCount: number };
+
 type Contact = {
   id: string;
   name: string;
   phone: string;
   email: string | null;
   tags: string | null;
+  groups: { id: string; name: string }[];
   createdAt: string;
 };
 
@@ -282,6 +287,7 @@ export default function ContactsClient({
   initialPage = 1,
   initialLimit = 20,
   totalPages = 1,
+  groups = [],
 }: {
   userId: string;
   initialContacts: Contact[];
@@ -289,6 +295,7 @@ export default function ContactsClient({
   initialPage?: number;
   initialLimit?: number;
   totalPages?: number;
+  groups?: ContactGroup[];
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -324,9 +331,19 @@ export default function ContactsClient({
   // Filter / search state
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTagFilter, setActiveTagFilter] = useState<string | null>(null);
+  const [activeGroupFilter, setActiveGroupFilter] = useState<string | null>(null);
 
   // Selection state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Quick Add state (bulk phone entry)
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [quickAddText, setQuickAddText] = useState("");
+  const [quickAddName, setQuickAddName] = useState("Quick Import");
+
+  // Add to Group modal state
+  const [showAddToGroup, setShowAddToGroup] = useState(false);
+  const [addToGroupId, setAddToGroupId] = useState("");
 
   // Batch tag state
   const [showBatchTagInput, setShowBatchTagInput] = useState(false);
@@ -392,6 +409,12 @@ export default function ContactsClient({
       );
     }
 
+    if (activeGroupFilter) {
+      result = result.filter((c) =>
+        c.groups.some((g) => g.id === activeGroupFilter),
+      );
+    }
+
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
       result = result.filter(
@@ -404,7 +427,7 @@ export default function ContactsClient({
     }
 
     return result;
-  }, [initialContacts, activeTagFilter, searchQuery]);
+  }, [initialContacts, activeTagFilter, activeGroupFilter, searchQuery]);
 
   const hasSelection = selectedIds.size > 0;
   const allSelected =
@@ -676,6 +699,72 @@ export default function ContactsClient({
     });
   };
 
+  const handleBulkDelete = () => {
+    if (selectedIds.size === 0) return;
+    startTransition(async () => {
+      try {
+        const result = await bulkDeleteContacts(userId, Array.from(selectedIds));
+        toast("success", `ลบ ${result.deleted} รายชื่อสำเร็จ`);
+        setSelectedIds(new Set());
+        router.refresh();
+      } catch (e) {
+        toast("error", safeErrorMessage(e));
+      }
+    });
+  };
+
+  const handleBulkAddToGroup = () => {
+    if (!addToGroupId || selectedIds.size === 0) return;
+    startTransition(async () => {
+      try {
+        await addContactsToGroup(userId, addToGroupId, Array.from(selectedIds));
+        toast("success", `เพิ่ม ${selectedIds.size} รายชื่อเข้ากลุ่มสำเร็จ`);
+        setSelectedIds(new Set());
+        setShowAddToGroup(false);
+        setAddToGroupId("");
+        router.refresh();
+      } catch (e) {
+        toast("error", safeErrorMessage(e));
+      }
+    });
+  };
+
+  const handleQuickAdd = () => {
+    const phones = quickAddText
+      .split(/[,\n\r]+/)
+      .map((p) => p.trim())
+      .filter(Boolean);
+    if (phones.length === 0) return;
+
+    const contacts = phones.map((phone) => ({
+      name: quickAddName.trim() || "Quick Import",
+      phone,
+    }));
+
+    startTransition(async () => {
+      try {
+        const result = await importContacts(userId, contacts);
+        toast("success", `เพิ่มสำเร็จ ${result.imported} เบอร์${result.skipped > 0 ? ` (ซ้ำ ${result.skipped})` : ""}`);
+        setShowQuickAdd(false);
+        setQuickAddText("");
+        router.refresh();
+      } catch (e) {
+        toast("error", safeErrorMessage(e));
+      }
+    });
+  };
+
+  const handleDownloadTemplate = () => {
+    const csv = "name,phone,email\nตัวอย่าง ชื่อ,0891234567,example@email.com\n";
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "contacts-template.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   // ==========================================
   // Render
   // ==========================================
@@ -697,8 +786,20 @@ export default function ContactsClient({
             จัดการรายชื่อผู้ติดต่อ ({totalContacts} รายชื่อ)
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          {/* Import */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Download Template */}
+          <motion.button
+            onClick={handleDownloadTemplate}
+            className="btn-glass px-3 py-2.5 text-sm rounded-xl inline-flex items-center gap-1.5"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" />
+            </svg>
+            Template CSV
+          </motion.button>
+          {/* Import CSV */}
           <input
             ref={fileInputRef}
             type="file"
@@ -712,21 +813,10 @@ export default function ContactsClient({
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-              <polyline points="17 8 12 3 7 8" />
-              <line x1="12" y1="3" x2="12" y2="15" />
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" />
             </svg>
-            นำเข้า
+            นำเข้า CSV
           </motion.button>
           {/* Export */}
           <motion.button
@@ -736,21 +826,20 @@ export default function ContactsClient({
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
             </svg>
             ส่งออก
+          </motion.button>
+          {/* Quick Add */}
+          <motion.button
+            onClick={() => setShowQuickAdd(true)}
+            className="btn-glass px-3 py-2.5 text-sm rounded-xl inline-flex items-center gap-1.5"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+            Quick Add
           </motion.button>
           {/* Add Contact */}
           <motion.button
@@ -816,6 +905,40 @@ export default function ContactsClient({
       </div>
 
 
+
+      {/* Group Filter Dropdown */}
+      {groups.length > 0 && (
+        <div className="flex items-center gap-3 mb-4">
+          <span className="text-xs text-[var(--text-muted)] uppercase tracking-wider font-medium">กลุ่ม:</span>
+          <div className="flex flex-wrap gap-1.5">
+            <button
+              onClick={() => setActiveGroupFilter(null)}
+              className={`text-xs px-3 py-1.5 rounded-full font-medium transition-all border ${
+                activeGroupFilter === null
+                  ? "bg-white/10 text-white border-white/20"
+                  : "bg-white/5 text-[var(--text-muted)] border-transparent hover:bg-white/[0.08] hover:text-slate-200"
+              }`}
+            >
+              ทั้งหมด
+            </button>
+            {groups.map((g) => (
+              <button
+                key={g.id}
+                onClick={() => setActiveGroupFilter(activeGroupFilter === g.id ? null : g.id)}
+                className={`text-xs px-3 py-1.5 rounded-full font-medium transition-all border inline-flex items-center gap-1.5 ${
+                  activeGroupFilter === g.id
+                    ? "bg-violet-500/15 text-violet-400 border-violet-500/20"
+                    : "bg-white/5 text-[var(--text-muted)] border-transparent hover:bg-white/[0.08] hover:text-slate-200"
+                }`}
+              >
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" /></svg>
+                {g.name}
+                <span className="text-[10px] bg-white/10 px-1.5 rounded-full">{g.memberCount}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Tag Filter Chips */}
       {allTags.size > 0 && (
@@ -909,6 +1032,29 @@ export default function ContactsClient({
               </svg>
               ลบแท็ก
             </motion.button>
+            {/* Bulk Delete */}
+            <motion.button
+              onClick={handleBulkDelete}
+              disabled={isPending}
+              className="px-3 py-1.5 text-xs rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/15 transition-colors disabled:opacity-40 inline-flex items-center gap-1.5"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2" /></svg>
+              ลบ
+            </motion.button>
+            {/* Add to Group */}
+            {groups.length > 0 && (
+              <motion.button
+                onClick={() => setShowAddToGroup(true)}
+                className="btn-glass px-3 py-1.5 text-xs rounded-lg inline-flex items-center gap-1.5"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" /></svg>
+                เพิ่มเข้ากลุ่ม
+              </motion.button>
+            )}
             <motion.button
               onClick={() => {
                 setSelectedIds(new Set());
@@ -1130,11 +1276,14 @@ export default function ContactsClient({
                   <th className="text-left px-5 py-3 text-xs text-[var(--text-muted)] uppercase tracking-wider font-medium">
                     เบอร์โทร
                   </th>
-                  <th className="text-left px-5 py-3 text-xs text-[var(--text-muted)] uppercase tracking-wider font-medium hidden md:table-cell">
-                    อีเมล
+                  <th className="text-left px-5 py-3 text-xs text-[var(--text-muted)] uppercase tracking-wider font-medium hidden lg:table-cell">
+                    กลุ่ม
                   </th>
                   <th className="text-left px-5 py-3 text-xs text-[var(--text-muted)] uppercase tracking-wider font-medium hidden md:table-cell">
                     แท็ก
+                  </th>
+                  <th className="text-left px-5 py-3 text-xs text-[var(--text-muted)] uppercase tracking-wider font-medium hidden lg:table-cell">
+                    วันที่เพิ่ม
                   </th>
                   <th className="w-28 px-5 py-3 text-xs text-[var(--text-muted)] uppercase tracking-wider font-medium text-right">
                     จัดการ
@@ -1175,8 +1324,18 @@ export default function ContactsClient({
                       <td className="px-5 py-3.5 text-[var(--text-secondary)] font-mono text-xs">
                         {contact.phone}
                       </td>
-                      <td className="px-5 py-3.5 text-[var(--text-muted)] text-xs hidden md:table-cell">
-                        {contact.email || "-"}
+                      <td className="px-5 py-3.5 hidden lg:table-cell">
+                        <div className="flex gap-1 flex-wrap">
+                          {contact.groups.length > 0 ? contact.groups.slice(0, 2).map((g) => (
+                            <span key={g.id} className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md bg-violet-500/10 text-violet-400 border border-violet-500/15 font-medium">
+                              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" /></svg>
+                              {g.name}
+                            </span>
+                          )) : <span className="text-xs text-[var(--text-muted)]">—</span>}
+                          {contact.groups.length > 2 && (
+                            <span className="text-[10px] text-[var(--text-muted)]">+{contact.groups.length - 2}</span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-5 py-3.5 hidden md:table-cell">
                         <div className="flex gap-1 flex-wrap items-center">
@@ -1207,6 +1366,9 @@ export default function ContactsClient({
                             </button>
                           </div>
                         </div>
+                      </td>
+                      <td className="px-5 py-3.5 text-xs text-[var(--text-muted)] hidden lg:table-cell">
+                        {new Date(contact.createdAt).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" })}
                       </td>
                       <td className="px-5 py-3.5 text-right">
                         <div className="flex items-center justify-end gap-1.5">
@@ -1411,6 +1573,94 @@ export default function ContactsClient({
           }}
         />
       )}
+      {/* Quick Add Modal */}
+      <AnimatePresence>
+        {showQuickAdd && (
+          <motion.div className="fixed inset-0 z-50 flex items-center justify-center px-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowQuickAdd(false)} />
+            <motion.div className="relative glass p-6 w-full max-w-md z-10" initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} transition={{ duration: 0.2 }}>
+              <h3 className="text-lg font-bold text-white mb-1">Quick Add</h3>
+              <p className="text-xs text-[var(--text-muted)] mb-5">พิมพ์หลายเบอร์ คั่นด้วย , หรือ Enter</p>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs text-[var(--text-secondary)] uppercase tracking-wider mb-2">ชื่อ (ใช้ร่วม)</label>
+                  <input type="text" className="input-glass w-full" placeholder="เช่น Import 10 มี.ค." value={quickAddName} onChange={(e) => setQuickAddName(e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-xs text-[var(--text-secondary)] uppercase tracking-wider mb-2">เบอร์โทร</label>
+                  <textarea
+                    className="input-glass w-full min-h-[120px] font-mono text-sm"
+                    placeholder={"0891234567\n0812345678\n0823456789"}
+                    value={quickAddText}
+                    onChange={(e) => setQuickAddText(e.target.value)}
+                  />
+                  <p className="text-[11px] text-[var(--text-muted)] mt-1.5">
+                    {quickAddText.split(/[,\n\r]+/).filter((p) => p.trim()).length} เบอร์
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-3 mt-6">
+                <button onClick={() => setShowQuickAdd(false)} className="flex-1 btn-glass py-2.5 rounded-xl text-sm cursor-pointer">ยกเลิก</button>
+                <button
+                  onClick={handleQuickAdd}
+                  disabled={isPending || !quickAddText.trim()}
+                  className="flex-1 btn-primary py-2.5 rounded-xl text-sm disabled:opacity-40 cursor-pointer"
+                >
+                  {isPending ? "กำลังเพิ่ม..." : "เพิ่มทั้งหมด"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Add to Group Modal */}
+      <AnimatePresence>
+        {showAddToGroup && (
+          <motion.div className="fixed inset-0 z-50 flex items-center justify-center px-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { setShowAddToGroup(false); setAddToGroupId(""); }} />
+            <motion.div className="relative glass p-6 w-full max-w-sm z-10" initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} transition={{ duration: 0.2 }}>
+              <h3 className="text-lg font-bold text-white mb-1">เพิ่มเข้ากลุ่ม</h3>
+              <p className="text-xs text-[var(--text-muted)] mb-5">เลือกกลุ่มสำหรับ {selectedIds.size} รายชื่อที่เลือก</p>
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {groups.map((g) => (
+                  <button
+                    key={g.id}
+                    onClick={() => setAddToGroupId(g.id)}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all text-left ${
+                      addToGroupId === g.id
+                        ? "bg-violet-500/10 border-violet-500/30 text-white"
+                        : "bg-white/[0.02] border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-white/5"
+                    }`}
+                  >
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${addToGroupId === g.id ? "bg-violet-500/20 text-violet-400" : "bg-white/5 text-[var(--text-muted)]"}`}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" /></svg>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-medium truncate">{g.name}</div>
+                      <div className="text-xs text-[var(--text-muted)]">{g.memberCount} สมาชิก</div>
+                    </div>
+                    {addToGroupId === g.id && (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-violet-400 shrink-0"><polyline points="20 6 9 17 4 12" /></svg>
+                    )}
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-3 mt-6">
+                <button onClick={() => { setShowAddToGroup(false); setAddToGroupId(""); }} className="flex-1 btn-glass py-2.5 rounded-xl text-sm cursor-pointer">ยกเลิก</button>
+                <button
+                  onClick={handleBulkAddToGroup}
+                  disabled={isPending || !addToGroupId}
+                  className="flex-1 btn-primary py-2.5 rounded-xl text-sm disabled:opacity-40 cursor-pointer"
+                >
+                  {isPending ? "กำลังเพิ่ม..." : "เพิ่มเข้ากลุ่ม"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Quick tag portal dropdown */}
       {typeof document !== "undefined" && quickTagContactId && quickTagRect && createPortal(
         <AnimatePresence>

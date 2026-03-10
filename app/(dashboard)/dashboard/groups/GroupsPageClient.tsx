@@ -335,35 +335,54 @@ export default function GroupsPageClient({
         )}
       </AnimatePresence>
 
-      {/* Groups Grid */}
+      {/* Groups Table */}
       {groups.length > 0 ? (
-        <motion.div variants={stagger} initial="hidden" animate="show" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {groups.map(g => (
-            <motion.div key={g.id} variants={cardVariant} className="glass card-glow p-5 group flex items-start justify-between">
-              <button
-                className="flex items-center gap-3 flex-1 min-w-0 text-left cursor-pointer"
-                onClick={() => openMembers(g)}
-              >
-                <div className="w-10 h-10 rounded-xl bg-violet-500/[0.08] border border-violet-500/10 flex items-center justify-center text-violet-400 flex-shrink-0 group-hover:bg-violet-500/[0.12] group-hover:border-violet-500/20 transition-all">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
-                  </svg>
-                </div>
-                <div className="min-w-0">
-                  <div className="text-sm font-semibold text-white truncate">{g.name}</div>
-                  <div className="text-xs text-[var(--text-muted)] mt-0.5">{g._count.members} สมาชิก</div>
-                </div>
-              </button>
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2 flex-shrink-0">
-                <button onClick={() => openEdit(g)} className="w-8 h-8 rounded-lg hover:bg-white/8 flex items-center justify-center text-[var(--text-muted)] hover:text-slate-200 transition-colors cursor-pointer">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
-                </button>
-                <button onClick={() => setDeleteConfirm(g.id)} className="w-8 h-8 rounded-lg hover:bg-red-500/10 flex items-center justify-center text-[var(--text-muted)] hover:text-red-400 transition-colors cursor-pointer">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2" /></svg>
-                </button>
-              </div>
-            </motion.div>
-          ))}
+        <motion.div className="glass overflow-hidden" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-[var(--border-subtle)]">
+                  <th className="text-left px-5 py-3 text-xs text-[var(--text-muted)] uppercase tracking-wider font-medium">ชื่อกลุ่ม</th>
+                  <th className="text-left px-5 py-3 text-xs text-[var(--text-muted)] uppercase tracking-wider font-medium">สมาชิก</th>
+                  <th className="text-left px-5 py-3 text-xs text-[var(--text-muted)] uppercase tracking-wider font-medium hidden md:table-cell">วันที่สร้าง</th>
+                  <th className="w-36 px-5 py-3 text-xs text-[var(--text-muted)] uppercase tracking-wider font-medium text-right">จัดการ</th>
+                </tr>
+              </thead>
+              <motion.tbody variants={stagger} initial="hidden" animate="show">
+                {groups.map(g => (
+                  <motion.tr key={g.id} variants={cardVariant} className="table-row group">
+                    <td className="px-5 py-3.5">
+                      <a href={`/dashboard/groups/${g.id}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                        <div className="w-9 h-9 rounded-xl bg-violet-500/[0.08] border border-violet-500/10 flex items-center justify-center text-violet-400 flex-shrink-0 group-hover:bg-violet-500/[0.12] transition-all">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" /></svg>
+                        </div>
+                        <span className="text-sm font-semibold text-white truncate">{g.name}</span>
+                      </a>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg bg-white/5 text-[var(--text-secondary)]">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+                        {g._count.members}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5 text-xs text-[var(--text-muted)] hidden md:table-cell">
+                      {new Date(g.createdAt).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" })}
+                    </td>
+                    <td className="px-5 py-3.5 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button onClick={() => openMembers(g)} className="btn-glass px-2.5 py-1.5 text-xs rounded-lg inline-flex items-center gap-1 cursor-pointer">
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+                          สมาชิก
+                        </button>
+                        <button onClick={() => openEdit(g)} className="btn-glass px-2.5 py-1.5 text-xs rounded-lg cursor-pointer">แก้ไข</button>
+                        <button onClick={() => setDeleteConfirm(g.id)} className="px-2.5 py-1.5 text-xs rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/15 transition-colors cursor-pointer">ลบ</button>
+                      </div>
+                    </td>
+                  </motion.tr>
+                ))}
+              </motion.tbody>
+            </table>
+          </div>
         </motion.div>
       ) : (
         <motion.div className="glass p-16 text-center" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
