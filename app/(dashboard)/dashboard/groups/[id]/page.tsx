@@ -34,10 +34,11 @@ export default async function GroupDetailPage({
     email: m.contact.email,
   }));
 
-  const serializedAvailable = (availableContacts as { id: string; name: string; phone: string; email: string | null }[]).map((c) => ({
+  const serializedAvailable = (availableContacts as { id: string; name: string; phone: string; email: string | null; tags: string | null }[]).map((c) => ({
     id: c.id,
     name: c.name,
     phone: c.phone,
+    tags: c.tags,
   }));
 
   return (

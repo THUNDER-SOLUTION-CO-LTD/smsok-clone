@@ -122,8 +122,8 @@ export async function getContactsNotInGroup(userId: string, groupId: string, sea
         ],
       } : {}),
     },
-    select: { id: true, name: true, phone: true, email: true },
+    select: { id: true, name: true, phone: true, email: true, tags: true },
     orderBy: { name: "asc" },
-    take: 50,
+    take: 200,
   });
 }
