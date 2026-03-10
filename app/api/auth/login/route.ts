@@ -10,7 +10,12 @@ const DUMMY_HASH = "$2b$12$qF1xea/GGCtjbQ6FC32FAu0YSQWxmgOuBDgvb4IVBhTrnjXPVYwoC
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      throw new ApiError(400, "กรุณาส่งข้อมูล JSON");
+    }
     const input = loginSchema.parse(body);
 
     const user = await prisma.user.findUnique({
