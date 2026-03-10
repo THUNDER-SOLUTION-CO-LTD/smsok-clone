@@ -5,7 +5,7 @@ import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { registerSchema } from "@/lib/validations";
 import { blockNonNumeric, blockThai, fieldCls } from "@/lib/form-utils";
-import { generateOtpForRegister, verifyOtpForRegister } from "@/lib/actions/otp";
+import { generateOtpForRegister } from "@/lib/actions/otp";
 import { registerWithOtp } from "@/lib/actions";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -96,7 +96,6 @@ export default function RegisterPage() {
     setOtpError("");
     startTransition(async () => {
       try {
-        await verifyOtpForRegister(otpRef, otpCode);
         await registerWithOtp({ name, email, phone, password, otpRef, otpCode });
         router.push("/dashboard");
       } catch (e) {
