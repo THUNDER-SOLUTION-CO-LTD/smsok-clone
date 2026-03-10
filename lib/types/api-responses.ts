@@ -47,6 +47,8 @@ export type Challenge2FAResponse = {
 
 // ── OTP Responses ───────────────────────────────────────
 
+export type OtpCooldownState = "ready" | "cooldown" | "backoff" | "blocked"
+
 export type SendOtpResponse = {
   id: string
   ref: string
@@ -58,6 +60,18 @@ export type SendOtpResponse = {
   creditsRemaining: number
   delivery: "sms" | "debug"
   debugCode?: string
+  retryAfter: number
+  remainingToday: number
+  otpExpiresIn: number
+  cooldownState: OtpCooldownState
+}
+
+export type OtpRateLimitResponse = {
+  error: string
+  retryAfter: number
+  remainingToday: number
+  otpExpiresIn: number
+  cooldownState: OtpCooldownState
 }
 
 export type VerifyOtpResponse = {

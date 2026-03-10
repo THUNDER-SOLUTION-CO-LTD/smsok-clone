@@ -52,12 +52,15 @@ const IP_HOURLY_LIMIT = 10
 const IP_TTL = 3600 // 1 hour
 const OTP_EXPIRES_IN = 300 // 5 minutes
 
+export type CooldownState = "ready" | "cooldown" | "backoff" | "blocked"
+
 export type OtpRateLimitResult = {
   allowed: boolean
-  retryAfter: number      // seconds until next send allowed (0 if allowed now)
-  remainingToday: number  // remaining daily quota for this phone
-  otpExpiresIn: number    // OTP validity in seconds (constant 300)
-  reason?: string         // Thai error message if blocked
+  retryAfter: number        // seconds until next send allowed (0 if allowed now)
+  remainingToday: number    // remaining daily quota for this phone
+  otpExpiresIn: number      // OTP validity in seconds (constant 300)
+  cooldownState: CooldownState  // UI state hint for frontend countdown
+  reason?: string           // Thai error message if blocked
 }
 
 /**
@@ -91,6 +94,7 @@ export async function checkOtpRateLimit(
         retryAfter: DAILY_TTL, // try again tomorrow
         remainingToday: 0,
         otpExpiresIn: OTP_EXPIRES_IN,
+        cooldownState: "blocked",
         reason: "ส่ง OTP เกินจำนวนสูงสุดต่อวัน กรุณาลองใหม่พรุ่งนี้",
       }
     }
@@ -102,6 +106,7 @@ export async function checkOtpRateLimit(
         retryAfter: IP_TTL,
         remainingToday: Math.max(0, DAILY_QUOTA - dailyCount),
         otpExpiresIn: OTP_EXPIRES_IN,
+        cooldownState: "blocked",
         reason: "ส่ง OTP มากเกินไป กรุณารอสักครู่",
       }
     }
@@ -119,6 +124,7 @@ export async function checkOtpRateLimit(
           retryAfter: remaining,
           remainingToday: Math.max(0, DAILY_QUOTA - dailyCount),
           otpExpiresIn: OTP_EXPIRES_IN,
+          cooldownState: remaining <= 60 ? "cooldown" : "backoff",
           reason: `กรุณารอ ${formatWait(remaining)} ก่อนส่ง OTP อีกครั้ง`,
         }
       }
@@ -130,6 +136,7 @@ export async function checkOtpRateLimit(
       retryAfter: 0,
       remainingToday: Math.max(0, DAILY_QUOTA - dailyCount - 1), // -1 for this send
       otpExpiresIn: OTP_EXPIRES_IN,
+      cooldownState: "ready",
     }
   } catch (err) {
     // Redis down — fall through to allow (fail-open for availability)
@@ -140,6 +147,7 @@ export async function checkOtpRateLimit(
       retryAfter: 0,
       remainingToday: DAILY_QUOTA,
       otpExpiresIn: OTP_EXPIRES_IN,
+      cooldownState: "ready",
     }
   }
 }

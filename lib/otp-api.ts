@@ -68,6 +68,7 @@ export async function handleSendOtp(req: NextRequest, body?: unknown) {
           retryAfter: limit.retryAfter,
           remainingToday: limit.remainingToday,
           otpExpiresIn: limit.otpExpiresIn,
+          cooldownState: limit.cooldownState,
         },
         {
           status: 429,
@@ -88,6 +89,7 @@ export async function handleSendOtp(req: NextRequest, body?: unknown) {
       retryAfter: 0,
       remainingToday: limit.remainingToday,
       otpExpiresIn: limit.otpExpiresIn,
+      cooldownState: "cooldown", // just sent — frontend starts countdown
     }, 201);
   } catch (error) {
     return apiError(error);
