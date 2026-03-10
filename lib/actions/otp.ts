@@ -134,14 +134,14 @@ export async function generateOtp_(
   }
 
   // Send OTP via SMS
-  const message = `รหัส OTP ของคุณคือ ${code} (หมดอายุใน 5 นาที)`;
+  const smsText = `รหัส OTP ของคุณคือ ${code} (หมดอายุใน 5 นาที)`;
   let delivery: "sms" | "debug" = "sms";
   if (debugMode && !hasSmsGatewayCredentials()) {
     // Localhost testing path: keep Prisma flow real, expose the OTP instead of requiring SMS infra.
     delivery = "debug";
   } else {
     try {
-      const result = await sendSingleSms(input.phone, message, "EasySlip");
+      const result = await sendSingleSms(input.phone, smsText, "EasySlip");
       if (!result.success) {
         throw new Error(result.error || "ส่ง OTP ไม่สำเร็จ กรุณาลองใหม่");
       }
@@ -157,6 +157,32 @@ export async function generateOtp_(
       throw new Error("ส่ง OTP ไม่สำเร็จ กรุณาลองใหม่");
     }
   }
+
+  // Log credit deduction + SMS history after confirmed send
+  const sentAt = new Date();
+  await prisma.$transaction([
+    prisma.creditTransaction.create({
+      data: {
+        userId,
+        amount: -OTP_CREDIT_COST,
+        balance: updatedUser.credits, // already decremented
+        type: "OTP_SEND",
+        description: `OTP ส่งไปยัง ${normalizedPhone}`,
+        refId: otpRecord.id,
+      },
+    }),
+    prisma.message.create({
+      data: {
+        userId,
+        senderName: "EasySlip",
+        recipient: normalizedPhone,
+        content: "[OTP]",
+        status: "delivered",
+        creditCost: OTP_CREDIT_COST,
+        sentAt,
+      },
+    }),
+  ]);
 
   return {
     id: otpRecord.id,
