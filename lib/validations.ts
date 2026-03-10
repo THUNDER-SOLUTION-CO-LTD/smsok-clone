@@ -1,4 +1,8 @@
 import { z } from "zod";
+import { passwordSchema } from "./password-policy";
+
+// Re-export password policy for frontend
+export { passwordSchema, getPasswordStrength, isCommonPassword, PASSWORD_RULES } from "./password-policy";
 
 const CONTROL_CHAR_REGEX = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g;
 const HTML_TAG_REGEX = /<\/?[a-zA-Z][^>]*>/g;
@@ -112,12 +116,7 @@ export const registerSchema = z.object({
   lastName: sanitizedNameSchema(1, 50, "กรุณากรอกนามสกุล", "นามสกุลต้องไม่เกิน 50 ตัวอักษร"),
   email: emailSchema,
   phone: optionalPhoneSchema,
-  password: z
-    .string()
-    .min(8, "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร")
-    .max(100)
-    .regex(/[A-Z]/, "ต้องมีตัวพิมพ์ใหญ่อย่างน้อย 1 ตัว")
-    .regex(/[0-9]/, "ต้องมีตัวเลขอย่างน้อย 1 ตัว"),
+  password: passwordSchema,
 });
 
 export const loginSchema = z.object({
@@ -125,12 +124,8 @@ export const loginSchema = z.object({
   password: z.string().min(1, "กรุณากรอกรหัสผ่าน"),
 });
 
-const strongPasswordSchema = z
-  .string()
-  .min(8, "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร")
-  .max(100)
-  .regex(/[A-Z]/, "ต้องมีตัวพิมพ์ใหญ่อย่างน้อย 1 ตัว")
-  .regex(/[0-9]/, "ต้องมีตัวเลขอย่างน้อย 1 ตัว");
+// Re-export shared password schema for backward compat
+const strongPasswordSchema = passwordSchema;
 
 export const forgotPasswordSchema = z.object({
   phone: phoneSchema,
