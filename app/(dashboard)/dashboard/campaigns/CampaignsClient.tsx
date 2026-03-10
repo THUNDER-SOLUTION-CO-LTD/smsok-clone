@@ -3,13 +3,14 @@
 import { useState, useTransition } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { createCampaign } from "@/lib/actions/campaigns";
-import { allowAlphaNumericSpace, fieldCls } from "@/lib/form-utils";
+import { createCampaign, executeCampaign, getCampaignProgress } from "@/lib/actions/campaigns";
+import { fieldCls } from "@/lib/form-utils";
 import CustomSelect from "@/components/ui/CustomSelect";
+import SenderDropdown from "@/components/ui/SenderDropdown";
 import { safeErrorMessage } from "@/lib/error-messages";
 
 // ─── Types ────────────────────────────────────────────────────────────────
-type CampaignStatus = "draft" | "scheduled" | "running" | "completed" | "cancelled";
+type CampaignStatus = "draft" | "scheduled" | "sending" | "running" | "completed" | "failed" | "cancelled";
 
 type Campaign = {
   id: string;
@@ -38,8 +39,10 @@ const STATUS_CONFIG: Record<
 > = {
   draft: { label: "แบบร่าง", bg: "bg-slate-500/10", text: "text-slate-300", dot: "bg-slate-300" },
   scheduled: { label: "ตั้งเวลา", bg: "bg-amber-500/10", text: "text-amber-400", dot: "bg-amber-400" },
-  running: { label: "กำลังส่ง", bg: "bg-cyan-500/10", text: "text-cyan-400", dot: "bg-cyan-400", pulse: true },
+  sending: { label: "กำลังส่ง...", bg: "bg-blue-500/10", text: "text-blue-400", dot: "bg-blue-400", pulse: true },
+  running: { label: "กำลังส่ง", bg: "bg-blue-500/10", text: "text-blue-400", dot: "bg-blue-400", pulse: true },
   completed: { label: "เสร็จสิ้น", bg: "bg-emerald-500/10", text: "text-emerald-400", dot: "bg-emerald-400" },
+  failed: { label: "ล้มเหลว", bg: "bg-red-500/10", text: "text-red-400", dot: "bg-red-400" },
   cancelled: { label: "ยกเลิก", bg: "bg-red-500/10", text: "text-red-400", dot: "bg-red-400" },
 };
 
@@ -111,30 +114,27 @@ export default function CampaignsClient({
   initialCampaigns,
   groups,
   templates,
+  senderNames = ["EasySlip"],
 }: {
   userId: string;
   initialCampaigns: Campaign[];
   groups: ContactGroup[];
   templates: Template[];
+  senderNames?: string[];
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [campaigns] = useState<Campaign[]>(initialCampaigns);
+  const [campaigns, setCampaigns] = useState<Campaign[]>(initialCampaigns);
   const [showForm, setShowForm] = useState(false);
   const [filterStatus, setFilterStatus] = useState<CampaignStatus | "all">("all");
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [sendingIds, setSendingIds] = useState<Set<string>>(new Set());
 
   // Form state
   const [formName, setFormName] = useState("");
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-  function validateCampaignField(field: string, value: string) {
-    let error = "";
-    if (field === "senderName" && value && !/^[A-Za-z0-9 ]{3,11}$/.test(value)) error = "ชื่อผู้ส่ง 3-11 ตัว A-Z 0-9 หรือช่องว่าง";
-    setFormErrors(prev => ({ ...prev, [field]: error }));
-  }
   const [formGroup, setFormGroup] = useState("");
   const [formTemplate, setFormTemplate] = useState("");
-  const [formSender, setFormSender] = useState("");
+  const [formSender, setFormSender] = useState("EasySlip");
   const [formSchedule, setFormSchedule] = useState("");
 
   // Detail view
@@ -171,7 +171,7 @@ export default function CampaignsClient({
         setFormName("");
         setFormGroup("");
         setFormTemplate("");
-        setFormSender("");
+        setFormSender("EasySlip");
         setFormSchedule("");
         setShowForm(false);
         router.refresh();
@@ -181,10 +181,96 @@ export default function CampaignsClient({
     });
   };
 
-  const handleAction = (_id: string, _action: "start" | "cancel") => {
-    // TODO: implement campaign start/cancel via server action
-    setFeedback({ type: "error", text: "ฟีเจอร์นี้กำลังพัฒนา" });
-    if (selectedCampaign?.id === _id) setSelectedCampaign(null);
+  const handleSend = (campaignId: string) => {
+    setFeedback(null);
+    setSendingIds((prev) => new Set(prev).add(campaignId));
+
+    // Optimistic: mark as sending
+    setCampaigns((prev) =>
+      prev.map((c) => (c.id === campaignId ? { ...c, status: "sending" as CampaignStatus } : c))
+    );
+
+    startTransition(async () => {
+      try {
+        await executeCampaign(userId, campaignId);
+
+        // Mark as running
+        setCampaigns((prev) =>
+          prev.map((c) => (c.id === campaignId ? { ...c, status: "running" as CampaignStatus } : c))
+        );
+
+        // Poll progress
+        const pollInterval = setInterval(async () => {
+          try {
+            const progress = await getCampaignProgress(userId, campaignId);
+            setCampaigns((prev) =>
+              prev.map((c) =>
+                c.id === campaignId
+                  ? {
+                      ...c,
+                      status: progress.status as CampaignStatus,
+                      sentCount: progress.sentCount,
+                      deliveredCount: progress.deliveredCount,
+                      failedCount: progress.failedCount,
+                      creditUsed: progress.creditUsed,
+                    }
+                  : c
+              )
+            );
+
+            // Update selected campaign detail if open
+            if (selectedCampaign?.id === campaignId) {
+              setSelectedCampaign((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      status: progress.status as CampaignStatus,
+                      sentCount: progress.sentCount,
+                      deliveredCount: progress.deliveredCount,
+                      failedCount: progress.failedCount,
+                      creditUsed: progress.creditUsed,
+                    }
+                  : prev
+              );
+            }
+
+            if (progress.status === "completed" || progress.status === "failed" || progress.status === "cancelled") {
+              clearInterval(pollInterval);
+              setSendingIds((prev) => {
+                const next = new Set(prev);
+                next.delete(campaignId);
+                return next;
+              });
+              setFeedback({
+                type: progress.status === "completed" ? "success" : "error",
+                text:
+                  progress.status === "completed"
+                    ? `ส่งสำเร็จ ${progress.sentCount} ข้อความ (ล้มเหลว ${progress.failedCount})`
+                    : `แคมเปญ${progress.status === "failed" ? "ล้มเหลว" : "ถูกยกเลิก"}`,
+              });
+            }
+          } catch {
+            clearInterval(pollInterval);
+          }
+        }, 2000);
+      } catch (e) {
+        // Rollback optimistic update
+        setCampaigns((prev) =>
+          prev.map((c) => (c.id === campaignId ? { ...c, status: "draft" as CampaignStatus } : c))
+        );
+        setSendingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(campaignId);
+          return next;
+        });
+        setFeedback({ type: "error", text: safeErrorMessage(e) });
+      }
+    });
+  };
+
+  const handleCancel = (_id: string) => {
+    // TODO: implement campaign cancel via server action
+    setFeedback({ type: "error", text: "ฟีเจอร์ยกเลิกแคมเปญกำลังพัฒนา" });
   };
 
   const statCards = [
@@ -241,8 +327,10 @@ export default function CampaignsClient({
     { key: "all", label: "ทั้งหมด" },
     { key: "draft", label: "แบบร่าง" },
     { key: "scheduled", label: "ตั้งเวลา" },
+    { key: "sending", label: "กำลังส่ง" },
     { key: "running", label: "กำลังส่ง" },
     { key: "completed", label: "เสร็จสิ้น" },
+    { key: "failed", label: "ล้มเหลว" },
     { key: "cancelled", label: "ยกเลิก" },
   ];
 
@@ -367,16 +455,11 @@ export default function CampaignsClient({
                 <label className="block text-xs text-[var(--text-secondary)] uppercase tracking-wider mb-2">
                   ชื่อผู้ส่ง
                 </label>
-                <input
-                  type="text"
-                  maxLength={11}
-                  onKeyDown={allowAlphaNumericSpace}
-                  className={fieldCls(formErrors.senderName, formSender)}
-                  placeholder="SMSOK"
+                <SenderDropdown
                   value={formSender}
-                  onChange={(e) => { setFormSender(e.target.value); validateCampaignField("senderName", e.target.value); }}
+                  onChange={setFormSender}
+                  senderNames={senderNames}
                 />
-                {formErrors.senderName && <p className="text-red-400 text-xs mt-1">{formErrors.senderName}</p>}
               </div>
 
               {/* Contact Group */}
@@ -466,7 +549,7 @@ export default function CampaignsClient({
             <div className="mt-5 flex items-center gap-3">
               <motion.button
                 onClick={handleCreate}
-                disabled={!formName.trim() || !formGroup || !formTemplate || Object.values(formErrors).some(Boolean)}
+                disabled={!formName.trim() || !formGroup || !formTemplate}
                 className="btn-primary px-6 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 disabled:opacity-40"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
@@ -582,18 +665,26 @@ export default function CampaignsClient({
             {(selectedCampaign.status === "draft" || selectedCampaign.status === "scheduled") && (
               <div className="mt-5 pt-4 border-t border-[var(--border-subtle)] flex items-center gap-3">
                 <motion.button
-                  onClick={() => handleAction(selectedCampaign.id, "start")}
+                  onClick={() => handleSend(selectedCampaign.id)}
+                  disabled={sendingIds.has(selectedCampaign.id)}
                   className="btn-primary px-4 py-2 rounded-xl text-sm font-semibold inline-flex items-center gap-2"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polygon points="5 3 19 12 5 21 5 3" />
-                  </svg>
-                  เริ่มส่ง
+                  {sendingIds.has(selectedCampaign.id) ? (
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                  ) : (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polygon points="5 3 19 12 5 21 5 3" />
+                    </svg>
+                  )}
+                  {sendingIds.has(selectedCampaign.id) ? "กำลังส่ง..." : "ส่งทันที"}
                 </motion.button>
                 <motion.button
-                  onClick={() => handleAction(selectedCampaign.id, "cancel")}
+                  onClick={() => handleCancel(selectedCampaign.id)}
                   className="px-4 py-2 rounded-xl text-sm font-medium border border-red-500/20 text-red-400 hover:bg-red-500/10 transition-colors inline-flex items-center gap-2"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
@@ -606,10 +697,10 @@ export default function CampaignsClient({
                 </motion.button>
               </div>
             )}
-            {selectedCampaign.status === "running" && (
+            {(selectedCampaign.status === "sending" || selectedCampaign.status === "running") && (
               <div className="mt-5 pt-4 border-t border-[var(--border-subtle)]">
                 <motion.button
-                  onClick={() => handleAction(selectedCampaign.id, "cancel")}
+                  onClick={() => handleCancel(selectedCampaign.id)}
                   className="px-4 py-2 rounded-xl text-sm font-medium border border-red-500/20 text-red-400 hover:bg-red-500/10 transition-colors inline-flex items-center gap-2"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
@@ -737,19 +828,30 @@ export default function CampaignsClient({
                       >
                         {(campaign.status === "draft" || campaign.status === "scheduled") && (
                           <motion.button
-                            onClick={() => handleAction(campaign.id, "start")}
-                            className="px-2.5 py-1 rounded-md text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/15 hover:bg-emerald-500/20 transition-colors"
+                            onClick={() => handleSend(campaign.id)}
+                            disabled={sendingIds.has(campaign.id)}
+                            className="px-2.5 py-1 rounded-md text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/15 hover:bg-emerald-500/20 transition-colors disabled:opacity-40"
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                           >
-                            เริ่ม
+                            ส่งทันที
                           </motion.button>
+                        )}
+                        {(campaign.status === "sending" || campaign.status === "running") && (
+                          <span className="px-2.5 py-1 rounded-md text-[10px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/15 inline-flex items-center gap-1">
+                            <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                            </svg>
+                            กำลังส่ง
+                          </span>
                         )}
                         {(campaign.status === "draft" ||
                           campaign.status === "scheduled" ||
+                          campaign.status === "sending" ||
                           campaign.status === "running") && (
                           <motion.button
-                            onClick={() => handleAction(campaign.id, "cancel")}
+                            onClick={() => handleCancel(campaign.id)}
                             className="px-2.5 py-1 rounded-md text-[10px] font-semibold bg-red-500/10 text-red-400 border border-red-500/15 hover:bg-red-500/20 transition-colors"
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
@@ -812,6 +914,7 @@ export default function CampaignsClient({
 
                 {(campaign.status === "draft" ||
                   campaign.status === "scheduled" ||
+                  campaign.status === "sending" ||
                   campaign.status === "running") && (
                   <div
                     className="flex items-center gap-2 mt-3"
@@ -819,15 +922,25 @@ export default function CampaignsClient({
                   >
                     {(campaign.status === "draft" || campaign.status === "scheduled") && (
                       <motion.button
-                        onClick={() => handleAction(campaign.id, "start")}
-                        className="px-3 py-1.5 rounded-lg text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/15"
+                        onClick={() => handleSend(campaign.id)}
+                        disabled={sendingIds.has(campaign.id)}
+                        className="px-3 py-1.5 rounded-lg text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/15 disabled:opacity-40"
                         whileTap={{ scale: 0.95 }}
                       >
-                        เริ่มส่ง
+                        ส่งทันที
                       </motion.button>
                     )}
+                    {(campaign.status === "sending" || campaign.status === "running") && (
+                      <span className="px-3 py-1.5 rounded-lg text-[10px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/15 inline-flex items-center gap-1">
+                        <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        กำลังส่ง
+                      </span>
+                    )}
                     <motion.button
-                      onClick={() => handleAction(campaign.id, "cancel")}
+                      onClick={() => handleCancel(campaign.id)}
                       className="px-3 py-1.5 rounded-lg text-[10px] font-semibold bg-red-500/10 text-red-400 border border-red-500/15"
                       whileTap={{ scale: 0.95 }}
                     >

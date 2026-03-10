@@ -10,7 +10,7 @@ export default async function CampaignsPage() {
 
   const { campaigns } = await getCampaigns(user.id);
 
-  const [groups, templates] = await prisma.$transaction([
+  const [groups, templates, approvedSenders] = await prisma.$transaction([
     prisma.contactGroup.findMany({
       where: { userId: user.id },
       select: { id: true, name: true, _count: { select: { members: true } } },
@@ -21,12 +21,19 @@ export default async function CampaignsPage() {
       select: { id: true, name: true, content: true },
       orderBy: { name: "asc" },
     }),
+    prisma.senderName.findMany({
+      where: { userId: user.id, status: "approved" },
+      select: { name: true },
+      orderBy: { name: "asc" },
+    }),
   ]);
+
+  const senderNames = ["EasySlip", ...approvedSenders.map((s) => s.name).filter((n) => n !== "EasySlip")];
 
   const serializedCampaigns = campaigns.map((c) => ({
     id: c.id,
     name: c.name,
-    status: c.status as "draft" | "scheduled" | "running" | "completed" | "cancelled",
+    status: c.status as "draft" | "scheduled" | "sending" | "running" | "completed" | "failed" | "cancelled",
     groupName: c.contactGroup?.name ?? "—",
     templateName: c.template?.name ?? "—",
     senderName: c.senderName ?? "EasySlip",
@@ -58,6 +65,7 @@ export default async function CampaignsPage() {
       initialCampaigns={serializedCampaigns}
       groups={serializedGroups}
       templates={serializedTemplates}
+      senderNames={senderNames}
     />
   );
 }

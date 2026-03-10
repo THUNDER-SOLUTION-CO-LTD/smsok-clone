@@ -59,6 +59,8 @@ export default function MessagesClient({
   const [search, setSearch] = useState(initialSearch ?? "");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   const filtered = messages.filter((msg) => {
     const matchSearch =
@@ -68,7 +70,10 @@ export default function MessagesClient({
       msg.senderName.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "all" || msg.status === statusFilter;
     const matchType = typeFilter === "all" || detectType(msg.content) === typeFilter;
-    return matchSearch && matchStatus && matchType;
+    const msgDate = new Date(msg.createdAt);
+    const matchDateFrom = !dateFrom || msgDate >= new Date(dateFrom);
+    const matchDateTo = !dateTo || msgDate <= new Date(dateTo + "T23:59:59");
+    return matchSearch && matchStatus && matchType && matchDateFrom && matchDateTo;
   });
 
   function goToPage(p: number) {
@@ -105,45 +110,66 @@ export default function MessagesClient({
 
       {/* Search & Filter */}
       <motion.div
-        className="flex flex-col sm:flex-row gap-3 mb-6"
+        className="flex flex-col gap-3 mb-6"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.15, duration: 0.4 }}
       >
-        <div className="relative flex-1">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">
-            <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
-          </svg>
-          <input
-            type="text"
-            className="input-glass pl-10"
-            placeholder="ค้นหาเบอร์โทร, ข้อความ, ชื่อผู้ส่ง..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">
+              <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
+            </svg>
+            <input
+              type="text"
+              className="input-glass pl-10"
+              placeholder="ค้นหาเบอร์โทร, ข้อความ, ชื่อผู้ส่ง..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <CustomSelect
+            value={typeFilter}
+            onChange={setTypeFilter}
+            options={[
+              { value: "all", label: "ทุกประเภท" },
+              { value: "SMS", label: "SMS" },
+              { value: "OTP", label: "OTP" },
+            ]}
+            className="min-w-[120px]"
+          />
+          <CustomSelect
+            value={statusFilter}
+            onChange={setStatusFilter}
+            options={[
+              { value: "all",       label: "ทุกสถานะ" },
+              { value: "delivered", label: "ส่งสำเร็จ" },
+              { value: "sent",      label: "ส่งแล้ว" },
+              { value: "pending",   label: "รอส่ง" },
+              { value: "failed",    label: "ล้มเหลว" },
+            ]}
+            className="min-w-[140px]"
           />
         </div>
-        <CustomSelect
-          value={typeFilter}
-          onChange={setTypeFilter}
-          options={[
-            { value: "all", label: "ทุกประเภท" },
-            { value: "SMS", label: "SMS" },
-            { value: "OTP", label: "OTP" },
-          ]}
-          className="min-w-[120px]"
-        />
-        <CustomSelect
-          value={statusFilter}
-          onChange={setStatusFilter}
-          options={[
-            { value: "all",       label: "ทุกสถานะ" },
-            { value: "delivered", label: "ส่งสำเร็จ" },
-            { value: "sent",      label: "ส่งแล้ว" },
-            { value: "pending",   label: "รอส่ง" },
-            { value: "failed",    label: "ล้มเหลว" },
-          ]}
-          className="min-w-[140px]"
-        />
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2">
+            <label className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider font-medium">ตั้งแต่</label>
+            <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="input-glass text-sm py-1.5 px-3 w-[150px]" />
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider font-medium">ถึง</label>
+            <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="input-glass text-sm py-1.5 px-3 w-[150px]" />
+          </div>
+          {(dateFrom || dateTo || search || statusFilter !== "all" || typeFilter !== "all") && (
+            <button
+              type="button"
+              onClick={() => { setSearch(""); setStatusFilter("all"); setTypeFilter("all"); setDateFrom(""); setDateTo(""); }}
+              className="text-xs text-[var(--text-muted)] hover:text-violet-400 transition-colors px-2 py-1"
+            >
+              ล้างตัวกรอง
+            </button>
+          )}
+        </div>
       </motion.div>
 
       <AnimatePresence mode="wait">

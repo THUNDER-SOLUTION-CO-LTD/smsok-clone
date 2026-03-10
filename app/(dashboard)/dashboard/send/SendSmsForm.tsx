@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { sendSms, sendBatchSms } from "@/lib/actions/sms";
 import { smsCounterText } from "@/lib/form-utils";
 import { calculateCreditCost, calculateSmsCount } from "@/lib/validations";
-import CustomSelect from "@/components/ui/CustomSelect";
+import SenderDropdown from "@/components/ui/SenderDropdown";
 import { safeErrorMessage } from "@/lib/error-messages";
 
 type MsgType = "english" | "thai" | "unicode";
@@ -122,28 +122,11 @@ export default function SendSmsForm({ userId, senderNames = ["EasySlip"] }: { us
             {/* Sender Name */}
             <div>
               <label className="block text-xs text-slate-300 uppercase tracking-wider mb-2">ชื่อผู้ส่ง</label>
-              {senderNames.filter((n) => n !== "EasySlip").length > 0 ? (
-                <CustomSelect
-                  value={senderName}
-                  onChange={setSenderName}
-                  options={[
-                    { value: "EasySlip", label: "EasySlip (ค่าเริ่มต้น)" },
-                    ...senderNames.filter((n) => n !== "EasySlip").map((name) => ({ value: name, label: name })),
-                  ]}
-                />
-              ) : (
-                <div className="input-glass flex items-center gap-2 text-sm text-white pointer-events-none">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0" />
-                  EasySlip
-                  <span className="text-[11px] text-[var(--text-muted)] ml-auto">ค่าเริ่มต้น</span>
-                </div>
-              )}
-              <p className="text-[11px] text-slate-300 mt-1.5">
-                {senderNames.filter((n) => n !== "EasySlip").length > 0
-                  ? (senderName === "EasySlip" ? "ใช้ชื่อค่าเริ่มต้นได้เลย หรือ" : "Sender ที่ผ่านอนุมัติแล้ว — ")
-                  : "ใช้ชื่อค่าเริ่มต้น — "}{" "}
-                <a href="/dashboard/senders" className="text-violet-400 hover:text-violet-300 transition-colors">ขอ Sender Name ใหม่ →</a>
-              </p>
+              <SenderDropdown
+                value={senderName}
+                onChange={setSenderName}
+                senderNames={senderNames}
+              />
             </div>
 
             {/* Message Type */}

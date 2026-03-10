@@ -99,6 +99,7 @@ type ApiLogContext = {
   reqHeaders: Record<string, string>;
   reqBody: unknown;
   userId: string | null;
+  apiKeyId: string | null;
 };
 
 const logStore = new AsyncLocalStorage<ApiLogContext>();
@@ -134,6 +135,7 @@ export function startApiLog(req: NextRequest) {
     reqHeaders: maskHeaders(req),
     reqBody: null,
     userId: null,
+    apiKeyId: null,
   };
 
   logStore.enterWith(ctx);
@@ -156,6 +158,12 @@ export function setApiLogUser(userId: string) {
   if (ctx) ctx.userId = userId;
 }
 
+/** Set apiKeyId after authentication succeeds. */
+export function setApiLogApiKey(apiKeyId: string) {
+  const ctx = logStore.getStore();
+  if (ctx) ctx.apiKeyId = apiKeyId;
+}
+
 /** Log the API response. Called from apiResponse/apiError. */
 export function finishApiLog(
   resStatus: number,
@@ -172,7 +180,8 @@ export function finishApiLog(
   prisma.apiLog
     .create({
       data: {
-        userId: ctx.userId,
+        ...(ctx.userId ? { user: { connect: { id: ctx.userId } } } : {}),
+        ...(ctx.apiKeyId ? { apiKey: { connect: { id: ctx.apiKeyId } } } : {}),
         method: ctx.method,
         url: ctx.url,
         endpoint: ctx.endpoint,

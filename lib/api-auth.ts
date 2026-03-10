@@ -1,6 +1,6 @@
 import { prisma as db } from "./db";
 import { NextRequest } from "next/server";
-import { startApiLog, setApiLogUser, finishApiLog, ERROR_CODES } from "./api-log";
+import { startApiLog, setApiLogUser, setApiLogApiKey, finishApiLog, ERROR_CODES } from "./api-log";
 
 /**
  * Authenticate API request via Bearer token
@@ -41,8 +41,9 @@ export async function authenticateApiKey(req: NextRequest) {
   // Update lastUsed (fire and forget)
   db.apiKey.update({ where: { id: apiKey.id }, data: { lastUsed: new Date() } }).catch(() => {});
 
-  // Set userId for API logging
+  // Set userId + apiKeyId for API logging
   setApiLogUser(apiKey.user.id);
+  setApiLogApiKey(apiKey.id);
 
   return apiKey.user;
 }

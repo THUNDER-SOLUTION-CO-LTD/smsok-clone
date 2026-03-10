@@ -38,6 +38,7 @@ const fadeUp  = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0, trans
 export default function CreditsPage() {
   const [entries, setEntries] = useState<CreditEntry[]>([]);
   const [total, setTotal] = useState(0);
+  const [balance, setBalance] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dateFrom, setDateFrom] = useState("");
@@ -62,12 +63,23 @@ export default function CreditsPage() {
       const data: HistoryResponse = await res.json();
       setEntries(data.entries ?? []);
       setTotal(data.total ?? 0);
+      if (data.entries?.[0]?.balance != null && page === 1 && !dateFrom && !dateTo && !typeFilter) {
+        setBalance(data.entries[0].balance);
+      }
     } catch (e) {
       setError(safeErrorMessage(e));
     } finally {
       setLoading(false);
     }
   }, [dateFrom, dateTo, typeFilter, page]);
+
+  // Fetch current balance on mount
+  useEffect(() => {
+    fetch("/api/credits/history?page=1&limit=1", { credentials: "include" })
+      .then(r => r.json())
+      .then((data: HistoryResponse) => { if (data.entries?.[0]) setBalance(data.entries[0].balance); })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => { fetchHistory(); }, [fetchHistory]);
 
@@ -87,6 +99,37 @@ export default function CreditsPage() {
             <span className="gradient-text-mixed">ประวัติเครดิต</span>
           </h1>
           <p className="text-sm text-[var(--text-muted)]">รายการเติมเครดิต การส่ง SMS และการคืนเครดิตทั้งหมด</p>
+        </motion.div>
+
+        {/* Balance Card — Prepaid Style */}
+        <motion.div variants={fadeUp} className="mb-6">
+          <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-gradient-to-br from-[#0d1117] via-[#161b22] to-[#0d1117] p-6 md:p-8">
+            <div className="absolute inset-0 bg-gradient-to-r from-violet-500/[0.06] via-transparent to-cyan-500/[0.06]" />
+            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-violet-500/40 to-transparent" />
+            <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <p className="text-xs text-[var(--text-muted)] uppercase tracking-wider font-medium mb-2">ยอดเครดิตคงเหลือ</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl md:text-5xl font-bold text-white tabular-nums tracking-tight">
+                    {balance != null ? `฿${balance.toLocaleString()}` : "—"}
+                  </span>
+                  <span className="text-sm text-[var(--text-muted)]">เครดิต</span>
+                </div>
+                {total > 0 && (
+                  <p className="text-xs text-[var(--text-muted)] mt-2">{total.toLocaleString()} รายการทั้งหมด</p>
+                )}
+              </div>
+              <motion.a
+                href="/dashboard/topup"
+                className="btn-primary px-6 py-3 rounded-xl text-sm font-semibold inline-flex items-center gap-2"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                เติมเครดิต
+              </motion.a>
+            </div>
+          </div>
         </motion.div>
 
         {/* Filters */}

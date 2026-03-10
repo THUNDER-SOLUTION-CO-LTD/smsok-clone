@@ -85,6 +85,8 @@ model ApiKey {
   lastUsed  DateTime? @map("last_used")
   createdAt DateTime  @default(now()) @map("created_at")
 
+  apiLogs   ApiLog[]
+
   @@index([key])
   @@map("api_keys")
 }
@@ -292,6 +294,8 @@ model ApiLog {
   id         String   @id @default(cuid())
   userId     String?  @map("user_id")
   user       User?    @relation(fields: [userId], references: [id])
+  apiKeyId   String?  @map("api_key_id")
+  apiKey     ApiKey?  @relation(fields: [apiKeyId], references: [id])
   method     String   // GET, POST, PUT, DELETE
   url        String   // Full URL with query params
   endpoint   String   // Path only e.g. /api/v1/sms/send
@@ -308,6 +312,7 @@ model ApiLog {
   createdAt  DateTime @default(now()) @map("created_at")
 
   @@index([userId, createdAt])
+  @@index([apiKeyId])
   @@index([resStatus])
   @@index([endpoint])
   @@index([ipAddress])

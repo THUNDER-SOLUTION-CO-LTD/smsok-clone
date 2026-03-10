@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 const CONTROL_CHAR_REGEX = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g;
-const HTML_TAG_REGEX = /<[^>]*>/g;
+const HTML_TAG_REGEX = /<\/?[a-zA-Z][^>]*>/g;
 const INVALID_NAME_CHAR_REGEX = /[<>&"']/;
 const SANITIZED_PHONE_REGEX = /^(0[0-9]{9}|\+66[0-9]{9})$/;
 const MAX_SLIP_BYTES = 5 * 1024 * 1024;

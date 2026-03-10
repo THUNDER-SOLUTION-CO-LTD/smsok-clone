@@ -23,6 +23,7 @@ export async function GET(
     const result: Record<string, unknown> = {
       id: log.id,
       userId: log.userId,
+      apiKeyId: log.apiKeyId,
       method: log.method,
       url: log.url,
       endpoint: log.endpoint,
