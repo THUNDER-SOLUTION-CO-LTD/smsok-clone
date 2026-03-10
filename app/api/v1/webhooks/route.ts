@@ -5,8 +5,8 @@ import { createWebhook, listWebhooks } from "@/lib/actions/webhooks"
 // GET /api/v1/webhooks — List user's webhooks
 export async function GET(req: NextRequest) {
   try {
-    await authenticateApiKey(req)
-    const webhooks = await listWebhooks()
+    const user = await authenticateApiKey(req)
+    const webhooks = await listWebhooks(user.id)
     return apiResponse({ webhooks })
   } catch (error) {
     return apiError(error)
@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
 // POST /api/v1/webhooks — Create webhook
 export async function POST(req: NextRequest) {
   try {
-    await authenticateApiKey(req)
+    const user = await authenticateApiKey(req)
 
     let body: unknown
     try {
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     if (!url) throw new ApiError(400, "กรุณาระบุ URL")
     if (!events || !events.length) throw new ApiError(400, "กรุณาเลือก events")
 
-    const webhook = await createWebhook({ url, events })
+    const webhook = await createWebhook({ url, events, userId: user.id })
     return apiResponse({ webhook }, 201)
   } catch (error) {
     return apiError(error)

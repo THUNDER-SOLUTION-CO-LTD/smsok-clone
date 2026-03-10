@@ -17,9 +17,11 @@ const VALID_EVENTS: WebhookEvent[] = [
 
 // ── List webhooks ───────────────────────────────────────
 
-export async function listWebhooks() {
-  const user = await getSession()
-  if (!user) throw new Error("กรุณาเข้าสู่ระบบ")
+export async function listWebhooks(apiUserId?: string) {
+  const sessionUser = await getSession()
+  const userId = apiUserId ?? sessionUser?.id
+  if (!userId) throw new Error("กรุณาเข้าสู่ระบบ")
+  const user = { id: userId }
 
   const webhooks = await prisma.webhook.findMany({
     where: { userId: user.id },
@@ -44,9 +46,12 @@ export async function listWebhooks() {
 export async function createWebhook(input: {
   url: string
   events: string[]
+  userId?: string
 }) {
-  const user = await getSession()
-  if (!user) throw new Error("กรุณาเข้าสู่ระบบ")
+  const sessionUser = await getSession()
+  const userId = input.userId ?? sessionUser?.id
+  if (!userId) throw new Error("กรุณาเข้าสู่ระบบ")
+  const user = { id: userId }
 
   // Validate URL
   try {

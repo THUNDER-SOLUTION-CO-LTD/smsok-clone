@@ -89,9 +89,13 @@ function isBlockedIPv4(ip: string): boolean {
   return false
 }
 
+/** Strip IPv6 brackets: "[::1]" → "::1" */
+function stripBrackets(ip: string): string {
+  return ip.startsWith("[") && ip.endsWith("]") ? ip.slice(1, -1) : ip
+}
+
 function isBlockedIP(ip: string): boolean {
-  // Strip IPv6 brackets if present (e.g., "[::1]" → "::1")
-  const cleaned = ip.startsWith("[") && ip.endsWith("]") ? ip.slice(1, -1) : ip
+  const cleaned = stripBrackets(ip)
   if (isIP(cleaned) === 4) return isBlockedIPv4(cleaned)
   if (isIP(cleaned) === 6) return isBlockedIPv6(cleaned)
   return false
@@ -114,7 +118,7 @@ export async function isInternalUrl(urlString: string): Promise<boolean> {
     return true
   }
 
-  const hostname = parsed.hostname
+  const hostname = stripBrackets(parsed.hostname)
 
   // Direct IP check
   if (isIP(hostname)) {
@@ -162,9 +166,9 @@ export async function safeFetch(
   init?: RequestInit
 ): Promise<Response> {
   const parsed = new URL(urlString)
-  const hostname = parsed.hostname
+  const hostname = stripBrackets(parsed.hostname)
 
-  // Direct IP — already validated by caller's isInternalUrl()
+  // Direct IP — validate before fetch
   if (isIP(hostname)) {
     if (isBlockedIP(hostname)) {
       throw new Error("SSRF blocked: internal IP address")
@@ -211,7 +215,7 @@ export function isObviouslyInternalUrl(urlString: string): boolean {
     const parsed = new URL(urlString)
     if (!["http:", "https:"].includes(parsed.protocol)) return true
 
-    const hostname = parsed.hostname.toLowerCase()
+    const hostname = stripBrackets(parsed.hostname).toLowerCase()
 
     // Check direct IP
     if (isIP(hostname)) return isBlockedIP(hostname)

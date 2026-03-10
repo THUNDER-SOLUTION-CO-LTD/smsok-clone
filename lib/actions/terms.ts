@@ -10,9 +10,12 @@ const CURRENT_TOS_VERSION = "1.0"
 export async function acceptTerms(options?: {
   ipAddress?: string
   userAgent?: string
+  userId?: string
 }) {
-  const user = await getSession()
-  if (!user) throw new Error("กรุณาเข้าสู่ระบบ")
+  const sessionUser = await getSession()
+  const userId = options?.userId ?? sessionUser?.id
+  if (!userId) throw new Error("กรุณาเข้าสู่ระบบ")
+  const user = { id: userId }
 
   // Check if already accepted this version
   const existing = await prisma.termsAcceptance.findFirst({
@@ -44,9 +47,11 @@ export async function acceptTerms(options?: {
 
 // ── Get Terms Status ────────────────────────────────────
 
-export async function getTermsStatus() {
-  const user = await getSession()
-  if (!user) throw new Error("กรุณาเข้าสู่ระบบ")
+export async function getTermsStatus(apiUserId?: string) {
+  const sessionUser = await getSession()
+  const userId = apiUserId ?? sessionUser?.id
+  if (!userId) throw new Error("กรุณาเข้าสู่ระบบ")
+  const user = { id: userId }
 
   const latest = await prisma.termsAcceptance.findFirst({
     where: { userId: user.id },

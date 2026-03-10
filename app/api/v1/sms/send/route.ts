@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { authenticateApiKey, apiResponse, apiError } from "@/lib/api-auth";
+import { authenticateApiKey, ApiError, apiResponse, apiError } from "@/lib/api-auth";
 import { sendSms } from "@/lib/actions/sms";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { sendSmsApiSchema } from "@/lib/validations";
@@ -11,7 +11,12 @@ export async function POST(req: NextRequest) {
     const limit = checkRateLimit(user.id, "sms");
     if (!limit.allowed) return rateLimitResponse(limit.resetIn);
 
-    const body = await req.json();
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      throw new ApiError(400, "กรุณาส่งข้อมูล JSON");
+    }
     const input = sendSmsApiSchema.parse(body);
     const message = await sendSms(user.id, {
       senderName: input.sender,

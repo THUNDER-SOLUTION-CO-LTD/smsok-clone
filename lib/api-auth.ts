@@ -117,7 +117,8 @@ export function apiError(error: unknown) {
       msg.includes("มีอยู่แล้ว") ||
       msg.includes("ถูกล็อค") ||
       msg.includes("หากเบอร์") ||
-      msg.includes("ระบบยังไม่พร้อม");
+      msg.includes("ระบบยังไม่พร้อม") ||
+      msg.includes("ต้อง");
 
     // Classify error code
     let code: string = ERROR_CODES.INTERNAL;
