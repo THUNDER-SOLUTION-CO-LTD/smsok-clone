@@ -29,6 +29,7 @@ model User {
   campaigns           Campaign[]
   contactGroups       ContactGroup[]
   contacts            Contact[]
+  customFields        CustomField[]
   creditTransactions  CreditTransaction[]
   invoices            Invoice[]
   messageTemplates    MessageTemplate[]
@@ -89,20 +90,52 @@ model ApiKey {
 }
 
 model Contact {
-  id          String               @id @default(cuid())
-  userId      String               @map("user_id")
-  name        String
-  phone       String
-  email       String?
-  tags        String?
-  createdAt   DateTime             @default(now()) @map("created_at")
-  groups      ContactGroupMember[]
-  contactTags ContactTag[]
-  user        User                 @relation(fields: [userId], references: [id])
+  id                String               @id @default(cuid())
+  userId            String               @map("user_id")
+  name              String
+  phone             String
+  email             String?
+  tags              String?
+  smsConsent        Boolean              @default(true) @map("sms_consent")
+  createdAt         DateTime             @default(now()) @map("created_at")
+  groups            ContactGroupMember[]
+  contactTags       ContactTag[]
+  customFieldValues CustomFieldValue[]
+  user              User                 @relation(fields: [userId], references: [id])
 
   @@unique([userId, phone])
   @@index([userId])
   @@map("contacts")
+}
+
+model CustomField {
+  id        String             @id @default(cuid())
+  userId    String             @map("user_id")
+  name      String
+  type      String             @default("text") // text | number | date | select
+  options   String?            // JSON array for select type
+  required  Boolean            @default(false)
+  createdAt DateTime           @default(now()) @map("created_at")
+  values    CustomFieldValue[]
+  user      User               @relation(fields: [userId], references: [id])
+
+  @@unique([userId, name])
+  @@index([userId])
+  @@map("custom_fields")
+}
+
+model CustomFieldValue {
+  id        String      @id @default(cuid())
+  contactId String      @map("contact_id")
+  fieldId   String      @map("field_id")
+  value     String
+  createdAt DateTime    @default(now()) @map("created_at")
+  contact   Contact     @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  field     CustomField @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+
+  @@unique([contactId, fieldId])
+  @@index([fieldId])
+  @@map("custom_field_values")
 }
 
 model Tag {

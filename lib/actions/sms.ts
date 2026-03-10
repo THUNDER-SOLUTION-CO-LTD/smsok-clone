@@ -38,6 +38,16 @@ export async function sendSms(userId: string, data: unknown, channel: "WEB" | "A
     throw new Error("ชื่อผู้ส่งยังไม่ได้รับอนุมัติ");
   }
 
+  // Check SMS consent — respect opt-out
+  const recipientPhone = normalizePhone(input.recipient);
+  const recipientContact = await db.contact.findUnique({
+    where: { userId_phone: { userId, phone: recipientPhone } },
+    select: { smsConsent: true },
+  });
+  if (recipientContact && !recipientContact.smsConsent) {
+    throw new Error("ผู้รับปฏิเสธการรับ SMS (opt-out) ไม่สามารถส่งได้");
+  }
+
   // Create message + deduct credits in transaction
   const { message, updatedUser } = await db.$transaction(async (tx: Omit<PrismaClient, "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">) => {
     const createdMessage = await tx.message.create({

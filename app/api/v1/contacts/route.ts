@@ -50,6 +50,7 @@ export async function GET(req: NextRequest) {
       phone: c.phone,
       email: c.email,
       tags: c.tags,
+      smsConsent: c.smsConsent,
       groups: c.groups.map((g) => ({ id: g.group.id, name: g.group.name })),
       createdAt: c.createdAt,
     }));

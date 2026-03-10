@@ -151,6 +151,7 @@ export type ContactItem = {
   phone: string
   email: string | null
   tags: string | null
+  smsConsent: boolean
   groups: Array<{ id: string; name: string }>
   createdAt: string
 }
@@ -158,6 +159,63 @@ export type ContactItem = {
 export type ContactListResponse = {
   contacts: ContactItem[]
   pagination: PaginationMeta
+}
+
+// ── Custom Field Responses ──────────────────────────────
+
+export type CustomFieldItem = {
+  id: string
+  name: string
+  type: string
+  options: string | null
+  required: boolean
+  createdAt: string
+}
+
+export type CustomFieldValueItem = {
+  id: string
+  contactId: string
+  fieldId: string
+  value: string
+  field: {
+    id: string
+    name: string
+    type: string
+    options: string | null
+  }
+}
+
+// ── Activity Timeline ───────────────────────────────────
+
+export type ActivityItem = {
+  type: "sms" | "otp" | "credit"
+  id: string
+  timestamp: string
+  data: Record<string, unknown>
+}
+
+export type ActivityTimelineResponse = {
+  activities: ActivityItem[]
+  total: number
+  page: number
+  limit: number
+  totalPages: number
+}
+
+// ── Excel Import ────────────────────────────────────────
+
+export type ExcelPreviewResponse = {
+  headers: string[]
+  preview: Record<string, string>[]
+  totalRows: number
+}
+
+export type ExcelImportResult = {
+  total: number
+  created: number
+  updated: number
+  skipped: number
+  errors: Array<{ row: number; phone: string; error: string }>
 }
 
 export type ContactGroupItem = {
@@ -169,6 +227,64 @@ export type ContactGroupItem = {
 export type ContactGroupMembership = {
   id: string
   name: string
+}
+
+// ── Template Responses ───────────────────────────────────
+
+export type TemplateItem = {
+  id: string
+  userId: string
+  name: string
+  content: string
+  category: string
+  createdAt: string
+  updatedAt: string
+}
+
+// ── Tag Responses ───────────────────────────────────────
+
+export type TagItem = {
+  id: string
+  name: string
+  color: string
+  _count: { contactTags: number }
+}
+
+// ── Group Responses ─────────────────────────────────────
+
+export type GroupItem = {
+  id: string
+  name: string
+  createdAt: Date
+  _count: { members: number }
+}
+
+export type GroupContactStub = {
+  id: string
+  name: string
+  phone: string
+}
+
+export type GroupMember = {
+  id: string
+  groupId: string
+  contactId: string
+  contact: GroupContactStub
+}
+
+export type GroupDetailMember = {
+  id: string
+  contactId: string
+  name: string
+  phone: string
+  email: string | null
+}
+
+export type GroupDetailContactStub = {
+  id: string
+  name: string
+  phone: string
+  tags: string | null
 }
 
 // ── Billing Responses ───────────────────────────────────

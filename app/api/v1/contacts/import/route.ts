@@ -3,103 +3,147 @@ import { authenticateApiKey, apiResponse, apiError } from "@/lib/api-auth";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { prisma } from "@/lib/db";
 import { normalizePhone } from "@/lib/validations";
+import { importContactsFromExcel, parseExcelFile } from "@/lib/actions/excel-import";
 
-// POST /api/v1/contacts/import — Import CSV/text contacts
+// POST /api/v1/contacts/import — Import CSV/text/Excel contacts
 // Accepts: multipart/form-data (file) or application/json (contacts array)
+// For Excel: send file + mapping (JSON string) + updateExisting (optional)
+// For preview: send file without mapping → returns headers + preview rows
 export async function POST(req: NextRequest) {
   try {
     const user = await authenticateApiKey(req);
     const limit = checkRateLimit(user.id, "import");
     if (!limit.allowed) return rateLimitResponse(limit.resetIn);
 
-    let rows: { name?: string; phone: string }[] = [];
-    let groupId: string | null = null;
-
     const contentType = req.headers.get("content-type") || "";
 
     if (contentType.includes("multipart/form-data")) {
-      // File upload (CSV)
       const formData = await req.formData();
       const file = formData.get("file") as File | null;
-      groupId = formData.get("groupId") as string | null;
-
       if (!file) throw new Error("กรุณาอัพโหลดไฟล์");
+
+      // Check if this is an Excel file
+      const isExcel = file.name.match(/\.(xlsx|xls)$/i) ||
+        file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+        file.type === "application/vnd.ms-excel";
+
+      if (isExcel) {
+        // Max 5MB for Excel
+        if (file.size > 5 * 1024 * 1024) {
+          throw new Error("ไฟล์ต้องไม่เกิน 5MB");
+        }
+
+        const buffer = await file.arrayBuffer();
+        const mappingStr = formData.get("mapping") as string | null;
+
+        // No mapping = preview mode
+        if (!mappingStr) {
+          const preview = await parseExcelFile(buffer);
+          return apiResponse(preview);
+        }
+
+        let mapping: { name: string; phone: string; email?: string; tags?: string };
+        try {
+          mapping = JSON.parse(mappingStr);
+        } catch {
+          throw new Error("mapping ต้องเป็น JSON ที่ถูกต้อง");
+        }
+        if (!mapping.name || !mapping.phone) {
+          throw new Error("mapping ต้องมี name และ phone");
+        }
+
+        const updateExisting = formData.get("updateExisting") === "true";
+        const result = await importContactsFromExcel(user.id, buffer, mapping, { updateExisting });
+        return apiResponse(result, 201);
+      }
+
+      // CSV file — existing logic
+      const groupId = formData.get("groupId") as string | null;
       const text = await file.text();
-      rows = parseCsv(text);
+      return handleCsvImport(user.id, parseCsv(text), groupId);
+    }
+
+    // JSON body — existing logic
+    const body = await req.json();
+    const groupId = body.groupId || null;
+    let rows: { name?: string; phone: string }[];
+
+    if (typeof body.data === "string") {
+      rows = parseCsv(body.data);
+    } else if (Array.isArray(body.contacts)) {
+      rows = body.contacts;
     } else {
-      // JSON body
-      const body = await req.json();
-      groupId = body.groupId || null;
-
-      if (typeof body.data === "string") {
-        // Comma-separated or newline-separated
-        rows = parseCsv(body.data);
-      } else if (Array.isArray(body.contacts)) {
-        rows = body.contacts;
-      } else {
-        throw new Error("กรุณาส่ง contacts array หรือ data string");
-      }
+      throw new Error("กรุณาส่ง contacts array หรือ data string");
     }
 
-    if (rows.length === 0) throw new Error("ไม่มีรายชื่อที่จะนำเข้า");
-    if (rows.length > 10000) throw new Error("นำเข้าได้สูงสุด 10,000 รายชื่อต่อครั้ง");
-
-    // Verify group if specified
-    if (groupId) {
-      const group = await prisma.contactGroup.findFirst({
-        where: { id: groupId, userId: user.id },
-      });
-      if (!group) throw new Error("ไม่พบกลุ่มรายชื่อ");
-    }
-
-    let imported = 0;
-    let duplicates = 0;
-    let invalid = 0;
-    const createdIds: string[] = [];
-
-    for (const row of rows) {
-      const phone = normalizePhone(row.phone || "");
-      if (!/^0[0-9]{9}$/.test(phone) && !/^\+66[0-9]{9}$/.test(phone)) {
-        invalid++;
-        continue;
-      }
-
-      try {
-        const contact = await prisma.contact.create({
-          data: {
-            userId: user.id,
-            name: row.name?.trim() || phone,
-            phone,
-          },
-        });
-        createdIds.push(contact.id);
-        imported++;
-      } catch {
-        duplicates++;
-      }
-    }
-
-    // Add to group if specified
-    if (groupId && createdIds.length > 0) {
-      await prisma.contactGroupMember.createMany({
-        data: createdIds.map((contactId) => ({
-          groupId: groupId!,
-          contactId,
-        })),
-        skipDuplicates: true,
-      });
-    }
-
-    return apiResponse({
-      imported,
-      skipped: duplicates,
-      duplicates,
-      invalid,
-      total: rows.length,
-    }, 201);
+    return handleCsvImport(user.id, rows, groupId);
   } catch (error) {
     return apiError(error);
   }
+}
+
+async function handleCsvImport(
+  userId: string,
+  rows: { name?: string; phone: string }[],
+  groupId: string | null
+) {
+  if (rows.length === 0) throw new Error("ไม่มีรายชื่อที่จะนำเข้า");
+  if (rows.length > 10000) throw new Error("นำเข้าได้สูงสุด 10,000 รายชื่อต่อครั้ง");
+
+  if (groupId) {
+    const group = await prisma.contactGroup.findFirst({
+      where: { id: groupId, userId },
+    });
+    if (!group) throw new Error("ไม่พบกลุ่มรายชื่อ");
+  }
+
+  let invalid = 0;
+
+  // Validate and normalize all phones upfront
+  const validRows: { name: string; phone: string }[] = [];
+  for (const row of rows) {
+    const phone = normalizePhone(row.phone || "");
+    if (!/^0[0-9]{9}$/.test(phone) && !/^\+66[0-9]{9}$/.test(phone)) {
+      invalid++;
+      continue;
+    }
+    validRows.push({ name: row.name?.trim() || phone, phone });
+  }
+
+  // Batch insert with skipDuplicates (N+1 fix)
+  const BATCH_SIZE = 500;
+  let totalCreated = 0;
+  for (let i = 0; i < validRows.length; i += BATCH_SIZE) {
+    const batch = validRows.slice(i, i + BATCH_SIZE);
+    const result = await prisma.contact.createMany({
+      data: batch.map((r) => ({ userId, name: r.name, phone: r.phone })),
+      skipDuplicates: true,
+    });
+    totalCreated += result.count;
+  }
+
+  const duplicates = validRows.length - totalCreated;
+
+  // Add to group if specified — query back created contacts by phone
+  if (groupId && totalCreated > 0) {
+    const phones = validRows.map((r) => r.phone);
+    const created = await prisma.contact.findMany({
+      where: { userId, phone: { in: phones } },
+      select: { id: true },
+    });
+    await prisma.contactGroupMember.createMany({
+      data: created.map((c) => ({ groupId: groupId!, contactId: c.id })),
+      skipDuplicates: true,
+    });
+  }
+
+  return apiResponse({
+    imported: totalCreated,
+    skipped: duplicates,
+    duplicates,
+    invalid,
+    total: rows.length,
+  }, 201);
 }
 
 function parseCsv(text: string): { name?: string; phone: string }[] {

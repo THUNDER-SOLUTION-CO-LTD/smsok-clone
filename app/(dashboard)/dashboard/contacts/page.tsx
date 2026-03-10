@@ -30,6 +30,7 @@ export default async function ContactsPage({
     phone: c.phone,
     email: c.email,
     tags: c.tags,
+    smsConsent: c.smsConsent,
     groups: c.groups.map((g: typeof c.groups[number]) => ({
       id: g.group.id,
       name: g.group.name,
