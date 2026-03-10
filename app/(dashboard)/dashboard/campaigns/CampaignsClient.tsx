@@ -336,26 +336,6 @@ export default function CampaignsClient({
 
   return (
     <motion.div className="p-6 md:p-8 max-w-6xl" initial="hidden" animate="show" variants={stagger}>
-      {/* Beta Banner */}
-      <motion.div
-        variants={fadeUp}
-        className="mb-6 p-3 rounded-xl border border-amber-500/20 bg-amber-500/5 flex items-center gap-3"
-      >
-        <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/15 flex items-center justify-center shrink-0">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-amber-400">
-            <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-            <line x1="12" y1="9" x2="12" y2="13" />
-            <line x1="12" y1="17" x2="12.01" y2="17" />
-          </svg>
-        </div>
-        <div>
-          <span className="text-sm font-semibold text-amber-400">Beta</span>
-          <span className="text-sm text-[var(--text-secondary)] ml-2">
-            ระบบแคมเปญ SMS — สร้างและจัดการแคมเปญส่งข้อความแบบกลุ่ม
-          </span>
-        </div>
-      </motion.div>
-
       {/* Header */}
       <motion.div
         variants={fadeUp}

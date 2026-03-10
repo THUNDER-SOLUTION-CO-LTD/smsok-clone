@@ -376,7 +376,7 @@ export default function DashboardShell({
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 overflow-auto flex flex-col">
         {/* Top Bar — Clean, minimal */}
         <header className="sticky top-0 z-40 border-b border-[var(--border-subtle)] bg-[#0B1120]/80 backdrop-blur-xl h-14 flex items-center justify-between px-6 md:px-8">
           <h1 className="text-base font-semibold text-[var(--text-primary)] tracking-tight">
@@ -501,20 +501,22 @@ export default function DashboardShell({
         </header>
 
         {/* Page Content with transitions */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={pathname}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-          >
-            {children}
-          </motion.div>
-        </AnimatePresence>
+        <div className="flex-1">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={pathname}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+            >
+              {children}
+            </motion.div>
+          </AnimatePresence>
+        </div>
 
-        {/* Footer */}
-        <footer className="border-t border-[var(--border-subtle)] px-8 py-4 mt-8">
+        {/* Footer — outside flex-1 content, always at bottom */}
+        <footer className="border-t border-[var(--border-subtle)] px-8 py-4 shrink-0">
           <div className="flex items-center justify-between text-[11px] text-[var(--text-muted)]">
             <span>v1.0</span>
             <span>&copy; SMSOK</span>
