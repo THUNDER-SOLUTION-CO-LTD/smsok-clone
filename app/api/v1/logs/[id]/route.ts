@@ -32,6 +32,7 @@ export async function GET(
       resBody: log.resBody ? JSON.parse(log.resBody) : null,
       latencyMs: log.latencyMs,
       ipAddress: log.ipAddress,
+      source: log.source,
       errorCode: log.errorCode,
       errorMsg: log.errorMsg,
       createdAt: log.createdAt,

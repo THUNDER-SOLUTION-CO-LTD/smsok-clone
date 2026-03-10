@@ -95,6 +95,7 @@ type ApiLogContext = {
   url: string;       // full URL with query
   endpoint: string;  // path only
   ipAddress: string;
+  source: "WEB" | "API";
   reqHeaders: Record<string, string>;
   reqBody: unknown;
   userId: string | null;
@@ -106,12 +107,19 @@ const logStore = new AsyncLocalStorage<ApiLogContext>();
 export function startApiLog(req: NextRequest) {
   const parsed = new URL(req.url);
 
+  // Detect source: WEB if session cookie or Next.js server action headers present
+  const hasSessionCookie = req.headers.has("cookie") && (req.headers.get("cookie")?.includes("session") ?? false);
+  const hasServerActionHeader = req.headers.has("next-action");
+  const hasApiKeyAuth = req.headers.has("authorization") || req.headers.has("x-api-key");
+  const source: "WEB" | "API" = (hasSessionCookie || hasServerActionHeader) && !hasApiKeyAuth ? "WEB" : "API";
+
   const ctx: ApiLogContext = {
     startTime: Date.now(),
     method: req.method,
     url: parsed.pathname + parsed.search,
     endpoint: parsed.pathname,
     ipAddress: extractIp(req),
+    source,
     reqHeaders: maskHeaders(req),
     reqBody: null,
     userId: null,
@@ -157,6 +165,7 @@ export function finishApiLog(
         method: ctx.method,
         url: ctx.url,
         endpoint: ctx.endpoint,
+        source: ctx.source,
         reqHeaders: truncate(JSON.stringify(ctx.reqHeaders)),
         reqBody: truncate(JSON.stringify(ctx.reqBody)),
         resStatus,

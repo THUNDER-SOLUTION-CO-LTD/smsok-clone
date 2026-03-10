@@ -301,6 +301,7 @@ model ApiLog {
   resBody    String?  @map("res_body")     // JSON
   latencyMs  Int      @map("latency_ms")   // response time ms
   ipAddress  String?  @map("ip_address")   // caller IP
+  source     String   @default("API")      // WEB or API
   errorCode  String?  @map("error_code")   // 1001, 2004, 3001 etc
   errorMsg   String?  @map("error_msg")    // generic error message
   stackTrace String?  @map("stack_trace")  // INTERNAL ONLY — never sent to client

@@ -55,6 +55,7 @@ export async function GET(req: NextRequest) {
         resStatus: true,
         latencyMs: true,
         ipAddress: true,
+        source: true,
         errorCode: true,
         errorMsg: true,
         createdAt: true,
@@ -62,7 +63,7 @@ export async function GET(req: NextRequest) {
     });
 
     // Build CSV
-    const headers = ["id", "timestamp", "method", "endpoint", "url", "status", "latency_ms", "ip_address", "error_code", "error_message"];
+    const headers = ["id", "timestamp", "method", "endpoint", "url", "status", "latency_ms", "ip_address", "source", "error_code", "error_message"];
     const rows = logs.map((log) => [
       escapeCsv(log.id),
       escapeCsv(log.createdAt.toISOString()),
@@ -72,6 +73,7 @@ export async function GET(req: NextRequest) {
       String(log.resStatus),
       String(log.latencyMs),
       escapeCsv(log.ipAddress),
+      escapeCsv(log.source),
       escapeCsv(log.errorCode),
       escapeCsv(log.errorMsg),
     ]);

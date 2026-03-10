@@ -18,6 +18,7 @@ export async function GET(req: NextRequest) {
     const errorCode = searchParams.get("errorCode");
     const search = searchParams.get("search");
     const ip = searchParams.get("ip");
+    const source = searchParams.get("source");
     const offset = (page - 1) * limit;
 
     const where: Record<string, unknown> = { userId: user.id };
@@ -36,6 +37,9 @@ export async function GET(req: NextRequest) {
     }
     if (ip) {
       where.ipAddress = ip;
+    }
+    if (source) {
+      where.source = source.toUpperCase();
     }
     if (search) {
       where.OR = [
@@ -66,6 +70,7 @@ export async function GET(req: NextRequest) {
           resStatus: true,
           latencyMs: true,
           ipAddress: true,
+          source: true,
           errorCode: true,
           errorMsg: true,
           createdAt: true,
