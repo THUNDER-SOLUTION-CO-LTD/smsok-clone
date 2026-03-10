@@ -107,11 +107,22 @@ const logStore = new AsyncLocalStorage<ApiLogContext>();
 export function startApiLog(req: NextRequest) {
   const parsed = new URL(req.url);
 
-  // Detect source: WEB if session cookie or Next.js server action headers present
-  const hasSessionCookie = req.headers.has("cookie") && (req.headers.get("cookie")?.includes("session") ?? false);
-  const hasServerActionHeader = req.headers.has("next-action");
+  // Detect source: API key takes priority over session cookie
+  // 1. API key header present → always "API" (curl/Postman/SDK)
+  // 2. Session cookie or server-action header → "WEB" (dashboard/browser)
+  // 3. Neither → "API" (unknown defaults to API)
   const hasApiKeyAuth = req.headers.has("authorization") || req.headers.has("x-api-key");
-  const source: "WEB" | "API" = (hasSessionCookie || hasServerActionHeader) && !hasApiKeyAuth ? "WEB" : "API";
+  const cookies = req.headers.get("cookie") || "";
+  const hasSessionCookie = cookies.includes("next-auth.session-token") || cookies.includes("session-token");
+  const hasServerActionHeader = req.headers.has("next-action");
+  let source: "WEB" | "API";
+  if (hasApiKeyAuth) {
+    source = "API";
+  } else if (hasSessionCookie || hasServerActionHeader) {
+    source = "WEB";
+  } else {
+    source = "API";
+  }
 
   const ctx: ApiLogContext = {
     startTime: Date.now(),
