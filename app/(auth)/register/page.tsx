@@ -207,7 +207,7 @@ export default function RegisterPage() {
                   {passwordMismatch && <p className="text-red-400 text-xs mt-1">รหัสผ่านไม่ตรงกัน</p>}
                 </div>
 
-                <motion.button onClick={handleSendOtp} disabled={isPending || hasErrors || !isFormComplete || passwordMismatch}
+                <motion.button onClick={handleSendOtp} disabled={isPending || hasErrors || passwordMismatch}
                   className="w-full btn-primary py-3 rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
                   whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}>
                   {isPending

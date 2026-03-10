@@ -106,7 +106,7 @@ export default function LoginPage() {
             </div>
             <button
               type="submit"
-              disabled={isPending || hasErrors || !isComplete}
+              disabled={isPending || hasErrors}
               className="w-full btn-primary py-3 rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {isPending ? (

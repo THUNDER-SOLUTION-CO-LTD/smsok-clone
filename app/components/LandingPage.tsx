@@ -35,7 +35,7 @@ const benefits = [
   },
   {
     title: "ทดลองฟรี",
-    desc: "สมัครวันนี้รับฟรี 500 เครดิต",
+    desc: "สมัครวันนี้รับฟรี 15 เครดิต",
     icon: (
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="20 12 20 22 4 22 4 12" /><rect x="2" y="7" width="20" height="5" /><line x1="12" y1="22" x2="12" y2="7" />
@@ -103,7 +103,7 @@ const features = [
 ];
 
 const faqs = [
-  { q: "ทดลองใช้ได้ไหม?", a: "สมัครฟรีวันนี้ ได้ 500 เครดิตทดลองส่ง SMS ทันที ไม่ต้องเติมเงิน" },
+  { q: "ทดลองใช้ได้ไหม?", a: "สมัครฟรีวันนี้ ได้ 15 เครดิตทดลองส่ง SMS ทันที ไม่ต้องเติมเงิน" },
   { q: "Sender name ใช้เวลาอนุมัตินานไหม?", a: "1-2 วันทำการ ระหว่างรออนุมัติสามารถใช้ชื่อ default ส่ง SMS ได้เลย" },
   { q: "ชำระเงินยังไง?", a: "รองรับโอนเงินผ่านธนาคาร, PromptPay QR Code — ยืนยันสลิปอัตโนมัติ" },
   { q: "เบอร์ถูก block ทำยังไง?", a: "ติดต่อทีม support เพื่อทำ whitelist ให้ฟรี" },
@@ -256,13 +256,13 @@ export default function LandingPage() {
             ส่ง SMS ผ่านเว็บหรือ API ได้ทันที ราคาเริ่มต้น ฿0.147/ข้อความ
             <br className="hidden sm:block" />
             <span className="sm:hidden"> — </span>
-            สมัครวันนี้รับฟรี 500 เครดิต
+            สมัครวันนี้รับฟรี 15 เครดิต
           </p>
 
           {/* CTA Buttons */}
           <div className="animate-fade-in flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 px-2 mb-12 sm:mb-16" style={{ animationDelay: "0.3s" }}>
             <Link href="/register" className="btn-primary px-8 py-3.5 text-base rounded-xl w-full sm:w-auto text-center min-h-[48px] flex items-center justify-center gap-2 font-semibold">
-              สมัครฟรี — รับ 500 เครดิต
+              สมัครฟรี — รับ 15 เครดิต
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M5 12h14M12 5l7 7-7 7" />
               </svg>
