@@ -59,12 +59,8 @@ export async function registerWithOtp(data: {
 }) {
   const { verifyOtpForRegister } = await import("./actions/otp");
 
-  // Verify OTP first
-  const otpResult = await verifyOtpForRegister(data.otpRef, data.otpCode);
-  if (!otpResult.valid) {
-    throw new Error("OTP ไม่ถูกต้อง");
-  }
-
+  // Validate schema + check duplicates BEFORE consuming OTP
+  // (prevents OTP being permanently used if validation or duplicate check fails)
   const parsed = registerSchema.safeParse({
     name: data.name,
     email: data.email,
@@ -82,6 +78,12 @@ export async function registerWithOtp(data: {
   ]);
   if (existingEmail) throw new Error("อีเมลนี้ถูกใช้งานแล้ว");
   if (existingPhone) throw new Error("เบอร์โทรนี้ถูกใช้งานแล้ว");
+
+  // Verify OTP last — only consumed after validation passes
+  const otpResult = await verifyOtpForRegister(data.otpRef, data.otpCode);
+  if (!otpResult.valid) {
+    throw new Error("OTP ไม่ถูกต้อง");
+  }
 
   const hashed = await hashPassword(password);
   const user = await prisma.$transaction(async (tx) => {

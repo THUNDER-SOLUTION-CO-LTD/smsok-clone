@@ -285,6 +285,10 @@ export async function generateOtpForRegister(phone: string) {
   const refCode = generateRefCode();
   const expiresAt = new Date(Date.now() + OTP_EXPIRY_MS);
 
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`[DEV] OTP for ${normalizedPhone} : ${code}  (ref: ${refCode})`);
+  }
+
   await prisma.otpRequest.create({
     data: {
       userId: null,
