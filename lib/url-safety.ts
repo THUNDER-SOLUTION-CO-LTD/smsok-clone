@@ -33,25 +33,49 @@ function isPrivate172(ip: string): boolean {
  * Extract embedded IPv4 from IPv4-mapped/translated IPv6 addresses.
  * Formats: ::ffff:A.B.C.D, ::ffff:0:A.B.C.D, 0:0:0:0:0:ffff:A.B.C.D
  */
+/**
+ * Convert hex IPv6 suffix to dotted IPv4: "7f00:1" → "127.0.0.1"
+ * Handles ::ffff:XXYY:ZZWW where XX.YY.ZZ.WW is the embedded IPv4.
+ */
+function hexToIPv4(hexStr: string): string | null {
+  const parts = hexStr.split(":")
+  if (parts.length !== 2) return null
+  const high = parseInt(parts[0]!, 16)
+  const low = parseInt(parts[1]!, 16)
+  if (isNaN(high) || isNaN(low) || high > 0xffff || low > 0xffff) return null
+  const ipv4 = `${(high >> 8) & 0xff}.${high & 0xff}.${(low >> 8) & 0xff}.${low & 0xff}`
+  return isIP(ipv4) === 4 ? ipv4 : null
+}
+
 function extractEmbeddedIPv4(ip: string): string | null {
   const lower = ip.toLowerCase()
 
-  // ::ffff:A.B.C.D (most common IPv4-mapped)
+  // ::ffff:A.B.C.D (most common IPv4-mapped, dotted decimal)
   if (lower.startsWith("::ffff:")) {
     const rest = lower.slice(7)
     if (isIP(rest) === 4) return rest
+    // ::ffff:7f00:1 (hex form — Node URL parser converts dotted to this)
+    const hex = hexToIPv4(rest)
+    if (hex) return hex
   }
 
   // ::ffff:0:A.B.C.D (IPv4-translated)
   if (lower.startsWith("::ffff:0:")) {
     const rest = lower.slice(9)
     if (isIP(rest) === 4) return rest
+    const hex = hexToIPv4(rest)
+    if (hex) return hex
   }
 
-  // Full form: 0:0:0:0:0:ffff:A.B.C.D
-  const fullMapped = /^(?:0+:){5}ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/i
+  // Full form: 0:0:0:0:0:ffff:A.B.C.D or 0:0:0:0:0:ffff:XXYY:ZZWW
+  const fullMapped = /^(?:0+:){5}ffff:(.+)$/i
   const match = lower.match(fullMapped)
-  if (match && isIP(match[1]!) === 4) return match[1]!
+  if (match) {
+    const rest = match[1]!
+    if (isIP(rest) === 4) return rest
+    const hex = hexToIPv4(rest)
+    if (hex) return hex
+  }
 
   return null
 }
