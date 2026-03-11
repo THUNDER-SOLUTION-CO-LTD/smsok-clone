@@ -151,70 +151,13 @@
 
 @layer components {
 
-  /* ── CARDS — Flat dark surfaces ── */
-
-  .glass {
-    position: relative;
-    background: var(--bg-surface);
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-xl);
-  }
-
-  .glass::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    padding: 1px;
-    background: linear-gradient(135deg, #00FFA7, var(--accent-secondary));
-    -webkit-mask:
-      linear-gradient(#fff 0 0) content-box,
-      linear-gradient(#fff 0 0);
-    mask:
-      linear-gradient(#fff 0 0) content-box,
-      linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    pointer-events: none;
-  }
-
-  .glass:hover::before {
-    opacity: 0.5;
-  }
+  /* .glass*, .glass-cyan, .glass-blue, .glass-emerald, .glass-rose REMOVED — v3 uses inline Tailwind */
 
   .surface-elevated {
     background: var(--bg-surface);
     border: 1px solid var(--border-default);
     border-radius: var(--radius-xl);
     box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-  }
-
-  /* ── CARD COLOR VARIANTS — Flat with subtle tint ── */
-
-  .glass-cyan {
-    background: linear-gradient(135deg, rgba(0,255,167,0.04) 0%, var(--bg-surface) 100%);
-    border: 1px solid rgba(0,255,167,0.12);
-    border-radius: var(--radius-xl);
-  }
-
-  .glass-blue {
-    background: linear-gradient(135deg, rgba(50,152,218,0.04) 0%, var(--bg-surface) 100%);
-    border: 1px solid rgba(50,152,218,0.12);
-    border-radius: var(--radius-xl);
-  }
-
-  .glass-emerald {
-    background: linear-gradient(135deg, rgba(0,255,167,0.04) 0%, var(--bg-surface) 100%);
-    border: 1px solid rgba(0,255,167,0.12);
-    border-radius: var(--radius-xl);
-  }
-
-  .glass-rose {
-    background: linear-gradient(135deg, rgba(239,68,68,0.04) 0%, var(--bg-surface) 100%);
-    border: 1px solid rgba(239,68,68,0.12);
-    border-radius: var(--radius-xl);
   }
 
   /* ── PREMIUM CARD — Nansen elevated hover ── */
@@ -258,20 +201,7 @@
     transform: translateY(0) scale(0.98);
   }
 
-  .btn-glass {
-    background: transparent;
-    border: 1px solid var(--border-default);
-    color: #FFFFFF;
-    border-radius: var(--radius-md);
-    cursor: pointer;
-    transition: all 0.2s ease;
-  }
-
-  .btn-glass:hover {
-    border-color: rgba(0,255,167,0.3);
-    background: rgba(0,255,167,0.04);
-    transform: translateY(-1px);
-  }
+  /* .btn-glass REMOVED — v3 uses inline Tailwind */
 
   .btn-danger {
     background: rgba(239,68,68,0.08);
@@ -307,27 +237,7 @@
 
   .btn-gradient:active { transform: translateY(0) scale(0.98); }
 
-  /* ── INPUTS — Clean dark surface ── */
-
-  .input-glass {
-    width: 100%;
-    padding: 10px 14px;
-    border-radius: var(--radius-md);
-    background: var(--bg-surface);
-    border: 1px solid var(--border-default);
-    color: #FFFFFF;
-    font-size: 14px;
-    outline: none;
-    transition: all 0.2s ease;
-  }
-
-  .input-glass::placeholder { color: var(--text-subdued); }
-
-  .input-glass:focus {
-    border-color: rgba(0,255,167,0.6);
-    box-shadow: 0 0 0 3px rgba(0,255,167,0.15);
-    outline: none;
-  }
+  /* .input-glass REMOVED — v3 uses inline Tailwind */
 
   /* ── STATUS BADGES — Clean pill ── */
 

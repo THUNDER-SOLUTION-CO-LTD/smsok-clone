@@ -118,8 +118,6 @@ export default function LandingPage() {
   }, []);
 
   const { scrollY } = useScroll();
-  const orbParallax1 = useTransform(scrollY, [0, 2000], [0, -300]);
-  const orbParallax2 = useTransform(scrollY, [0, 2000], [0, 200]);
   const heroParallax = useTransform(scrollY, [0, 600], [0, -120]);
 
   return (
@@ -127,42 +125,20 @@ export default function LandingPage() {
       {/* Background grid */}
       <div className="fixed inset-0 grid-bg pointer-events-none" />
 
-      {/* Ambient orbs — parallax + float */}
-      <motion.div
-        className="fixed top-[-200px] left-1/2 -translate-x-1/2 w-[1000px] h-[800px] rounded-full pointer-events-none"
-        style={{ y: orbParallax1, background: "radial-gradient(circle, rgba(14,165,233,0.15) 0%, rgba(139,92,246,0.05) 40%, transparent 70%)" }}
-      />
-      <motion.div style={{ y: orbParallax1 }} className="fixed top-[30%] right-[-200px] w-[600px] h-[600px] rounded-full pointer-events-none">
-        <motion.div
-          className="w-full h-full rounded-full"
-          style={{ background: "radial-gradient(circle, rgba(129,140,248,0.1) 0%, transparent 70%)" }}
-          animate={{ y: [0, -20, 0] }}
-          transition={{ repeat: Infinity, duration: 8, ease: "easeInOut" }}
-        />
-      </motion.div>
-      <motion.div style={{ y: orbParallax2 }} className="fixed bottom-[-100px] left-[-100px] w-[500px] h-[500px] rounded-full pointer-events-none">
-        <motion.div
-          className="w-full h-full rounded-full"
-          style={{ background: "radial-gradient(circle, rgba(139,92,246,0.08) 0%, transparent 70%)" }}
-          animate={{ y: [0, 20, 0] }}
-          transition={{ repeat: Infinity, duration: 10, ease: "easeInOut", delay: 3 }}
-        />
-      </motion.div>
-
       {/* ─── NAV ─── */}
       <nav className={`fixed top-0 w-full z-50 transition-all duration-500 ${
         scrolled
-          ? "backdrop-blur-2xl border-b border-white/[0.06] bg-[#040810]/80 shadow-[0_4px_30px_rgba(0,0,0,0.3)]"
+          ? "border-b border-white/[0.06] bg-[#040810]/80 shadow-[0_4px_30px_rgba(0,0,0,0.3)]"
           : "bg-transparent"
       }`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5 group">
             <div className="relative">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-violet-400 transition-all group-hover:drop-shadow-[0_0_8px_rgba(139,92,246,0.6)]">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-[#00FFA7] transition-all group-hover:drop-shadow-[0_0_8px_rgba(0,255,167,0.6)]">
                 <path d="M12 2L2 7l10 5 10-5-10-5z" fill="currentColor" opacity="0.3" />
                 <path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-              <div className="absolute inset-0 bg-violet-400/20 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="absolute inset-0 bg-[rgba(0,255,167,0.15)] rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
             <span className="text-xl font-bold gradient-text-mixed tracking-tight">SMSOK</span>
           </Link>
@@ -171,13 +147,13 @@ export default function LandingPage() {
             {[{ href: "#why", label: "ทำไมต้องเรา" }, { href: "#features", label: "ฟีเจอร์" }, { href: "#pricing", label: "ราคา" }, { href: "#faq", label: "FAQ" }].map((item) => (
               <a key={item.href} href={item.href} className="relative hover:text-white transition-colors duration-300 py-1 group">
                 {item.label}
-                <span className="absolute bottom-0 left-0 w-0 h-px bg-violet-400 group-hover:w-full transition-all duration-300" />
+                <span className="absolute bottom-0 left-0 w-0 h-px bg-[#00FFA7] group-hover:w-full transition-all duration-300" />
               </a>
             ))}
           </div>
 
           <div className="hidden md:flex items-center gap-3">
-            <Link href="/login" className="btn-glass px-5 py-2 text-sm inline-block">เข้าสู่ระบบ</Link>
+            <Link href="/login" className="bg-transparent border border-[var(--border-default)] text-[var(--text-primary)] rounded-xl hover:border-[rgba(0,255,167,0.3)] hover:bg-[rgba(0,255,167,0.04)] cursor-pointer px-5 py-2 text-sm inline-block">เข้าสู่ระบบ</Link>
             <Link href="/register" className="btn-primary px-5 py-2 text-sm inline-block">สมัครฟรี</Link>
           </div>
 
@@ -199,13 +175,13 @@ export default function LandingPage() {
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.2 }}
-              className="md:hidden border-t border-white/5 bg-[#040810]/95 backdrop-blur-2xl px-4 py-4 flex flex-col gap-1 overflow-hidden"
+              className="md:hidden border-t border-white/5 bg-[#040810]/95 px-4 py-4 flex flex-col gap-1 overflow-hidden"
             >
               {[{ href: "#why", label: "ทำไมต้องเรา" }, { href: "#features", label: "ฟีเจอร์" }, { href: "#pricing", label: "ราคา" }, { href: "#faq", label: "FAQ" }].map((item) => (
                 <a key={item.href} href={item.href} onClick={() => setMobileOpen(false)} className="text-slate-300 hover:text-white py-3 px-3 transition-colors rounded-lg hover:bg-white/5 min-h-[44px] flex items-center">{item.label}</a>
               ))}
               <div className="flex gap-3 pt-3 mt-2 border-t border-white/5">
-                <Link href="/login" className="btn-glass px-4 py-3 text-sm flex-1 text-center min-h-[44px] flex items-center justify-center">เข้าสู่ระบบ</Link>
+                <Link href="/login" className="bg-transparent border border-[var(--border-default)] text-[var(--text-primary)] rounded-xl hover:border-[rgba(0,255,167,0.3)] hover:bg-[rgba(0,255,167,0.04)] cursor-pointer px-4 py-3 text-sm flex-1 text-center min-h-[44px] flex items-center justify-center">เข้าสู่ระบบ</Link>
                 <Link href="/register" className="btn-primary px-4 py-3 text-sm flex-1 text-center min-h-[44px] flex items-center justify-center">สมัครฟรี</Link>
               </div>
             </motion.div>
@@ -216,27 +192,16 @@ export default function LandingPage() {
       {/* ─── HERO ─── */}
       <section className="relative pt-32 sm:pt-40 pb-20 sm:pb-28 px-4 sm:px-6">
         <div className="max-w-5xl mx-auto text-center">
-          {/* Floating blob — parallax + float */}
-          <motion.div
-            className="absolute top-20 left-1/2 -translate-x-1/2 w-[600px] h-[300px] rounded-full pointer-events-none -z-10 blur-3xl"
-            style={{ y: heroParallax, background: "radial-gradient(ellipse, rgba(139,92,246,0.15) 0%, transparent 70%)" }}
-          >
-            <motion.div
-              className="w-full h-full rounded-full"
-              animate={{ y: [0, -20, 0] }}
-              transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }}
-            />
-          </motion.div>
 
           {/* Badge */}
           <motion.div
             variants={fadeUp}
             initial="hidden"
             animate="show"
-            className="inline-flex items-center gap-2 mb-6 sm:mb-8 px-4 py-1.5 rounded-full border border-violet-500/20 bg-violet-500/[0.06]"
+            className="inline-flex items-center gap-2 mb-6 sm:mb-8 px-4 py-1.5 rounded-full border border-[rgba(0,255,167,0.15)] bg-[rgba(0,255,167,0.06)]"
           >
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-glow-pulse" />
-            <span className="text-cyan-300 text-xs sm:text-sm font-medium tracking-wide">ส่ง SMS ง่าย รวดเร็ว ราคาถูก</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse-dot" />
+            <span className="text-[#00FFA7] text-xs sm:text-sm font-medium tracking-wide">ส่ง SMS ง่าย รวดเร็ว ราคาถูก</span>
           </motion.div>
 
           {/* Heading */}
@@ -283,7 +248,7 @@ export default function LandingPage() {
               </Link>
             </motion.div>
             <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-              <a href="#pricing" className="btn-glass px-8 py-3.5 text-base rounded-xl w-full sm:w-auto text-center min-h-[48px] flex items-center justify-center font-medium">ดูราคา</a>
+              <a href="#pricing" className="bg-transparent border border-[var(--border-default)] text-[var(--text-primary)] rounded-xl hover:border-[rgba(0,255,167,0.3)] hover:bg-[rgba(0,255,167,0.04)] cursor-pointer px-8 py-3.5 text-base rounded-xl w-full sm:w-auto text-center min-h-[48px] flex items-center justify-center font-medium">ดูราคา</a>
             </motion.div>
           </motion.div>
 
@@ -309,7 +274,7 @@ export default function LandingPage() {
             initial="hidden"
             animate="show"
             transition={{ delay: 0.5 }}
-            className="mt-16 sm:mt-20 glass p-1"
+            className="mt-16 sm:mt-20 bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[20px] p-1"
           >
             <motion.div
               variants={stagger}
@@ -331,7 +296,7 @@ export default function LandingPage() {
 
       {/* ─── Divider ─── */}
       <div className="relative h-px pointer-events-none mx-8 sm:mx-24">
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-violet-400/20 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[rgba(0,255,167,0.2)] to-transparent" />
       </div>
 
       {/* ─── WHY US ─── */}
@@ -351,7 +316,7 @@ export default function LandingPage() {
             viewport={{ once: false, margin: "-100px" }}
             className="text-center mb-12 sm:mb-16"
           >
-            <div className="inline-block text-xs font-semibold text-violet-400 uppercase tracking-[0.2em] mb-3">Why Choose Us</div>
+            <div className="inline-block text-xs font-semibold text-[#00FFA7] uppercase tracking-[0.2em] mb-3">Why Choose Us</div>
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">
               ทำไมต้อง <span className="gradient-text-mixed">SMSOK</span>?
             </h2>
@@ -369,10 +334,10 @@ export default function LandingPage() {
               <motion.div
                 key={b.title}
                 variants={fadeUp}
-                whileHover={{ y: -4, boxShadow: "0 20px 40px rgba(139,92,246,0.2)" }}
-                className="glass card-glow p-5 sm:p-6 text-center group"
+                whileHover={{ y: -4, boxShadow: "0 20px 40px rgba(0,255,167,0.2)" }}
+                className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[20px] card-lift p-5 sm:p-6 text-center group"
               >
-                <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-violet-500/[0.08] border border-violet-500/10 flex items-center justify-center text-violet-400 group-hover:text-cyan-300 group-hover:bg-violet-500/[0.12] group-hover:border-violet-500/20 group-hover:shadow-[0_0_20px_rgba(139,92,246,0.15)] transition-all duration-500">
+                <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-[rgba(0,255,167,0.08)] border border-[rgba(0,255,167,0.1)] flex items-center justify-center text-[#00FFA7] group-hover:text-[#4779FF] group-hover:bg-[rgba(0,255,167,0.12)] group-hover:border-[rgba(0,255,167,0.2)] group-hover:shadow-[0_0_20px_rgba(0,255,167,0.15)] transition-all duration-500">
                   {b.icon}
                 </div>
                 <h3 className="font-semibold text-white mb-1.5 text-xs sm:text-sm md:text-base">{b.title}</h3>
@@ -385,7 +350,7 @@ export default function LandingPage() {
 
       {/* ─── Divider ─── */}
       <div className="relative h-px pointer-events-none mx-8 sm:mx-24">
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-400/15 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[rgba(0,255,167,0.15)] to-transparent" />
       </div>
 
       {/* ─── FEATURES ─── */}
@@ -405,9 +370,9 @@ export default function LandingPage() {
             viewport={{ once: false, margin: "-100px" }}
             className="text-center mb-12 sm:mb-16"
           >
-            <div className="inline-block text-xs font-semibold text-cyan-400 uppercase tracking-[0.2em] mb-3">Features</div>
+            <div className="inline-block text-xs font-semibold text-[#00FFA7] uppercase tracking-[0.2em] mb-3">Features</div>
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">
-              ฟีเจอร์<span className="neon-violet">ครบ</span>ทุกความต้องการ
+              ฟีเจอร์<span className="neon-cyan">ครบ</span>ทุกความต้องการ
             </h2>
             <p className="text-slate-300 max-w-xl mx-auto text-sm sm:text-base">ไม่ว่าจะส่งผ่านเว็บหรือ API เรามีทุกอย่างที่คุณต้องการ</p>
           </motion.div>
@@ -423,10 +388,10 @@ export default function LandingPage() {
               <motion.div
                 key={f.title}
                 variants={fadeUp}
-                whileHover={{ y: -4, boxShadow: "0 20px 40px rgba(129,140,248,0.15)" }}
-                className="glass card-glow p-6 sm:p-8 flex gap-5 group"
+                whileHover={{ y: -4, boxShadow: "0 20px 40px rgba(0,255,167,0.15)" }}
+                className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[20px] card-lift p-6 sm:p-8 flex gap-5 group"
               >
-                <div className="w-14 h-14 flex-shrink-0 rounded-xl bg-cyan-500/[0.08] border border-cyan-500/10 flex items-center justify-center text-cyan-400 group-hover:text-indigo-300 group-hover:bg-cyan-500/[0.12] group-hover:border-cyan-500/20 group-hover:shadow-[0_0_20px_rgba(129,140,248,0.15)] transition-all duration-500">
+                <div className="w-14 h-14 flex-shrink-0 rounded-xl bg-[rgba(0,255,167,0.08)] border border-[rgba(0,255,167,0.1)] flex items-center justify-center text-[#00FFA7] group-hover:text-[#4779FF] group-hover:bg-[rgba(0,255,167,0.12)] group-hover:border-[rgba(0,255,167,0.2)] group-hover:shadow-[0_0_20px_rgba(0,255,167,0.15)] transition-all duration-500">
                   {f.icon}
                 </div>
                 <div>
@@ -441,7 +406,7 @@ export default function LandingPage() {
 
       {/* ─── Divider ─── */}
       <div className="relative h-px pointer-events-none mx-8 sm:mx-24">
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-indigo-400/12 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[rgba(50,152,218,0.12)] to-transparent" />
       </div>
 
       {/* ─── CODE PREVIEW ─── */}
@@ -458,7 +423,7 @@ export default function LandingPage() {
             initial="hidden"
             whileInView="show"
             viewport={{ once: false, margin: "-80px" }}
-            className="glass overflow-hidden"
+            className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[20px] overflow-hidden"
           >
             <div className="flex items-center gap-2 px-4 py-3 border-b border-white/[0.04] bg-white/[0.02]">
               <div className="flex gap-1.5">
@@ -469,16 +434,16 @@ export default function LandingPage() {
               <span className="text-xs text-slate-300 ml-2 font-mono">send-sms.js</span>
             </div>
             <div className="p-5 sm:p-6 font-mono text-xs sm:text-sm leading-relaxed overflow-x-auto">
-              <div><span className="text-cyan-400">const</span> <span className="text-cyan-300">response</span> <span className="text-white/50">=</span> <span className="text-cyan-400">await</span> <span className="text-emerald-400">fetch</span><span className="text-white/40">(</span></div>
+              <div><span className="text-[#00FFA7]">const</span> <span className="text-[#00FFA7]">response</span> <span className="text-white/50">=</span> <span className="text-[#00FFA7]">await</span> <span className="text-emerald-400">fetch</span><span className="text-white/40">(</span></div>
               <div className="pl-4"><span className="text-amber-300">{`"https://api.smsok.com/v1/send"`}</span><span className="text-white/40">,</span></div>
               <div className="pl-4"><span className="text-white/40">{"{"}</span></div>
-              <div className="pl-8"><span className="text-cyan-300">method</span><span className="text-white/40">:</span> <span className="text-amber-300">{`"POST"`}</span><span className="text-white/40">,</span></div>
-              <div className="pl-8"><span className="text-cyan-300">headers</span><span className="text-white/40">:</span> <span className="text-white/40">{"{"}</span></div>
+              <div className="pl-8"><span className="text-[#00FFA7]">method</span><span className="text-white/40">:</span> <span className="text-amber-300">{`"POST"`}</span><span className="text-white/40">,</span></div>
+              <div className="pl-8"><span className="text-[#00FFA7]">headers</span><span className="text-white/40">:</span> <span className="text-white/40">{"{"}</span></div>
               <div className="pl-12"><span className="text-amber-300">{`"Authorization"`}</span><span className="text-white/40">:</span> <span className="text-amber-300">{`"Bearer \${API_KEY}"`}</span></div>
               <div className="pl-8"><span className="text-white/40">{"}"}</span><span className="text-white/40">,</span></div>
-              <div className="pl-8"><span className="text-cyan-300">body</span><span className="text-white/40">:</span> <span className="text-emerald-400">JSON</span><span className="text-white/40">.</span><span className="text-emerald-400">stringify</span><span className="text-white/40">({"{"}</span></div>
-              <div className="pl-12"><span className="text-cyan-300">to</span><span className="text-white/40">:</span> <span className="text-amber-300">{`"0891234567"`}</span><span className="text-white/40">,</span></div>
-              <div className="pl-12"><span className="text-cyan-300">message</span><span className="text-white/40">:</span> <span className="text-amber-300">{`"Your OTP is 1234"`}</span></div>
+              <div className="pl-8"><span className="text-[#00FFA7]">body</span><span className="text-white/40">:</span> <span className="text-emerald-400">JSON</span><span className="text-white/40">.</span><span className="text-emerald-400">stringify</span><span className="text-white/40">({"{"}</span></div>
+              <div className="pl-12"><span className="text-[#00FFA7]">to</span><span className="text-white/40">:</span> <span className="text-amber-300">{`"0891234567"`}</span><span className="text-white/40">,</span></div>
+              <div className="pl-12"><span className="text-[#00FFA7]">message</span><span className="text-white/40">:</span> <span className="text-amber-300">{`"Your OTP is 1234"`}</span></div>
               <div className="pl-8"><span className="text-white/40">{"})"}</span></div>
               <div className="pl-4"><span className="text-white/40">{"}"}</span></div>
               <div><span className="text-white/40">)</span><span className="text-white/40">;</span></div>
@@ -491,7 +456,7 @@ export default function LandingPage() {
 
       {/* ─── Divider ─── */}
       <div className="relative h-px pointer-events-none mx-8 sm:mx-24">
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-violet-400/20 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[rgba(0,255,167,0.2)] to-transparent" />
       </div>
 
       {/* ─── PRICING ─── */}
@@ -511,7 +476,7 @@ export default function LandingPage() {
             viewport={{ once: false, margin: "-100px" }}
             className="text-center mb-12 sm:mb-16"
           >
-            <div className="inline-block text-xs font-semibold text-violet-400 uppercase tracking-[0.2em] mb-3">Pricing</div>
+            <div className="inline-block text-xs font-semibold text-[#00FFA7] uppercase tracking-[0.2em] mb-3">Pricing</div>
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">
               เลือก<span className="gradient-text-mixed">แพ็กเกจ</span>ที่เหมาะกับคุณ
             </h2>
@@ -529,26 +494,26 @@ export default function LandingPage() {
               <motion.div
                 key={pkg.name}
                 variants={scaleIn}
-                whileHover={{ y: -6, boxShadow: pkg.best ? "0 20px 40px rgba(139,92,246,0.3)" : "0 20px 40px rgba(139,92,246,0.15)" }}
-                className={`glass card-glow p-5 sm:p-6 flex flex-col group relative ${
-                  pkg.best ? "border-sky-400/30 scale-[1.02] z-10" : ""
+                whileHover={{ y: -6, boxShadow: pkg.best ? "0 20px 40px rgba(0,255,167,0.3)" : "0 20px 40px rgba(0,255,167,0.15)" }}
+                className={`bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[20px] card-lift p-5 sm:p-6 flex flex-col group relative ${
+                  pkg.best ? "border-[rgba(0,255,167,0.3)] scale-[1.02] z-10" : ""
                 }`}
               >
-                {/* Best seller animated glow */}
+                {/* Best seller accent */}
                 {pkg.best && (
                   <motion.div
                     className="absolute -inset-px rounded-[16px] pointer-events-none"
-                    animate={{ boxShadow: ["0 0 20px rgba(124,58,237,0.3)", "0 0 40px rgba(124,58,237,0.6)", "0 0 20px rgba(124,58,237,0.3)"] }}
+                    animate={{ boxShadow: ["0 0 20px rgba(0,255,167,0.3)", "0 0 40px rgba(0,255,167,0.6)", "0 0 20px rgba(0,255,167,0.3)"] }}
                     transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
                   />
                 )}
                 {pkg.best && (
-                  <div className="absolute -inset-px rounded-[16px] bg-gradient-to-b from-sky-400/20 via-transparent to-cyan-400/10 pointer-events-none" />
+                  <div className="absolute -inset-px rounded-[16px] bg-gradient-to-b from-[rgba(0,255,167,0.2)] via-transparent to-[rgba(0,255,167,0.1)] pointer-events-none" />
                 )}
 
                 {pkg.best && (
-                  <div className="relative inline-flex items-center gap-1.5 text-xs font-bold text-violet-400 uppercase tracking-wider mb-3">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="text-violet-400">
+                  <div className="relative inline-flex items-center gap-1.5 text-xs font-bold text-[#00FFA7] uppercase tracking-wider mb-3">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="text-[#00FFA7]">
                       <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                     </svg>
                     Best Seller
@@ -557,7 +522,7 @@ export default function LandingPage() {
 
                 <div className="relative">
                   <div className="text-sm text-slate-300 mb-1">SMSOK {pkg.name}</div>
-                  <div className="text-2xl sm:text-3xl font-bold text-white mb-1 group-hover:text-cyan-200 transition-colors duration-300">
+                  <div className="text-2xl sm:text-3xl font-bold text-white mb-1 group-hover:text-[#00FFA7] transition-colors duration-300">
                     ฿{fmt(pkg.price)}
                   </div>
                   {pkg.bonus > 0 ? (
@@ -576,7 +541,7 @@ export default function LandingPage() {
 
                   <Link
                     href="/register"
-                    className={`mt-6 w-full py-3 rounded-xl font-semibold text-sm transition-all text-center min-h-[44px] flex items-center justify-center gap-2 ${pkg.best ? "btn-primary" : "btn-glass"}`}
+                    className={`mt-6 w-full py-3 rounded-xl font-semibold text-sm transition-all text-center min-h-[44px] flex items-center justify-center gap-2 ${pkg.best ? "btn-primary" : "bg-transparent border border-[var(--border-default)] text-[var(--text-primary)] rounded-xl hover:border-[rgba(0,255,167,0.3)] hover:bg-[rgba(0,255,167,0.04)] cursor-pointer"}`}
                   >
                     เลือกแพ็กเกจ
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all">
@@ -592,7 +557,7 @@ export default function LandingPage() {
 
       {/* ─── Divider ─── */}
       <div className="relative h-px pointer-events-none mx-8 sm:mx-24">
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-sky-400/15 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[rgba(50,152,218,0.15)] to-transparent" />
       </div>
 
       {/* ─── CTA ─── */}
@@ -608,16 +573,16 @@ export default function LandingPage() {
           initial="hidden"
           whileInView="show"
           viewport={{ once: false, margin: "-80px" }}
-          className="max-w-4xl mx-auto glass p-10 sm:p-14 text-center relative animate-breathe"
+          className="max-w-4xl mx-auto bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[20px] p-10 sm:p-14 text-center relative animate-breathe"
         >
-          <div className="absolute inset-0 rounded-[16px] bg-gradient-to-br from-violet-500/[0.05] to-cyan-500/[0.03] pointer-events-none" />
+          <div className="absolute inset-0 rounded-[16px] bg-gradient-to-br from-[rgba(0,255,167,0.05)] to-[rgba(50,152,218,0.03)] pointer-events-none" />
           <div className="relative">
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4">ต้องการแพ็กเกจพิเศษ?</h2>
             <p className="text-slate-300 mb-8 text-sm sm:text-base max-w-lg mx-auto">
               สำหรับธุรกิจที่ส่ง SMS มากกว่า 1 ล้านข้อความ/เดือน ติดต่อเราเพื่อรับราคาพิเศษ
             </p>
             <motion.button
-              whileHover={{ scale: 1.04, boxShadow: "0 0 30px rgba(139,92,246,0.4)" }}
+              whileHover={{ scale: 1.04, boxShadow: "0 0 30px rgba(0,255,167,0.4)" }}
               whileTap={{ scale: 0.97 }}
               className="btn-primary px-8 py-3.5 text-base rounded-xl cursor-pointer min-h-[48px] inline-flex items-center gap-2 font-semibold"
             >
@@ -630,7 +595,7 @@ export default function LandingPage() {
 
       {/* ─── Divider ─── */}
       <div className="relative h-px pointer-events-none mx-8 sm:mx-24">
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-400/15 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[rgba(0,255,167,0.15)] to-transparent" />
       </div>
 
       {/* ─── FAQ ─── */}
@@ -650,8 +615,8 @@ export default function LandingPage() {
             viewport={{ once: false, margin: "-100px" }}
             className="text-center mb-12 sm:mb-16"
           >
-            <div className="inline-block text-xs font-semibold text-cyan-400 uppercase tracking-[0.2em] mb-3">FAQ</div>
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold">คำถาม<span className="neon-violet">ที่พบบ่อย</span></h2>
+            <div className="inline-block text-xs font-semibold text-[#00FFA7] uppercase tracking-[0.2em] mb-3">FAQ</div>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold">คำถาม<span className="neon-cyan">ที่พบบ่อย</span></h2>
           </motion.div>
 
           <motion.div
@@ -665,7 +630,7 @@ export default function LandingPage() {
               <motion.div
                 key={faq.q}
                 variants={fadeUp}
-                className={`glass transition-all duration-400 ${openFaq === i ? "border-violet-500/25 shadow-[0_0_30px_rgba(139,92,246,0.06)]" : ""}`}
+                className={`bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[20px] transition-all duration-400 ${openFaq === i ? "border-[rgba(0,255,167,0.25)] shadow-[0_0_30px_rgba(0,255,167,0.06)]" : ""}`}
               >
                 <button
                   onClick={() => setOpenFaq(openFaq === i ? null : i)}
@@ -676,7 +641,7 @@ export default function LandingPage() {
                   <motion.span
                     animate={{ rotate: openFaq === i ? 45 : 0 }}
                     transition={{ duration: 0.2 }}
-                    className={`w-6 h-6 flex-shrink-0 rounded-full border border-white/10 flex items-center justify-center text-violet-400/50 text-sm ${openFaq === i ? "border-violet-500/30 bg-violet-500/10" : ""}`}
+                    className={`w-6 h-6 flex-shrink-0 rounded-full border border-white/10 flex items-center justify-center text-[#00FFA7]/50 text-sm ${openFaq === i ? "border-[rgba(0,255,167,0.3)] bg-[rgba(0,255,167,0.1)]" : ""}`}
                   >
                     +
                   </motion.span>
@@ -703,7 +668,7 @@ export default function LandingPage() {
 
       {/* ─── Divider ─── */}
       <div className="relative h-px pointer-events-none mx-8 sm:mx-24">
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-violet-400/10 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[rgba(0,255,167,0.1)] to-transparent" />
       </div>
 
       {/* ─── FOOTER ─── */}
@@ -712,7 +677,7 @@ export default function LandingPage() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 mb-12">
             <div className="col-span-2 sm:col-span-1">
               <Link href="/" className="flex items-center gap-2 mb-4">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-violet-400">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-[#00FFA7]">
                   <path d="M12 2L2 7l10 5 10-5-10-5z" fill="currentColor" opacity="0.3" />
                   <path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
@@ -744,7 +709,7 @@ export default function LandingPage() {
                 { label: "Facebook", path: "M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" },
                 { label: "X", path: "M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" },
               ].map((s) => (
-                <motion.a key={s.label} href="#" whileHover={{ scale: 1.2, color: "#8B5CF6" }} className="text-slate-400 transition-colors p-1" aria-label={s.label}>
+                <motion.a key={s.label} href="#" whileHover={{ scale: 1.2, color: "#00FFA7" }} className="text-slate-400 transition-colors p-1" aria-label={s.label}>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d={s.path} /></svg>
                 </motion.a>
               ))}

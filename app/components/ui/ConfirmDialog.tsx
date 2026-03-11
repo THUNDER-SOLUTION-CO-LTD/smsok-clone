@@ -71,7 +71,7 @@ export default function ConfirmDialog({
               <button
                 onClick={onClose}
                 disabled={loading}
-                className="flex-1 btn-glass py-2.5 rounded-xl text-sm font-medium"
+                className="flex-1 bg-transparent border border-[var(--border-default)] text-[var(--text-primary)] hover:border-[rgba(0,255,167,0.3)] hover:bg-[rgba(0,255,167,0.04)] py-2.5 rounded-xl text-sm font-medium"
               >
                 {cancelLabel}
               </button>
