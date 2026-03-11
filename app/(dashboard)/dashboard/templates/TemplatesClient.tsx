@@ -1,36 +1,72 @@
 "use client";
 
-import { useState, useTransition, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useTransition, useMemo, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import {
   createTemplate,
   updateTemplate,
   deleteTemplate,
 } from "@/lib/actions/templates";
-import { useRouter } from "next/navigation";
+import type { TemplateItem } from "@/lib/types/api-responses";
 import { safeErrorMessage } from "@/lib/error-messages";
-import EmptyState from "@/app/components/ui/EmptyState";
-import { smsCounterText, fieldCls } from "@/lib/form-utils";
+import { useToast } from "@/app/components/ui/Toast";
+import { smsCounterText } from "@/lib/form-utils";
 
-// ---------------------------------------------------------------------------
+// shadcn
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Card } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+
+// Icons
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  FileText,
+  Loader2,
+} from "lucide-react";
+
+// ==========================================
 // Types
-// ---------------------------------------------------------------------------
+// ==========================================
 
-type Template = {
-  id: string;
-  userId: string;
-  name: string;
-  content: string;
-  category: string;
-  createdAt: string;
-  updatedAt: string;
-};
+type Template = TemplateItem;
 
 type CategoryKey = "all" | "general" | "otp" | "marketing" | "notification";
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
+// ==========================================
+// Constants — Nansen-aligned
+// ==========================================
 
 const CATEGORIES: { key: CategoryKey; label: string }[] = [
   { key: "all", label: "ทั้งหมด" },
@@ -45,24 +81,24 @@ const CATEGORY_STYLES: Record<
   { bg: string; text: string; dot: string }
 > = {
   general: {
-    bg: "bg-slate-500/10",
-    text: "text-slate-300",
-    dot: "bg-slate-300",
+    bg: "bg-[rgba(155,161,165,0.08)]",
+    text: "text-[var(--text-muted)]",
+    dot: "bg-[var(--text-muted)]",
   },
   otp: {
-    bg: "bg-amber-500/10",
-    text: "text-amber-400",
-    dot: "bg-amber-400",
+    bg: "bg-[rgba(0,255,167,0.08)]",
+    text: "text-[var(--accent)]",
+    dot: "bg-[var(--accent)]",
   },
   marketing: {
-    bg: "bg-violet-500/10",
-    text: "text-violet-400",
-    dot: "bg-violet-400",
+    bg: "bg-[rgba(245,158,11,0.08)]",
+    text: "text-[#F59E0B]",
+    dot: "bg-[#F59E0B]",
   },
   notification: {
-    bg: "bg-cyan-500/10",
-    text: "text-cyan-400",
-    dot: "bg-cyan-400",
+    bg: "bg-[rgba(var(--accent-secondary-rgb,50,152,218),0.08)]",
+    text: "text-[var(--accent-secondary)]",
+    dot: "bg-[var(--accent-secondary)]",
   },
 };
 
@@ -73,50 +109,27 @@ const VARIABLES = [
   { label: "จำนวนเงิน", value: "{{amount}}" },
 ];
 
-// ---------------------------------------------------------------------------
-// Animations
-// ---------------------------------------------------------------------------
+// ==========================================
+// Zod schema
+// ==========================================
 
-const stagger = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.06 } },
-};
+const templateFormSchema = z.object({
+  name: z
+    .string()
+    .min(1, "กรุณาตั้งชื่อเทมเพลต")
+    .max(100, "ชื่อต้องไม่เกิน 100 ตัวอักษร"),
+  category: z.enum(["general", "otp", "marketing", "notification"]),
+  content: z
+    .string()
+    .min(1, "กรุณากรอกข้อความ")
+    .max(1000, "ข้อความต้องไม่เกิน 1,000 ตัวอักษร"),
+});
 
-const cardVariant = {
-  hidden: { opacity: 0, y: 20, scale: 0.97 },
-  show: {
-    opacity: 1,
-    y: 0,
-    scale: 1,
-    transition: { duration: 0.4, ease: "easeOut" as const },
-  },
-};
+type TemplateFormValues = z.infer<typeof templateFormSchema>;
 
-const modalOverlay = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1 },
-  exit: { opacity: 0 },
-};
-
-const modalContent = {
-  hidden: { opacity: 0, scale: 0.92, y: 24 },
-  visible: {
-    opacity: 1,
-    scale: 1,
-    y: 0,
-    transition: { duration: 0.35, ease: [0.16, 1, 0.3, 1] as const },
-  },
-  exit: {
-    opacity: 0,
-    scale: 0.92,
-    y: 24,
-    transition: { duration: 0.2 },
-  },
-};
-
-// ---------------------------------------------------------------------------
+// ==========================================
 // Helpers
-// ---------------------------------------------------------------------------
+// ==========================================
 
 function getCategoryStyle(category: string) {
   return CATEGORY_STYLES[category] || CATEGORY_STYLES.general;
@@ -134,7 +147,7 @@ function highlightVariables(text: string) {
       return (
         <span
           key={i}
-          className="inline-block px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-400 text-[11px] font-mono font-semibold mx-0.5"
+          className="inline-block px-1.5 py-0.5 rounded bg-[rgba(0,255,167,0.06)] text-[var(--accent)] text-[11px] font-mono font-semibold mx-0.5 border border-[rgba(0,255,167,0.1)]"
         >
           {part}
         </span>
@@ -160,34 +173,9 @@ function formatDate(iso: string) {
   });
 }
 
-// ---------------------------------------------------------------------------
-// Spinner
-// ---------------------------------------------------------------------------
-
-function Spinner() {
-  return (
-    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-      <circle
-        className="opacity-25"
-        cx="12"
-        cy="12"
-        r="10"
-        stroke="currentColor"
-        strokeWidth="4"
-        fill="none"
-      />
-      <path
-        className="opacity-75"
-        fill="currentColor"
-        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-      />
-    </svg>
-  );
-}
-
-// ---------------------------------------------------------------------------
+// ==========================================
 // Main Component
-// ---------------------------------------------------------------------------
+// ==========================================
 
 export default function TemplatesClient({
   userId,
@@ -197,50 +185,37 @@ export default function TemplatesClient({
   initialTemplates: Template[];
 }) {
   const router = useRouter();
+  const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
 
   // Filter
   const [activeCategory, setActiveCategory] = useState<CategoryKey>("all");
 
-  // Modal
-  const [showModal, setShowModal] = useState(false);
+  // Dialog states
+  const [showDialog, setShowDialog] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
+  const [showDeleteAlert, setShowDeleteAlert] = useState(false);
+  const [deletingTemplate, setDeletingTemplate] = useState<Template | null>(null);
+
+  // Textarea ref for cursor insertion
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Form
-  const [formName, setFormName] = useState("");
-  const [formContent, setFormContent] = useState("");
-  const [formCategory, setFormCategory] = useState("general");
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const form = useForm<TemplateFormValues>({
+    resolver: zodResolver(templateFormSchema),
+    defaultValues: { name: "", category: "general", content: "" },
+  });
 
-  function validateTemplateField(field: string, value: string) {
-    let error = "";
-    if (field === "name" && value && value.trim().length < 1) error = "กรุณาตั้งชื่อเทมเพลต";
-    if (field === "content" && value && value.trim().length < 1) error = "กรุณากรอกข้อความ";
-    setFormErrors(prev => ({ ...prev, [field]: error }));
-  }
+  const contentValue = form.watch("content");
 
-  // Feedback
-  const [feedback, setFeedback] = useState<{
-    type: "success" | "error";
-    text: string;
-  } | null>(null);
-
-  // Delete confirm
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-
-  // ---------------------------------------------------------------------------
-  // Filtered templates
-  // ---------------------------------------------------------------------------
+  // ==========================================
+  // Derived data
+  // ==========================================
 
   const filtered = useMemo(() => {
     if (activeCategory === "all") return initialTemplates;
     return initialTemplates.filter((t) => t.category === activeCategory);
   }, [initialTemplates, activeCategory]);
-
-  // ---------------------------------------------------------------------------
-  // Counts per category
-  // ---------------------------------------------------------------------------
 
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = { all: initialTemplates.length };
@@ -250,181 +225,128 @@ export default function TemplatesClient({
     return counts;
   }, [initialTemplates]);
 
-  // ---------------------------------------------------------------------------
-  // Modal helpers
-  // ---------------------------------------------------------------------------
+  // ==========================================
+  // Handlers
+  // ==========================================
 
   function openCreate() {
     setEditingTemplate(null);
-    setFormName("");
-    setFormContent("");
-    setFormCategory("general");
-    setFeedback(null);
-    setShowModal(true);
+    form.reset({ name: "", category: "general", content: "" });
+    setShowDialog(true);
   }
 
   function openEdit(template: Template) {
     setEditingTemplate(template);
-    setFormName(template.name);
-    setFormContent(template.content);
-    setFormCategory(template.category);
-    setFeedback(null);
-    setShowModal(true);
-  }
-
-  function closeModal() {
-    setShowModal(false);
-    setEditingTemplate(null);
+    form.reset({
+      name: template.name,
+      category: template.category as TemplateFormValues["category"],
+      content: template.content,
+    });
+    setShowDialog(true);
   }
 
   function insertVariable(variable: string) {
-    setFormContent((prev) => prev + variable);
+    const textarea = textareaRef.current;
+    if (textarea) {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const current = form.getValues("content");
+      const newContent =
+        current.substring(0, start) + variable + current.substring(end);
+      form.setValue("content", newContent, { shouldValidate: true });
+      // Restore cursor
+      setTimeout(() => {
+        textarea.selectionStart = textarea.selectionEnd =
+          start + variable.length;
+        textarea.focus();
+      }, 0);
+    } else {
+      form.setValue("content", form.getValues("content") + variable, {
+        shouldValidate: true,
+      });
+    }
   }
 
-  // ---------------------------------------------------------------------------
-  // Actions
-  // ---------------------------------------------------------------------------
-
-  function handleSave() {
-    if (!formName.trim() || !formContent.trim()) return;
-    setFeedback(null);
-
+  function handleSubmit(data: TemplateFormValues) {
     startTransition(async () => {
       try {
         if (editingTemplate) {
           await updateTemplate(userId, editingTemplate.id, {
-            name: formName.trim(),
-            content: formContent,
-            category: formCategory,
+            name: data.name.trim(),
+            content: data.content,
+            category: data.category,
           });
-          setFeedback({ type: "success", text: "อัปเดตเทมเพลตสำเร็จ!" });
+          toast("success", "อัปเดตเทมเพลตสำเร็จ!");
         } else {
           await createTemplate(userId, {
-            name: formName.trim(),
-            content: formContent,
-            category: formCategory,
+            name: data.name.trim(),
+            content: data.content,
+            category: data.category,
           });
-          setFeedback({ type: "success", text: "สร้างเทมเพลตสำเร็จ!" });
+          toast("success", "สร้างเทมเพลตสำเร็จ!");
         }
-        closeModal();
+        setShowDialog(false);
         router.refresh();
       } catch (e) {
-        setFeedback({
-          type: "error",
-          text: safeErrorMessage(e),
-        });
+        toast("error", safeErrorMessage(e));
       }
     });
   }
 
-  function handleDelete(templateId: string) {
-    setDeletingId(templateId);
-    setFeedback(null);
-
+  function handleDeleteConfirm() {
+    if (!deletingTemplate) return;
     startTransition(async () => {
       try {
-        await deleteTemplate(userId, templateId);
-        setFeedback({ type: "success", text: "ลบเทมเพลตสำเร็จ" });
-        setConfirmDeleteId(null);
+        await deleteTemplate(userId, deletingTemplate.id);
+        toast("success", "ลบเทมเพลตสำเร็จ");
+        setShowDeleteAlert(false);
+        setDeletingTemplate(null);
         router.refresh();
       } catch (e) {
-        setFeedback({
-          type: "error",
-          text: safeErrorMessage(e),
-        });
-      } finally {
-        setDeletingId(null);
+        toast("error", safeErrorMessage(e));
       }
     });
   }
 
-  // ---------------------------------------------------------------------------
+  // ==========================================
   // Render
-  // ---------------------------------------------------------------------------
+  // ==========================================
 
   return (
-    <motion.div
-      className="p-6 md:p-8 max-w-6xl"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, ease: "easeOut" }}
-    >
-      {/* ------------------------------------------------------------------ */}
-      {/* Header                                                              */}
-      {/* ------------------------------------------------------------------ */}
-
-      <div className="flex items-center justify-between mb-8">
+    <div className="p-4 md:p-8 max-w-6xl pb-20 md:pb-8">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-3">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight gradient-text-mixed">
+          <h2 className="text-2xl font-bold tracking-tight text-white">
             เทมเพลตข้อความ
           </h2>
           <p className="text-sm text-[var(--text-muted)] mt-1">
             จัดการเทมเพลตข้อความสำเร็จรูป ({initialTemplates.length} รายการ)
           </p>
         </div>
-        <motion.button
+        <Button
           onClick={openCreate}
-          className="btn-primary px-4 py-2.5 text-sm rounded-xl inline-flex items-center gap-2"
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
+          className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--bg-base)] font-semibold"
         >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
+          <Plus className="w-4 h-4 mr-1.5" />
           สร้างใหม่
-        </motion.button>
+        </Button>
       </div>
 
-      {/* ------------------------------------------------------------------ */}
-      {/* Feedback                                                            */}
-      {/* ------------------------------------------------------------------ */}
-
-      <AnimatePresence>
-        {feedback && !showModal && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className={`mb-6 p-4 rounded-xl border text-sm font-medium ${
-              feedback.type === "success"
-                ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
-                : "bg-red-500/10 border-red-500/20 text-red-400"
-            }`}
-          >
-            {feedback.text}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ------------------------------------------------------------------ */}
-      {/* Category Filter Tabs                                                */}
-      {/* ------------------------------------------------------------------ */}
-
-      <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-1 scrollbar-none">
+      {/* Category Filter Tabs */}
+      <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-1">
         {CATEGORIES.map(({ key, label }) => {
           const isActive = activeCategory === key;
           const count = categoryCounts[key] || 0;
           return (
-            <motion.button
+            <button
               key={key}
               onClick={() => setActiveCategory(key)}
-              className={`shrink-0 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
+              className={`shrink-0 px-3.5 py-1.5 rounded-full text-[13px] font-medium transition-all flex items-center gap-2 border min-h-[36px] ${
                 isActive
-                  ? "bg-white/[0.08] text-white border border-white/[0.08] shadow-lg shadow-white/[0.02]"
-                  : "text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-white/[0.03]"
+                  ? "bg-[rgba(0,255,167,0.08)] border-[rgba(0,255,167,0.3)] text-[var(--accent)]"
+                  : "bg-transparent border-[var(--border-subtle)] text-[var(--text-muted)] hover:bg-[rgba(255,255,255,0.03)] hover:text-white"
               }`}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
             >
               {key !== "all" && (
                 <span
@@ -432,49 +354,31 @@ export default function TemplatesClient({
                 />
               )}
               {label}
-              <span
-                className={`text-xs ${
-                  isActive ? "text-slate-300" : "text-[var(--text-muted)]"
-                }`}
-              >
-                {count}
-              </span>
-            </motion.button>
+              <span className="text-[11px] opacity-70">{count}</span>
+            </button>
           );
         })}
       </div>
 
-      {/* ------------------------------------------------------------------ */}
-      {/* Template Cards Grid                                                 */}
-      {/* ------------------------------------------------------------------ */}
-
+      {/* Template Cards Grid */}
       {filtered.length > 0 ? (
-        <motion.div
-          className="grid grid-cols-1 md:grid-cols-2 gap-4"
-          variants={stagger}
-          initial="hidden"
-          animate="show"
-          key={activeCategory}
-        >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filtered.map((template) => {
             const style = getCategoryStyle(template.category);
             const vars = extractVariables(template.content);
-            const isConfirmingDelete = confirmDeleteId === template.id;
 
             return (
-              <motion.div
+              <Card
                 key={template.id}
-                variants={cardVariant}
-                className="glass p-5 card-hover group relative"
-                layout
+                className="bg-[var(--bg-surface)] border-[var(--border-subtle)] rounded-[20px] p-4 hover:border-[rgba(0,255,167,0.15)] hover:-translate-y-0.5 transition-all group"
               >
                 {/* Top row: name + category badge */}
                 <div className="flex items-start justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-[var(--text-primary)] leading-snug pr-4 line-clamp-1">
+                  <h3 className="text-[15px] font-semibold text-white leading-snug pr-4 line-clamp-1">
                     {template.name}
                   </h3>
                   <span
-                    className={`shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-semibold uppercase tracking-wider ${style.bg} ${style.text}`}
+                    className={`shrink-0 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium ${style.bg} ${style.text}`}
                   >
                     <span
                       className={`w-1.5 h-1.5 rounded-full ${style.dot}`}
@@ -484,20 +388,17 @@ export default function TemplatesClient({
                 </div>
 
                 {/* Content preview */}
-                <div className="text-xs text-[var(--text-secondary)] leading-relaxed mb-3 line-clamp-3 min-h-[3.6em]">
+                <div className="text-[13px] text-[var(--text-secondary)] leading-relaxed mb-3 line-clamp-3 min-h-[3.6em]">
                   {highlightVariables(template.content)}
                 </div>
 
                 {/* Variables used */}
                 {vars.length > 0 && (
                   <div className="flex items-center gap-1.5 mb-3 flex-wrap">
-                    <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">
-                      ตัวแปร:
-                    </span>
                     {vars.map((v) => (
                       <span
                         key={v}
-                        className="text-[10px] px-2 py-0.5 rounded-md bg-cyan-500/10 text-cyan-400 font-mono"
+                        className="text-[11px] px-1.5 py-0.5 rounded bg-[rgba(0,255,167,0.06)] text-[var(--accent)] font-mono border border-[rgba(0,255,167,0.1)]"
                       >
                         {v}
                       </span>
@@ -507,375 +408,271 @@ export default function TemplatesClient({
 
                 {/* Footer: timestamp + actions */}
                 <div className="flex items-center justify-between pt-3 border-t border-[var(--border-subtle)]">
-                  <span className="text-[10px] text-[var(--text-muted)]">
+                  <span className="text-[12px] text-[var(--text-muted)]">
                     อัปเดต {formatDate(template.updatedAt)}
                   </span>
 
-                  <div className="flex items-center gap-2">
-                    {isConfirmingDelete ? (
-                      <>
-                        <motion.button
-                          onClick={() => handleDelete(template.id)}
-                          disabled={deletingId === template.id}
-                          className="px-3 py-1.5 text-[11px] font-semibold rounded-lg bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-colors disabled:opacity-40"
-                          initial={{ opacity: 0, scale: 0.9 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          whileTap={{ scale: 0.95 }}
-                        >
-                          {deletingId === template.id ? (
-                            <Spinner />
-                          ) : (
-                            "ยืนยันลบ"
-                          )}
-                        </motion.button>
-                        <motion.button
-                          onClick={() => setConfirmDeleteId(null)}
-                          className="px-3 py-1.5 text-[11px] font-medium rounded-lg text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
-                          initial={{ opacity: 0, scale: 0.9 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          whileTap={{ scale: 0.95 }}
-                        >
-                          ยกเลิก
-                        </motion.button>
-                      </>
-                    ) : (
-                      <>
-                        <motion.button
-                          onClick={() => openEdit(template)}
-                          className="px-3 py-1.5 text-[11px] font-medium rounded-lg text-[var(--text-secondary)] hover:text-white hover:bg-white/[0.06] transition-all"
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                        >
-                          <span className="flex items-center gap-1.5">
-                            <svg
-                              width="12"
-                              height="12"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            >
-                              <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
-                              <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
-                            </svg>
-                            แก้ไข
-                          </span>
-                        </motion.button>
-                        <motion.button
-                          onClick={() => setConfirmDeleteId(template.id)}
-                          className="px-3 py-1.5 text-[11px] font-medium rounded-lg text-[var(--text-muted)] hover:text-red-400 hover:bg-red-500/10 transition-all"
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                        >
-                          <span className="flex items-center gap-1.5">
-                            <svg
-                              width="12"
-                              height="12"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            >
-                              <polyline points="3 6 5 6 21 6" />
-                              <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
-                            </svg>
-                            ลบ
-                          </span>
-                        </motion.button>
-                      </>
-                    )}
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => openEdit(template)}
+                      className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-white hover:bg-[rgba(255,255,255,0.04)] transition-all"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        setDeletingTemplate(template);
+                        setShowDeleteAlert(true);
+                      }}
+                      className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-red-400 hover:bg-[rgba(239,68,68,0.06)] transition-all"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
-              </motion.div>
+              </Card>
             );
           })}
-        </motion.div>
+        </div>
       ) : (
-        <EmptyState
-          icon={
-            <svg
-              width="32"
-              height="32"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-              <polyline points="14 2 14 8 20 8" />
-              <line x1="16" y1="13" x2="8" y2="13" />
-              <line x1="16" y1="17" x2="8" y2="17" />
-              <polyline points="10 9 9 9 8 9" />
-            </svg>
-          }
-          title={
-            activeCategory === "all"
+        /* Empty state */
+        <Card className="bg-[var(--bg-surface)] border-[var(--border-subtle)] rounded-[20px] p-12 text-center">
+          <div className="w-16 h-16 rounded-full bg-[rgba(0,255,167,0.08)] border border-[rgba(0,255,167,0.15)] flex items-center justify-center mx-auto mb-4">
+            <FileText className="w-8 h-8 text-[var(--accent)]" />
+          </div>
+          <h3 className="text-lg font-semibold text-white mb-2">
+            {activeCategory === "all"
               ? "ยังไม่มีเทมเพลต"
-              : `ไม่มีเทมเพลตในหมวด "${getCategoryLabel(activeCategory)}"`
-          }
-          description="สร้างเทมเพลตข้อความสำเร็จรูปเพื่อส่งข้อความได้รวดเร็วขึ้น"
-          action={{ label: "+ สร้างเทมเพลต", onClick: openCreate }}
-        />
+              : `ไม่มีเทมเพลตในหมวด "${getCategoryLabel(activeCategory)}"`}
+          </h3>
+          <p className="text-sm text-[var(--text-muted)] mb-6">
+            สร้างเทมเพลตข้อความสำเร็จรูปเพื่อส่งข้อความได้รวดเร็วขึ้น
+          </p>
+          <Button
+            onClick={openCreate}
+            className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--bg-base)] font-semibold"
+          >
+            <Plus className="w-4 h-4 mr-1.5" />
+            สร้างเทมเพลต
+          </Button>
+        </Card>
       )}
 
-      {/* ------------------------------------------------------------------ */}
-      {/* Create / Edit Modal                                                 */}
-      {/* ------------------------------------------------------------------ */}
-
-      <AnimatePresence>
-        {showModal && (
-          <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            variants={modalOverlay}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-          >
-            {/* Backdrop */}
-            <motion.div
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-              onClick={closeModal}
-            />
-
-            {/* Modal Content */}
-            <motion.div
-              className="relative w-full max-w-lg glass p-6 border border-[var(--border-subtle)] shadow-2xl max-h-[90vh] overflow-y-auto"
-              variants={modalContent}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Modal Header */}
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-base font-semibold flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500/[0.12] to-cyan-500/[0.08] border border-violet-500/10 flex items-center justify-center">
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="text-violet-400"
-                    >
-                      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-                      <polyline points="14 2 14 8 20 8" />
-                    </svg>
-                  </div>
-                  <span className="gradient-text-mixed">
-                    {editingTemplate ? "แก้ไขเทมเพลต" : "สร้างเทมเพลตใหม่"}
-                  </span>
-                </h3>
-                <motion.button
-                  onClick={closeModal}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-white hover:bg-white/[0.06] transition-all"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
+      {/* Mobile action buttons — visible on cards (touch targets) */}
+      <div className="md:hidden mt-4">
+        {filtered.length > 0 && (
+          <div className="space-y-3">
+            {filtered.map((template) => {
+              const style = getCategoryStyle(template.category);
+              return (
+                <div
+                  key={`mobile-actions-${template.id}`}
+                  className="flex items-center justify-end gap-2 px-1"
                 >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
+                  <span className="flex-1 text-xs text-[var(--text-muted)] truncate">
+                    {template.name}
+                  </span>
+                  <button
+                    onClick={() => openEdit(template)}
+                    className="min-w-[44px] min-h-[44px] flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
                   >
-                    <line x1="18" y1="6" x2="6" y2="18" />
-                    <line x1="6" y1="6" x2="18" y2="18" />
-                  </svg>
-                </motion.button>
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      setDeletingTemplate(template);
+                      setShowDeleteAlert(true);
+                    }}
+                    className="min-w-[44px] min-h-[44px] flex items-center justify-center text-[var(--text-muted)] hover:text-red-400 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* ==========================================
+          DIALOGS
+          ========================================== */}
+
+      {/* Create / Edit Dialog */}
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent className="bg-[var(--bg-surface)] border-[var(--border-subtle)] rounded-[20px] sm:max-w-[560px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-white text-lg">
+              {editingTemplate ? "แก้ไขเทมเพลต" : "สร้างเทมเพลตใหม่"}
+            </DialogTitle>
+            <DialogDescription className="text-[var(--text-muted)]">
+              {editingTemplate
+                ? "แก้ไขข้อมูลเทมเพลตข้อความ"
+                : "สร้างเทมเพลตข้อความสำเร็จรูปสำหรับส่ง SMS"}
+            </DialogDescription>
+          </DialogHeader>
+
+          <Form {...form}>
+            <form
+              onSubmit={form.handleSubmit(handleSubmit)}
+              className="space-y-4"
+            >
+              {/* Name */}
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs font-semibold uppercase tracking-[0.05em] text-[var(--text-secondary)]">
+                      ชื่อเทมเพลต *
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="เช่น ยืนยัน OTP, โปรโมชั่นประจำเดือน"
+                        maxLength={100}
+                        className="h-11 bg-[var(--bg-base)] border-[var(--border-subtle)] text-white placeholder:text-[var(--text-muted)] rounded-lg focus:border-[rgba(0,255,167,0.6)] focus:ring-[rgba(0,255,167,0.12)]"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Category — RadioGroup style inline cards */}
+              <FormField
+                control={form.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs font-semibold uppercase tracking-[0.05em] text-[var(--text-secondary)]">
+                      หมวดหมู่
+                    </FormLabel>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {CATEGORIES.filter((c) => c.key !== "all").map(
+                        ({ key, label }) => {
+                          const catStyle = getCategoryStyle(key);
+                          const isSelected = field.value === key;
+                          return (
+                            <button
+                              key={key}
+                              type="button"
+                              onClick={() => field.onChange(key)}
+                              className={`px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all flex items-center gap-2 border ${
+                                isSelected
+                                  ? "border-[rgba(0,255,167,0.5)] bg-[rgba(0,255,167,0.04)] text-white"
+                                  : "border-[var(--border-subtle)] bg-transparent text-[var(--text-muted)] hover:border-[rgba(0,255,167,0.2)] hover:text-white"
+                              }`}
+                            >
+                              <span
+                                className={`w-2 h-2 rounded-full ${catStyle.dot}`}
+                              />
+                              {label}
+                            </button>
+                          );
+                        },
+                      )}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Content */}
+              <FormField
+                control={form.control}
+                name="content"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="flex items-center justify-between">
+                      <FormLabel className="text-xs font-semibold uppercase tracking-[0.05em] text-[var(--text-secondary)]">
+                        ข้อความ *
+                      </FormLabel>
+                      <span
+                        className={`text-[10px] font-mono ${
+                          field.value.length > 900
+                            ? "text-red-400"
+                            : field.value.length > 700
+                              ? "text-[#F59E0B]"
+                              : "text-[var(--text-muted)]"
+                        }`}
+                      >
+                        {field.value.length}/1,000
+                      </span>
+                    </div>
+                    <FormControl>
+                      <Textarea
+                        placeholder="พิมพ์ข้อความ... ใช้ {{name}} สำหรับตัวแปร"
+                        maxLength={1000}
+                        rows={5}
+                        className="bg-[var(--bg-base)] border-[var(--border-subtle)] text-white placeholder:text-[var(--text-muted)] rounded-lg resize-y min-h-[120px] focus:border-[rgba(0,255,167,0.6)] focus:ring-[rgba(0,255,167,0.12)]"
+                        {...field}
+                        ref={(el) => {
+                          field.ref(el);
+                          (textareaRef as React.MutableRefObject<HTMLTextAreaElement | null>).current = el;
+                        }}
+                      />
+                    </FormControl>
+                    {field.value && (
+                      <p className="text-[11px] text-[var(--text-muted)] text-right">
+                        {smsCounterText(field.value)}
+                      </p>
+                    )}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Variable helper buttons */}
+              <div>
+                <label className="block text-xs text-[var(--text-muted)] mb-2">
+                  แทรกตัวแปร
+                </label>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {VARIABLES.map(({ label, value }) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => insertVariable(value)}
+                      className="px-3 py-1.5 rounded-lg text-[11px] font-mono bg-[rgba(0,255,167,0.06)] text-[var(--accent)] hover:bg-[rgba(0,255,167,0.12)] border border-[rgba(0,255,167,0.1)] transition-all flex items-center gap-1.5"
+                    >
+                      <Plus className="w-2.5 h-2.5" />
+                      {label}{" "}
+                      <span className="opacity-60">{value}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              {/* Form */}
-              <div className="space-y-4">
-                {/* Name */}
-                <div>
-                  <label className="block text-xs text-[var(--text-secondary)] uppercase tracking-wider mb-2">
-                    ชื่อเทมเพลต *
-                  </label>
-                  <input
-                    type="text"
-                    className={fieldCls(formErrors.name, formName)}
-                    placeholder="เช่น ยืนยัน OTP, โปรโมชั่นประจำเดือน"
-                    value={formName}
-                    onChange={(e) => { setFormName(e.target.value); validateTemplateField("name", e.target.value); }}
-                    maxLength={100}
-                  />
-                  {formErrors.name && <p className="text-red-400 text-xs mt-1">{formErrors.name}</p>}
-                </div>
-
-                {/* Category */}
-                <div>
-                  <label className="block text-xs text-[var(--text-secondary)] uppercase tracking-wider mb-2">
-                    หมวดหมู่
-                  </label>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {CATEGORIES.filter((c) => c.key !== "all").map(
-                      ({ key, label }) => {
-                        const catStyle = getCategoryStyle(key);
-                        const isSelected = formCategory === key;
-                        return (
-                          <motion.button
-                            key={key}
-                            type="button"
-                            onClick={() => setFormCategory(key)}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
-                              isSelected
-                                ? `${catStyle.bg} ${catStyle.text} ring-1 ring-current/20`
-                                : "text-[var(--text-muted)] hover:text-[var(--text-secondary)] bg-white/[0.02] hover:bg-white/[0.04]"
-                            }`}
-                            whileHover={{ scale: 1.03 }}
-                            whileTap={{ scale: 0.97 }}
-                          >
-                            <span
-                              className={`w-1.5 h-1.5 rounded-full ${
-                                isSelected
-                                  ? catStyle.dot
-                                  : "bg-current opacity-40"
-                              }`}
-                            />
-                            {label}
-                          </motion.button>
-                        );
-                      }
-                    )}
-                  </div>
-                </div>
-
-                {/* Content */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="text-xs text-[var(--text-secondary)] uppercase tracking-wider">
-                      ข้อความ *
-                    </label>
-                    <span
-                      className={`text-[10px] font-mono ${
-                        formContent.length > 900
-                          ? "text-red-400"
-                          : formContent.length > 700
-                            ? "text-amber-400"
-                            : "text-[var(--text-muted)]"
-                      }`}
-                    >
-                      {formContent.length}/1,000
-                    </span>
-                  </div>
-                  <textarea
-                    className={fieldCls(formErrors.content, formContent, "min-h-[120px] resize-y")}
-                    placeholder={'พิมพ์ข้อความ... ใช้ {{name}} สำหรับตัวแปร'}
-                    value={formContent}
-                    onChange={(e) => { setFormContent(e.target.value); validateTemplateField("content", e.target.value); }}
-                    maxLength={1000}
-                    rows={5}
-                  />
-                  {formContent && (
-                    <p className="text-[11px] text-[var(--text-muted)] mt-1 text-right">{smsCounterText(formContent)}</p>
-                  )}
-                </div>
-
-                {/* Variable helper buttons */}
+              {/* Preview */}
+              {contentValue.trim() && (
                 <div>
                   <label className="block text-xs text-[var(--text-muted)] mb-2">
-                    แทรกตัวแปร
+                    ตัวอย่าง
                   </label>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {VARIABLES.map(({ label, value }) => (
-                      <motion.button
-                        key={value}
-                        type="button"
-                        onClick={() => insertVariable(value)}
-                        className="px-3 py-1.5 rounded-lg text-[11px] font-mono bg-cyan-500/[0.06] text-cyan-400 hover:bg-cyan-500/15 border border-cyan-500/10 transition-all flex items-center gap-1.5"
-                        whileHover={{ scale: 1.05, y: -1 }}
-                        whileTap={{ scale: 0.95 }}
-                      >
-                        <svg
-                          width="10"
-                          height="10"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <line x1="12" y1="5" x2="12" y2="19" />
-                          <line x1="5" y1="12" x2="19" y2="12" />
-                        </svg>
-                        {label}{" "}
-                        <span className="opacity-60">{value}</span>
-                      </motion.button>
-                    ))}
+                  <div className="p-3 rounded-lg bg-[var(--bg-base)] border border-[var(--border-subtle)] text-[13px] text-[var(--text-secondary)] leading-relaxed whitespace-pre-wrap">
+                    {highlightVariables(contentValue)}
                   </div>
                 </div>
+              )}
 
-                {/* Preview */}
-                {formContent.trim() && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    className="mt-2"
-                  >
-                    <label className="block text-xs text-[var(--text-muted)] mb-2">
-                      ตัวอย่าง
-                    </label>
-                    <div className="p-4 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] text-xs text-[var(--text-secondary)] leading-relaxed whitespace-pre-wrap">
-                      {highlightVariables(formContent)}
-                    </div>
-                  </motion.div>
-                )}
-              </div>
-
-              {/* Modal feedback */}
-              <AnimatePresence>
-                {feedback && showModal && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -8 }}
-                    className={`mt-4 p-3 rounded-xl border text-xs font-medium ${
-                      feedback.type === "success"
-                        ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
-                        : "bg-red-500/10 border-red-500/20 text-red-400"
-                    }`}
-                  >
-                    {feedback.text}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* Modal Actions */}
-              <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-[var(--border-subtle)]">
-                <motion.button
-                  onClick={closeModal}
-                  className="btn-glass px-5 py-2.5 text-sm font-medium rounded-xl"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+              <DialogFooter className="gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowDialog(false)}
+                  className="border-[var(--border-subtle)] text-[var(--text-muted)] hover:text-white bg-transparent"
                 >
                   ยกเลิก
-                </motion.button>
-                <motion.button
-                  onClick={handleSave}
-                  disabled={
-                    isPending || !formName.trim() || !formContent.trim()
-                  }
-                  className="btn-primary px-6 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 disabled:opacity-40"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isPending}
+                  className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--bg-base)] font-semibold"
                 >
                   {isPending ? (
                     <span className="flex items-center gap-2">
-                      <Spinner />
+                      <Loader2 className="w-4 h-4 animate-spin" />
                       กำลังบันทึก...
                     </span>
                   ) : editingTemplate ? (
@@ -883,12 +680,46 @@ export default function TemplatesClient({
                   ) : (
                     "สร้างเทมเพลต"
                   )}
-                </motion.button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={showDeleteAlert} onOpenChange={setShowDeleteAlert}>
+        <AlertDialogContent className="bg-[var(--bg-surface)] border-[var(--border-subtle)] rounded-[20px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">
+              ลบเทมเพลต?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-[var(--text-muted)]">
+              การลบเทมเพลต &ldquo;{deletingTemplate?.name}&rdquo;
+              จะไม่สามารถกู้คืนได้
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-[var(--border-subtle)] text-[var(--text-muted)] hover:text-white bg-transparent">
+              ยกเลิก
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              disabled={isPending}
+              className="bg-red-500 hover:bg-red-600 text-white"
+            >
+              {isPending ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  กำลังลบ...
+                </span>
+              ) : (
+                "ลบ"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
 }

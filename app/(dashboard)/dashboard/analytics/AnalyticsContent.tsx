@@ -123,10 +123,10 @@ export default function AnalyticsContent({ stats }: { stats: Stats }) {
   const successRate = totalMessages > 0 ? Math.round((data.delivered / totalMessages) * 100) : 0;
 
   const statCards = [
-    { label: "ส่งทั้งหมด", value: totalMessages, glass: "glass-cyan", color: "text-cyan-400", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-cyan-400"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" /></svg> },
-    { label: "สำเร็จ", value: data.delivered, glass: "glass-emerald", color: "text-emerald-400", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-emerald-400"><polyline points="20 6 9 17 4 12" /></svg> },
-    { label: "อัตราสำเร็จ", value: `${successRate}%`, glass: "glass-violet", color: "text-violet-400", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-violet-400"><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></svg> },
-    { label: "ล้มเหลว", value: data.failed, glass: "glass-rose", color: "text-red-400", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-red-400"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg> },
+    { label: "ส่งทั้งหมด", value: totalMessages, cardStyle: "bg-[var(--bg-surface)] border border-[rgba(0,255,167,0.12)] rounded-[20px]", color: "text-[#00FFA7]", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[#00FFA7]"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" /></svg> },
+    { label: "สำเร็จ", value: data.delivered, cardStyle: "bg-[var(--bg-surface)] border border-[rgba(0,255,167,0.12)] rounded-[20px]", color: "text-emerald-400", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-emerald-400"><polyline points="20 6 9 17 4 12" /></svg> },
+    { label: "อัตราสำเร็จ", value: `${successRate}%`, cardStyle: "bg-[var(--bg-surface)] border border-[rgba(0,255,167,0.12)] rounded-[20px]", color: "text-[#00FFA7]", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[#00FFA7]"><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></svg> },
+    { label: "ล้มเหลว", value: data.failed, cardStyle: "bg-[var(--bg-surface)] border border-[rgba(239,68,68,0.12)] rounded-[20px]", color: "text-red-400", icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-red-400"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg> },
   ];
 
   const donutData = [
@@ -141,10 +141,10 @@ export default function AnalyticsContent({ stats }: { stats: Stats }) {
       {/* Header */}
       <motion.div variants={fadeUp} className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-2xl font-bold gradient-text-mixed mb-2">รายงานและสถิติ</h1>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)] mb-2">รายงานและสถิติ</h1>
           <p className="text-[var(--text-secondary)] text-sm">วิเคราะห์ประสิทธิภาพการส่ง SMS แบบ real-time</p>
         </div>
-        <Link href="/dashboard" className="btn-glass px-4 py-2 text-sm font-medium rounded-xl">
+        <Link href="/dashboard" className="bg-transparent border border-[var(--border-default)] text-[var(--text-primary)] rounded-xl hover:border-[rgba(0,255,167,0.3)] hover:bg-[rgba(0,255,167,0.04)] px-4 py-2 text-sm font-medium">
           กลับแดชบอร์ด
         </Link>
       </motion.div>
@@ -160,7 +160,7 @@ export default function AnalyticsContent({ stats }: { stats: Stats }) {
             onClick={() => setPeriod(p.key)}
             className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
               period === p.key
-                ? "bg-violet-500/20 text-violet-300 border border-violet-500/30"
+                ? "bg-[rgba(0,255,167,0.1)] text-[#00FFA7] border border-[rgba(0,255,167,0.15)]"
                 : "bg-[var(--bg-surface)] text-[var(--text-muted)] border border-[var(--border-subtle)] hover:text-white"
             }`}
           >
@@ -172,7 +172,7 @@ export default function AnalyticsContent({ stats }: { stats: Stats }) {
       {/* Stats Grid */}
       <motion.div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8" variants={stagger}>
         {statCards.map((stat) => (
-          <motion.div key={stat.label} variants={fadeUp} whileHover={{ y: -4 }} className={`${stat.glass} card-hover p-5`}>
+          <motion.div key={stat.label} variants={fadeUp} whileHover={{ y: -4 }} className={`${stat.cardStyle} card-hover p-5`}>
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-medium text-[var(--text-muted)]">{stat.label}</span>
               {stat.icon}
@@ -187,9 +187,9 @@ export default function AnalyticsContent({ stats }: { stats: Stats }) {
       {/* Two columns: Donut + Breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Donut Chart */}
-        <motion.div variants={fadeUp} className="glass p-6">
+        <motion.div variants={fadeUp} className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[20px] p-6">
           <h3 className="text-base font-semibold text-[var(--text-primary)] mb-6 flex items-center gap-2">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-violet-400">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[#00FFA7]">
               <circle cx="12" cy="12" r="10" /><path d="M12 2a10 10 0 0110 10" />
             </svg>
             สัดส่วนสถานะ
@@ -204,16 +204,16 @@ export default function AnalyticsContent({ stats }: { stats: Stats }) {
         </motion.div>
 
         {/* Breakdown Bars */}
-        <motion.div variants={fadeUp} className="glass p-6">
+        <motion.div variants={fadeUp} className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[20px] p-6">
           <h3 className="text-base font-semibold text-[var(--text-primary)] mb-6 flex items-center gap-2">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-cyan-400">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[#00FFA7]">
               <line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" />
             </svg>
             รายละเอียด
           </h3>
           <div className="space-y-5">
             <HBar label="สำเร็จ (Delivered)" value={data.delivered} max={totalMessages} color="#10B981" textColor="text-emerald-400" />
-            <HBar label="ส่งแล้ว (Sent)" value={data.sent} max={totalMessages} color="#22D3EE" textColor="text-cyan-400" />
+            <HBar label="ส่งแล้ว (Sent)" value={data.sent} max={totalMessages} color="#22D3EE" textColor="text-[#00FFA7]" />
             <HBar label="รอดำเนินการ (Pending)" value={data.pending} max={totalMessages} color="#F59E0B" textColor="text-amber-400" />
             <HBar label="ล้มเหลว (Failed)" value={data.failed} max={totalMessages} color="#EF4444" textColor="text-red-400" />
           </div>
@@ -222,24 +222,25 @@ export default function AnalyticsContent({ stats }: { stats: Stats }) {
           <div className="mt-6 pt-5 border-t border-[var(--border-subtle)]">
             <div className="flex items-center justify-between">
               <span className="text-xs text-[var(--text-muted)]">เครดิตคงเหลือ</span>
-              <span className="text-lg font-bold gradient-text-cyan">{stats.user.credits.toLocaleString()}</span>
+              <span className="text-lg font-bold text-[var(--accent)]">{stats.user.credits.toLocaleString()}</span>
             </div>
           </div>
         </motion.div>
       </div>
 
       {/* Recent Activity */}
-      <motion.div variants={fadeUp} className="glass p-6">
+      <motion.div variants={fadeUp} className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[20px] p-6">
         <div className="flex items-center justify-between mb-5">
           <h3 className="text-base font-semibold text-[var(--text-primary)] flex items-center gap-2">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-violet-400">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[#00FFA7]">
               <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
             </svg>
             กิจกรรมล่าสุด
           </h3>
-          <Link href="/dashboard/messages" className="text-xs text-[var(--text-muted)] hover:text-violet-400 transition-colors">
+          <Link href="/dashboard/messages" className="text-xs text-[var(--text-muted)] hover:text-[#00FFA7] transition-colors">
             ดูทั้งหมด →
           </Link>
+
         </div>
 
         {stats.recentMessages.length > 0 ? (
@@ -247,7 +248,7 @@ export default function AnalyticsContent({ stats }: { stats: Stats }) {
             {stats.recentMessages.slice(0, 5).map((msg) => {
               const statusMap: Record<string, { dot: string; label: string }> = {
                 delivered: { dot: "bg-emerald-400", label: "สำเร็จ" },
-                sent: { dot: "bg-cyan-400", label: "ส่งแล้ว" },
+                sent: { dot: "bg-[#00FFA7]", label: "ส่งแล้ว" },
                 pending: { dot: "bg-amber-400", label: "รอส่ง" },
                 failed: { dot: "bg-red-400", label: "ล้มเหลว" },
               };

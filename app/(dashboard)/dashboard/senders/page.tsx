@@ -20,14 +20,14 @@ export default async function SendersPage() {
 
   return (
     <div className="p-6 md:p-8 max-w-6xl animate-fade-in-up">
-      <h1 className="text-2xl font-bold mb-1 tracking-tight gradient-text-mixed">ชื่อผู้ส่ง</h1>
+      <h1 className="text-2xl font-bold mb-1 tracking-tight text-[var(--text-primary)]">ชื่อผู้ส่ง</h1>
       <p className="text-sm text-[var(--text-muted)] mb-8">ยื่นคำขอชื่อผู้ส่งเพื่อใช้ส่ง SMS ในชื่อแบรนด์ของคุณ</p>
 
       {/* Request Process Info */}
-      <div className="glass p-5 mb-6">
+      <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[20px] p-5 mb-6">
         <div className="flex items-start gap-3">
-          <div className="w-8 h-8 rounded-lg bg-violet-500/[0.08] border border-violet-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-violet-400">
+          <div className="w-8 h-8 rounded-lg bg-[rgba(0,255,167,0.1)] border border-[rgba(0,255,167,0.15)] flex items-center justify-center flex-shrink-0 mt-0.5">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-[#00FFA7]">
               <circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" />
             </svg>
           </div>
@@ -35,7 +35,7 @@ export default async function SendersPage() {
             <p className="text-sm text-[var(--text-secondary)] font-medium mb-2">ขั้นตอนการขอชื่อผู้ส่ง</p>
             <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-[var(--text-muted)]">
               <div className="flex items-center gap-2">
-                <span className="w-5 h-5 rounded-full bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400 text-[10px] font-bold">1</span>
+                <span className="w-5 h-5 rounded-full bg-[rgba(0,255,167,0.1)] border border-[rgba(0,255,167,0.15)] flex items-center justify-center text-[#00FFA7] text-[10px] font-bold">1</span>
                 <span>ยื่นคำขอชื่อผู้ส่ง</span>
               </div>
               <div className="flex items-center gap-1.5 text-[var(--text-muted)]">→</div>
@@ -50,7 +50,7 @@ export default async function SendersPage() {
               </div>
             </div>
             <p className="text-[11px] text-[var(--text-muted)] mt-3">
-              ระหว่างรอสามารถใช้ <span className="text-cyan-300 font-medium">EasySlip</span> (Default) ส่ง SMS ได้เลย
+              ระหว่างรอสามารถใช้ <span className="text-[#00FFA7] font-medium">EasySlip</span> (Default) ส่ง SMS ได้เลย
             </p>
           </div>
         </div>
@@ -58,25 +58,25 @@ export default async function SendersPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="glass p-4 text-center">
+        <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[20px] p-4 text-center">
           <p className="text-2xl font-bold text-white">{senderNames.length}</p>
           <p className="text-[11px] text-[var(--text-muted)] mt-1">คำขอทั้งหมด</p>
         </div>
-        <div className="glass p-4 text-center">
+        <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[20px] p-4 text-center">
           <p className="text-2xl font-bold text-emerald-400">{approvedCount}</p>
           <p className="text-[11px] text-[var(--text-muted)] mt-1">อนุมัติแล้ว</p>
         </div>
-        <div className="glass p-4 text-center">
+        <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[20px] p-4 text-center">
           <p className="text-2xl font-bold text-amber-400">{pendingCount}</p>
           <p className="text-[11px] text-[var(--text-muted)] mt-1">รออนุมัติ</p>
         </div>
       </div>
 
       {/* Request New Sender Name */}
-      <div className="glass p-6 md:p-8 mb-8">
+      <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[20px] p-6 md:p-8 mb-8">
         <h2 className="text-base font-semibold text-white mb-5 flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-violet-500/[0.08] border border-violet-500/10 flex items-center justify-center">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-violet-400">
+          <div className="w-8 h-8 rounded-lg bg-[rgba(0,255,167,0.1)] border border-[rgba(0,255,167,0.15)] flex items-center justify-center">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-[#00FFA7]">
               <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><path d="M14 2v6h6M12 18v-6M9 15h6" />
             </svg>
           </div>
@@ -86,11 +86,11 @@ export default async function SendersPage() {
       </div>
 
       {/* Sender Names List */}
-      <div className="glass overflow-hidden">
+      <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[20px] overflow-hidden">
         <div className="px-6 py-4 border-b border-[var(--border-subtle)]">
           <h2 className="text-base font-semibold text-white flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-violet-500/[0.08] border border-violet-500/10 flex items-center justify-center">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-violet-400">
+            <div className="w-8 h-8 rounded-lg bg-[rgba(0,255,167,0.1)] border border-[rgba(0,255,167,0.15)] flex items-center justify-center">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-[#00FFA7]">
                 <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" /><rect x="9" y="3" width="6" height="4" rx="2" />
               </svg>
             </div>
@@ -118,7 +118,7 @@ export default async function SendersPage() {
                     <tr key={sender.id} className="table-row">
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400 font-bold text-xs">
+                          <div className="w-8 h-8 rounded-lg bg-[rgba(0,255,167,0.1)] border border-[rgba(0,255,167,0.15)] flex items-center justify-center text-[#00FFA7] font-bold text-xs">
                             {sender.name.charAt(0)}
                           </div>
                           <span className="text-slate-200 font-mono font-semibold">{sender.name}</span>

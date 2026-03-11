@@ -491,14 +491,14 @@ export default function LogsClient() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4 shrink-0">
         <div>
           <h1 className="text-xl font-bold tracking-tight">
-            <span className="gradient-text-mixed">API Request Logs</span>
+            <span className="text-[var(--text-primary)]">API Request Logs</span>
           </h1>
           <p className="text-xs text-[var(--text-muted)] mt-0.5">ประวัติการเรียก API ทั้งหมด</p>
         </div>
         <div className="flex items-center gap-2">
           <motion.button
             onClick={() => exportCsv(filtered)}
-            className="btn-glass px-3 py-1.5 rounded-lg text-[11px] font-medium inline-flex items-center gap-1.5 cursor-pointer"
+            className="bg-transparent border border-[var(--border-default)] text-[var(--text-primary)] rounded-xl hover:border-[rgba(0,255,167,0.3)] hover:bg-[rgba(0,255,167,0.04)] px-3 py-1.5 rounded-lg text-[11px] font-medium inline-flex items-center gap-1.5 cursor-pointer"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
@@ -520,7 +520,7 @@ export default function LogsClient() {
           </button>
           <motion.button
             onClick={refreshLogs}
-            className="btn-glass px-3 py-1.5 rounded-lg text-[11px] font-medium inline-flex items-center gap-1.5 cursor-pointer"
+            className="bg-transparent border border-[var(--border-default)] text-[var(--text-primary)] rounded-xl hover:border-[rgba(0,255,167,0.3)] hover:bg-[rgba(0,255,167,0.04)] px-3 py-1.5 rounded-lg text-[11px] font-medium inline-flex items-center gap-1.5 cursor-pointer"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
@@ -532,7 +532,7 @@ export default function LogsClient() {
       </div>
 
       {/* Filter Bar */}
-      <div className="glass p-3 mb-4 shrink-0">
+      <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[20px] p-3 mb-4 shrink-0">
         <div className="flex flex-col gap-2">
           <div className="flex flex-wrap gap-2">
             <div className="relative flex-1 min-w-[200px]">
@@ -541,7 +541,7 @@ export default function LogsClient() {
               </svg>
               <input
                 type="text"
-                className="input-glass pl-8 text-xs py-1.5"
+                className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg text-[var(--text-primary)] focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] pl-8 text-xs py-1.5"
                 placeholder="เบอร์โทร, Message ID, IP, endpoint..."
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setPage(1); }}
@@ -590,7 +590,7 @@ export default function LogsClient() {
               </svg>
               <input
                 type="text"
-                className="input-glass pl-8 text-xs py-1.5"
+                className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg text-[var(--text-primary)] focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] pl-8 text-xs py-1.5"
                 placeholder="IP Address..."
                 value={ipSearch}
                 onChange={(e) => { setIpSearch(e.target.value); setPage(1); }}
@@ -598,11 +598,11 @@ export default function LogsClient() {
             </div>
             <div className="flex items-center gap-1.5">
               <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">จาก</label>
-              <input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(1); }} className="input-glass text-xs py-1 px-2 w-[130px]" />
+              <input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(1); }} className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg text-[var(--text-primary)] focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] text-xs py-1 px-2 w-[130px]" />
             </div>
             <div className="flex items-center gap-1.5">
               <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">ถึง</label>
-              <input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(1); }} className="input-glass text-xs py-1 px-2 w-[130px]" />
+              <input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(1); }} className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg text-[var(--text-primary)] focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] text-xs py-1 px-2 w-[130px]" />
             </div>
             {hasFilters && (
               <button onClick={clearFilters} className="text-[10px] text-[var(--text-muted)] hover:text-[#00FFA7] transition-colors cursor-pointer">ล้าง</button>
@@ -633,7 +633,7 @@ export default function LogsClient() {
       {/* Split Pane: Left=List, Right=Detail */}
       <div className="flex-1 flex gap-4 min-h-0">
         {/* Left Pane — Request List */}
-        <div className={`glass flex flex-col overflow-hidden transition-all duration-300 ${selectedLog ? "w-[45%]" : "w-full"}`}>
+        <div className={`bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[20px] flex flex-col overflow-hidden transition-all duration-300 ${selectedLog ? "w-[45%]" : "w-full"}`}>
           {/* List header */}
           <div className="hidden md:grid grid-cols-[1fr_60px_60px_60px] gap-x-2 px-4 py-2 border-b border-[var(--border-subtle)] text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider shrink-0">
             <span>Request</span>
@@ -736,7 +736,7 @@ export default function LogsClient() {
         <AnimatePresence>
           {selectedLog && (
             <motion.div
-              className="glass relative flex flex-col overflow-hidden w-[55%]"
+              className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[20px] relative flex flex-col overflow-hidden w-[55%]"
               initial={{ width: 0, opacity: 0 }}
               animate={{ width: "55%", opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
@@ -758,7 +758,7 @@ export default function LogsClient() {
 
         {/* Empty state for right pane */}
         {!selectedLog && (
-          <div className="hidden lg:flex glass w-[55%] items-center justify-center">
+          <div className="hidden lg:flex bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[20px] w-[55%] items-center justify-center">
             <div className="text-center">
               <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] flex items-center justify-center">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="text-[var(--text-muted)]">

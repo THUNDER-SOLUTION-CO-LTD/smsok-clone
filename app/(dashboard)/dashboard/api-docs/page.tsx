@@ -20,15 +20,15 @@ type Endpoint = {
 };
 
 const methodColors: Record<string, string> = {
-  GET: "bg-cyan-500/15 text-cyan-400 border-cyan-500/20",
-  POST: "bg-violet-500/15 text-violet-400 border-violet-500/20",
+  GET: "bg-[rgba(0,255,167,0.1)] text-[#00FFA7] border-[rgba(0,255,167,0.15)]",
+  POST: "bg-[rgba(0,255,167,0.1)] text-[#00FFA7] border-[rgba(0,255,167,0.15)]",
   PUT: "bg-amber-500/15 text-amber-400 border-amber-500/20",
   DELETE: "bg-red-500/15 text-red-400 border-red-500/20",
 };
 
 const methodDotColors: Record<string, string> = {
-  GET: "bg-cyan-400",
-  POST: "bg-violet-400",
+  GET: "bg-[#00FFA7]",
+  POST: "bg-[#00FFA7]",
   PUT: "bg-amber-400",
   DELETE: "bg-red-400",
 };
@@ -518,7 +518,7 @@ function CodeTabs({ endpoint }: { endpoint: Endpoint }) {
               onClick={() => setActiveTab(tab)}
               className={`px-4 py-2 text-xs font-medium transition-all ${
                 activeTab === tab
-                  ? "bg-violet-500/20 text-violet-300 border-b-2 border-violet-500"
+                  ? "bg-[rgba(0,255,167,0.15)] text-[#4779FF] border-b-2 border-[#00FFA7]"
                   : "text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-white/5"
               }`}
             >
@@ -527,7 +527,7 @@ function CodeTabs({ endpoint }: { endpoint: Endpoint }) {
           ))}
         </div>
         <div className="p-4 relative">
-          <pre className="text-cyan-300/80 font-mono text-xs whitespace-pre overflow-x-auto">{codeMap[activeTab]}</pre>
+          <pre className="text-[#00FFA7]/80 font-mono text-xs whitespace-pre overflow-x-auto">{codeMap[activeTab]}</pre>
           <CopyButton text={codeMap[activeTab]} />
         </div>
       </div>
@@ -564,7 +564,7 @@ function TryItPanel({ endpoint }: { endpoint: Endpoint }) {
   return (
     <div>
       <p className="text-[10px] font-medium text-[var(--text-muted)] mb-2 uppercase tracking-wider flex items-center gap-2">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-violet-400"><polygon points="5 3 19 12 5 21 5 3" /></svg>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#00FFA7]"><polygon points="5 3 19 12 5 21 5 3" /></svg>
         Try It
       </p>
       <div className="bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-xl p-4 space-y-3">
@@ -572,12 +572,12 @@ function TryItPanel({ endpoint }: { endpoint: Endpoint }) {
         <div>
           <label className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-medium">Authorization</label>
           <div className="flex items-center gap-2 mt-1">
-            <span className="text-xs text-violet-400 font-mono whitespace-nowrap">Bearer</span>
+            <span className="text-xs text-[#00FFA7] font-mono whitespace-nowrap">Bearer</span>
             <input
               type="text"
               value={authToken}
               onChange={(e) => setAuthToken(e.target.value)}
-              className="input-glass text-xs font-mono flex-1"
+              className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg text-[var(--text-primary)] focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] text-xs font-mono flex-1"
             />
           </div>
         </div>
@@ -589,12 +589,12 @@ function TryItPanel({ endpoint }: { endpoint: Endpoint }) {
             <div className="mt-1 space-y-2">
               {fields.map((f) => (
                 <div key={f.key} className="flex items-center gap-2">
-                  <span className="text-xs text-cyan-400 font-mono w-28 shrink-0 truncate">{f.key}</span>
+                  <span className="text-xs text-[#00FFA7] font-mono w-28 shrink-0 truncate">{f.key}</span>
                   <input
                     type="text"
                     value={fieldValues[f.key] || ""}
                     onChange={(e) => setFieldValues((prev) => ({ ...prev, [f.key]: e.target.value }))}
-                    className="input-glass text-xs font-mono flex-1"
+                    className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg text-[var(--text-primary)] focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] text-xs font-mono flex-1"
                   />
                 </div>
               ))}
@@ -664,8 +664,8 @@ function ResponseFieldsTable({ fields }: { fields: { name: string; type: string;
           <tbody>
             {fields.map((f) => (
               <tr key={f.name} className="border-b border-[var(--border-subtle)] last:border-0">
-                <td className="p-3 font-mono text-cyan-400">{f.name}</td>
-                <td className="p-3 text-violet-300">{f.type}</td>
+                <td className="p-3 font-mono text-[#00FFA7]">{f.name}</td>
+                <td className="p-3 text-[#4779FF]">{f.type}</td>
                 <td className="p-3 text-[var(--text-secondary)]">{f.description}</td>
               </tr>
             ))}
@@ -678,7 +678,7 @@ function ResponseFieldsTable({ fields }: { fields: { name: string; type: string;
 
 function EndpointCard({ endpoint, isExpanded, onToggle, id }: { endpoint: Endpoint; isExpanded: boolean; onToggle: () => void; id: string }) {
   return (
-    <div id={id} className="glass overflow-hidden card-hover">
+    <div id={id} className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[20px] overflow-hidden card-hover">
       {/* Collapsed header -- always visible */}
       <button
         onClick={onToggle}
@@ -731,13 +731,13 @@ function EndpointCard({ endpoint, isExpanded, onToggle, id }: { endpoint: Endpoi
                     {endpoint.headers && (
                       <div className="bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-xl p-3 mb-2">
                         <p className="text-[9px] font-medium text-[var(--text-muted)] mb-1 uppercase tracking-wider">Headers</p>
-                        <code className="text-cyan-300/80 font-mono text-xs">{endpoint.headers}</code>
+                        <code className="text-[#00FFA7]/80 font-mono text-xs">{endpoint.headers}</code>
                       </div>
                     )}
                     {endpoint.body ? (
                       <div className="bg-[var(--bg-surface)] border border-[var(--border-subtle)] rounded-xl p-3 relative">
                         <p className="text-[9px] font-medium text-[var(--text-muted)] mb-1 uppercase tracking-wider">Body</p>
-                        <pre className="text-cyan-300/80 font-mono text-xs whitespace-pre overflow-x-auto">{endpoint.body}</pre>
+                        <pre className="text-[#00FFA7]/80 font-mono text-xs whitespace-pre overflow-x-auto">{endpoint.body}</pre>
                         <CopyButton text={endpoint.body} />
                       </div>
                     ) : (
@@ -833,7 +833,7 @@ function Sidebar({
   };
 
   return (
-    <nav className="glass p-4 sticky top-6 max-h-[calc(100vh-3rem)] overflow-y-auto">
+    <nav className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[20px] p-4 sticky top-6 max-h-[calc(100vh-3rem)] overflow-y-auto">
       <p className="text-[10px] font-medium text-[var(--text-muted)] uppercase tracking-wider mb-3">Endpoints</p>
       <div className="space-y-1">
         {Object.entries(grouped).map(([category, catEndpoints]) => (
@@ -870,7 +870,7 @@ function Sidebar({
                         onClick={() => onSelect(epId)}
                         className={`w-full text-left px-2 py-1.5 rounded-lg text-[11px] flex items-center gap-2 transition-colors ${
                           isActive
-                            ? "bg-violet-500/15 text-violet-300"
+                            ? "bg-[rgba(0,255,167,0.1)] text-[#4779FF]"
                             : "text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-white/5"
                         }`}
                       >
@@ -969,7 +969,7 @@ export default function ApiDocsPage() {
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
             <div>
-              <h1 className="text-2xl font-bold gradient-text-mixed mb-2">API Documentation</h1>
+              <h1 className="text-2xl font-bold text-[var(--text-primary)] mb-2">API Documentation</h1>
               <p className="text-[var(--text-secondary)] text-sm">SMSOK REST API v1 -- {endpoints.length} endpoints</p>
             </div>
             <div className="flex items-center gap-3">
@@ -981,39 +981,39 @@ export default function ApiDocsPage() {
           </div>
 
           {/* Authentication Section */}
-          <div className="glass p-6 mb-6">
+          <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[20px] p-6 mb-6">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-violet-400"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0110 0v4" /></svg>
+              <div className="w-10 h-10 rounded-xl bg-[rgba(0,255,167,0.1)] border border-[rgba(0,255,167,0.15)] flex items-center justify-center">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#00FFA7]"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0110 0v4" /></svg>
               </div>
               <div>
-                <h2 className="text-base font-semibold gradient-text-cyan">Authentication</h2>
+                <h2 className="text-base font-semibold text-[var(--accent)]">Authentication</h2>
                 <p className="text-xs text-[var(--text-muted)]">ทุก request ต้องมี API Key ใน Header</p>
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <span className="text-[10px] font-medium text-[var(--text-muted)] uppercase tracking-wider">Base URL</span>
-                <code className="block mt-1 text-cyan-300/80 font-mono text-sm bg-[var(--bg-surface)] px-3 py-2 rounded-lg border border-[var(--border-subtle)]">
+                <code className="block mt-1 text-[#00FFA7]/80 font-mono text-sm bg-[var(--bg-surface)] px-3 py-2 rounded-lg border border-[var(--border-subtle)]">
                   https://api.smsok.com
                 </code>
               </div>
               <div>
                 <span className="text-[10px] font-medium text-[var(--text-muted)] uppercase tracking-wider">Header Format</span>
-                <code className="block mt-1 text-violet-300/80 font-mono text-sm bg-[var(--bg-surface)] px-3 py-2 rounded-lg border border-[var(--border-subtle)]">
+                <code className="block mt-1 text-[#4779FF]/80 font-mono text-sm bg-[var(--bg-surface)] px-3 py-2 rounded-lg border border-[var(--border-subtle)]">
                   Authorization: Bearer &lt;API_KEY&gt;
                 </code>
               </div>
             </div>
             <div className="mt-4 bg-[#0d1117] rounded-xl p-4 relative border border-[var(--border-subtle)]">
-              <pre className="text-cyan-300/80 font-mono text-xs whitespace-pre overflow-x-auto">{`// Example: Using fetch
+              <pre className="text-[#00FFA7]/80 font-mono text-xs whitespace-pre overflow-x-auto">{`// Example: Using fetch
 const res = await fetch('https://api.smsok.com/api/v1/balance', {
   headers: { 'Authorization': 'Bearer sk_live_your_api_key' }
 });`}</pre>
               <CopyButton text={`const res = await fetch('https://api.smsok.com/api/v1/balance', {\n  headers: { 'Authorization': 'Bearer sk_live_your_api_key' }\n});`} />
             </div>
             <div className="mt-3 flex items-center gap-2">
-              <Link href="/dashboard/api-keys" className="text-xs text-violet-400 hover:text-violet-300 transition-colors flex items-center gap-1">
+              <Link href="/dashboard/api-keys" className="text-xs text-[#00FFA7] hover:text-[#4779FF] transition-colors flex items-center gap-1">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" /></svg>
                 Manage API Keys
               </Link>
@@ -1031,7 +1031,7 @@ const res = await fetch('https://api.smsok.com/api/v1/balance', {
                 placeholder="ค้นหา endpoint..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="input-glass pl-10 w-full"
+                className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] focus:outline-none px-3 py-2 pl-10 w-full"
               />
             </div>
             <div className="flex gap-1.5 flex-wrap">
@@ -1041,7 +1041,7 @@ const res = await fetch('https://api.smsok.com/api/v1/balance', {
                   onClick={() => setActiveCategory(cat)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                     activeCategory === cat
-                      ? "bg-violet-500/20 text-violet-300 border border-violet-500/30"
+                      ? "bg-[rgba(0,255,167,0.15)] text-[#4779FF] border border-[rgba(0,255,167,0.2)]"
                       : "bg-[var(--bg-surface)] text-[var(--text-muted)] border border-[var(--border-subtle)] hover:text-[var(--text-secondary)]"
                   }`}
                 >
@@ -1057,11 +1057,11 @@ const res = await fetch('https://api.smsok.com/api/v1/balance', {
               {filtered.length} endpoint{filtered.length !== 1 ? "s" : ""}
             </p>
             <div className="flex gap-2">
-              <button onClick={expandAll} className="btn-glass px-3 py-1.5 text-[11px] rounded-lg flex items-center gap-1.5">
+              <button onClick={expandAll} className="bg-transparent border border-[var(--border-default)] text-[var(--text-primary)] rounded-xl hover:border-[rgba(0,255,167,0.3)] hover:bg-[rgba(0,255,167,0.04)] px-3 py-1.5 text-[11px] rounded-lg flex items-center gap-1.5">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 3 21 3 21 9" /><polyline points="9 21 3 21 3 15" /><line x1="21" y1="3" x2="14" y2="10" /><line x1="3" y1="21" x2="10" y2="14" /></svg>
                 Expand All
               </button>
-              <button onClick={collapseAll} className="btn-glass px-3 py-1.5 text-[11px] rounded-lg flex items-center gap-1.5">
+              <button onClick={collapseAll} className="bg-transparent border border-[var(--border-default)] text-[var(--text-primary)] rounded-xl hover:border-[rgba(0,255,167,0.3)] hover:bg-[rgba(0,255,167,0.04)] px-3 py-1.5 text-[11px] rounded-lg flex items-center gap-1.5">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="4 14 10 14 10 20" /><polyline points="20 10 14 10 14 4" /><line x1="14" y1="10" x2="21" y2="3" /><line x1="3" y1="21" x2="10" y2="14" /></svg>
                 Collapse All
               </button>
@@ -1069,7 +1069,7 @@ const res = await fetch('https://api.smsok.com/api/v1/balance', {
           </div>
 
           {/* Rate Limit Info */}
-          <div className="glass p-4 mb-6 flex items-center gap-3 border-amber-500/10">
+          <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[20px] p-4 mb-6 flex items-center gap-3 border-amber-500/10">
             <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center flex-shrink-0">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-amber-400">
                 <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
@@ -1104,8 +1104,8 @@ const res = await fetch('https://api.smsok.com/api/v1/balance', {
           )}
 
           {/* Error Codes */}
-          <div className="glass p-6 mt-8">
-            <h3 className="text-base font-semibold gradient-text-mixed mb-4">Error Codes</h3>
+          <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[20px] p-6 mt-8">
+            <h3 className="text-base font-semibold text-[var(--text-primary)] mb-4">Error Codes</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               {[
                 { code: "400", label: "Bad Request", desc: "ข้อมูลไม่ถูกต้อง", color: "text-amber-400 bg-amber-500/10 border-amber-500/20" },
@@ -1123,13 +1123,13 @@ const res = await fetch('https://api.smsok.com/api/v1/balance', {
           </div>
 
           {/* SDK Section */}
-          <div className="glass p-6 mt-6">
+          <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[20px] p-6 mt-6">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-cyan-400"><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg>
+              <div className="w-10 h-10 rounded-xl bg-[rgba(0,255,167,0.1)] border border-[rgba(0,255,167,0.15)] flex items-center justify-center">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#00FFA7]"><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg>
               </div>
               <div>
-                <h3 className="text-base font-semibold gradient-text-cyan">SDK & Libraries</h3>
+                <h3 className="text-base font-semibold text-[var(--accent)]">SDK & Libraries</h3>
                 <p className="text-xs text-[var(--text-muted)]">ติดตั้ง SDK สำหรับใช้งานง่ายขึ้น</p>
               </div>
             </div>
@@ -1139,7 +1139,7 @@ const res = await fetch('https://api.smsok.com/api/v1/balance', {
               <div>
                 <p className="text-[10px] font-medium text-[var(--text-muted)] mb-2 uppercase tracking-wider">Installation</p>
                 <div className="bg-[#0d1117] rounded-xl p-4 relative border border-[var(--border-subtle)]">
-                  <pre className="text-cyan-300/80 font-mono text-xs">{`# npm
+                  <pre className="text-[#00FFA7]/80 font-mono text-xs">{`# npm
 npm install @smsok/sdk
 
 # yarn
@@ -1155,7 +1155,7 @@ pnpm add @smsok/sdk`}</pre>
               <div>
                 <p className="text-[10px] font-medium text-[var(--text-muted)] mb-2 uppercase tracking-wider">Quick Start</p>
                 <div className="bg-[#0d1117] rounded-xl p-4 relative border border-[var(--border-subtle)]">
-                  <pre className="text-cyan-300/80 font-mono text-xs">{`import { SMSOK } from '@smsok/sdk';
+                  <pre className="text-[#00FFA7]/80 font-mono text-xs">{`import { SMSOK } from '@smsok/sdk';
 
 const sms = new SMSOK('sk_live_your_key');
 

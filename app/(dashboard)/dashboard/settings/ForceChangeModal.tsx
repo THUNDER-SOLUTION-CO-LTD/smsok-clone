@@ -34,7 +34,7 @@ export default function ForceChangeModal({ userId }: { userId: string }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-      <div className="glass w-full max-w-md p-8 relative overflow-hidden">
+      <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[20px] w-full max-w-md p-8 relative overflow-hidden">
         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#00FFA7] via-[#4779FF] to-[#00FFA7]" />
 
         <div className="text-center mb-6">

@@ -470,7 +470,7 @@ export default function GroupDetailClient({
           </Button>
           <Button
             onClick={openAddDialog}
-            className="bg-[var(--accent)] hover:bg-[#0AE99C] text-[var(--bg-base)] font-semibold"
+            className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--bg-base)] font-semibold"
           >
             <Plus className="w-4 h-4 mr-1.5" />
             เพิ่มรายชื่อ
@@ -709,7 +709,7 @@ export default function GroupDetailClient({
           </p>
           <button
             onClick={() => setSearch("")}
-            className="text-xs text-[var(--accent)] hover:text-[#0AE99C] mt-2 transition-colors"
+            className="text-xs text-[var(--accent)] hover:text-[var(--accent-hover)] mt-2 transition-colors"
           >
             ล้างตัวกรอง
           </button>
@@ -728,7 +728,7 @@ export default function GroupDetailClient({
           </p>
           <Button
             onClick={openAddDialog}
-            className="bg-[var(--accent)] hover:bg-[#0AE99C] text-[var(--bg-base)] font-semibold"
+            className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--bg-base)] font-semibold"
           >
             <Plus className="w-4 h-4 mr-1.5" />
             เพิ่มรายชื่อ
@@ -813,7 +813,7 @@ export default function GroupDetailClient({
                     isPending ||
                     importPreviewData.filter((c) => c.valid).length === 0
                   }
-                  className="bg-[var(--accent)] hover:bg-[#0AE99C] text-[var(--bg-base)] font-semibold"
+                  className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--bg-base)] font-semibold"
                 >
                   {isPending ? (
                     <span className="flex items-center gap-2">
@@ -993,7 +993,7 @@ export default function GroupDetailClient({
                 <Button
                   onClick={handleAddToGroup}
                   disabled={isPending || addSelectedIds.size === 0}
-                  className="bg-[var(--accent)] hover:bg-[#0AE99C] text-[var(--bg-base)] font-semibold"
+                  className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--bg-base)] font-semibold"
                 >
                   {isPending ? (
                     <span className="flex items-center gap-2">

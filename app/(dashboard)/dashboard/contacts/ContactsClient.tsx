@@ -771,7 +771,7 @@ export default function ContactsClient({
           <Button
             size="sm"
             onClick={openAddDialog}
-            className="bg-[var(--accent)] hover:bg-[#0AE99C] text-[var(--bg-base)] font-semibold"
+            className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--bg-base)] font-semibold"
           >
             <Plus className="w-4 h-4 mr-1.5" />
             เพิ่มรายชื่อ
@@ -971,7 +971,7 @@ export default function ContactsClient({
                   size="sm"
                   onClick={handleBatchTag}
                   disabled={isPending || !batchTagValue.trim()}
-                  className="h-8 bg-[var(--accent)] hover:bg-[#0AE99C] text-[var(--bg-base)] font-semibold disabled:opacity-50"
+                  className="h-8 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--bg-base)] font-semibold disabled:opacity-50"
                 >
                   {isPending ? "..." : "ยืนยัน"}
                 </Button>
@@ -1451,7 +1451,7 @@ export default function ContactsClient({
           </p>
           <Button
             onClick={openAddDialog}
-            className="bg-[var(--accent)] hover:bg-[#0AE99C] text-[var(--bg-base)] font-semibold"
+            className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--bg-base)] font-semibold"
           >
             <Plus className="w-4 h-4 mr-1.5" />
             เพิ่มรายชื่อ
@@ -1569,7 +1569,7 @@ export default function ContactsClient({
                 <Button
                   type="submit"
                   disabled={isPending}
-                  className="bg-[var(--accent)] hover:bg-[#0AE99C] text-[var(--bg-base)] font-semibold"
+                  className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--bg-base)] font-semibold"
                 >
                   {isPending ? (
                     <span className="flex items-center gap-2">
@@ -1663,7 +1663,7 @@ export default function ContactsClient({
                 <Button
                   type="submit"
                   disabled={isPending}
-                  className="bg-[var(--accent)] hover:bg-[#0AE99C] text-[var(--bg-base)] font-semibold"
+                  className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--bg-base)] font-semibold"
                 >
                   {isPending ? (
                     <span className="flex items-center gap-2">
@@ -1809,7 +1809,7 @@ export default function ContactsClient({
             <Button
               onClick={handleBulkAddToGroup}
               disabled={isPending || !addToGroupId}
-              className="bg-[var(--accent)] hover:bg-[#0AE99C] text-[var(--bg-base)] font-semibold disabled:opacity-50"
+              className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--bg-base)] font-semibold disabled:opacity-50"
             >
               {isPending ? (
                 <span className="flex items-center gap-2">

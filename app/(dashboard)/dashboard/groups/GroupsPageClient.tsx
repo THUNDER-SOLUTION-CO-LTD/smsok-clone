@@ -379,7 +379,7 @@ export default function GroupsPageClient({
         </div>
         <Button
           onClick={openCreate}
-          className="bg-[var(--accent)] hover:bg-[#0AE99C] text-[var(--bg-base)] font-semibold"
+          className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--bg-base)] font-semibold"
         >
           <Plus className="w-4 h-4 mr-1.5" />
           สร้างกลุ่ม
@@ -548,7 +548,7 @@ export default function GroupsPageClient({
           </p>
           <Button
             onClick={openCreate}
-            className="bg-[var(--accent)] hover:bg-[#0AE99C] text-[var(--bg-base)] font-semibold"
+            className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--bg-base)] font-semibold"
           >
             <Plus className="w-4 h-4 mr-1.5" />
             สร้างกลุ่มแรก
@@ -613,7 +613,7 @@ export default function GroupsPageClient({
                 <Button
                   type="submit"
                   disabled={isPending}
-                  className="bg-[var(--accent)] hover:bg-[#0AE99C] text-[var(--bg-base)] font-semibold"
+                  className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--bg-base)] font-semibold"
                 >
                   {isPending ? (
                     <span className="flex items-center gap-2">

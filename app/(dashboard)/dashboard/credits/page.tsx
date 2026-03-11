@@ -96,7 +96,7 @@ export default function CreditsPage() {
         {/* Header */}
         <motion.div variants={fadeUp} className="mb-6">
           <h1 className="text-2xl font-bold tracking-tight mb-1">
-            <span className="gradient-text-mixed">ประวัติเครดิต</span>
+            <span className="text-[var(--text-primary)]">ประวัติเครดิต</span>
           </h1>
           <p className="text-sm text-[var(--text-muted)]">รายการเติมเครดิต การส่ง SMS และการคืนเครดิตทั้งหมด</p>
         </motion.div>
@@ -142,7 +142,7 @@ export default function CreditsPage() {
                 type="date"
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
-                className="input-glass text-sm py-2 px-3 w-[150px]"
+                className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] focus:outline-none px-3 py-2 w-full text-sm w-[150px]"
               />
             </div>
             <div>
@@ -151,7 +151,7 @@ export default function CreditsPage() {
                 type="date"
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
-                className="input-glass text-sm py-2 px-3 w-[150px]"
+                className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] focus:outline-none px-3 py-2 w-full text-sm w-[150px]"
               />
             </div>
             <div>

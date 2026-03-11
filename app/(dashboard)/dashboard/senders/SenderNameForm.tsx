@@ -66,7 +66,7 @@ export default function SenderNameForm({ userId }: { userId: string }) {
           <label className="block text-xs text-slate-300 uppercase tracking-wider mb-2 font-medium">วัตถุประสงค์การใช้งาน</label>
           <input
             type="text"
-            className="input-glass"
+            className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] focus:outline-none px-3 py-2 w-full"
             placeholder="เช่น ส่ง OTP ให้ลูกค้า, แจ้งโปรโมชัน"
             value={purpose}
             onChange={(e) => setPurpose(e.target.value)}

@@ -12,7 +12,7 @@ export default async function ScheduledPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-2xl font-bold gradient-text-mixed">
+            <h1 className="text-2xl font-bold text-[var(--text-primary)]">
               ตั้งเวลาส่ง SMS
             </h1>
             <span className="badge badge-warning">เร็วๆ นี้</span>
@@ -23,14 +23,14 @@ export default async function ScheduledPage() {
         </div>
         <Link
           href="/dashboard"
-          className="btn-glass px-4 py-2 text-sm font-medium"
+          className="bg-transparent border border-[var(--border-default)] text-[var(--text-primary)] rounded-xl hover:border-[rgba(0,255,167,0.3)] hover:bg-[rgba(0,255,167,0.04)] px-4 py-2 text-sm font-medium"
         >
           กลับแดชบอร์ด
         </Link>
       </div>
 
       {/* Schedule Form */}
-      <div className="glass p-6 mb-8">
+      <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[20px] p-6 mb-8">
         <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-6">
           ตั้งเวลาส่งข้อความใหม่
         </h2>
@@ -42,7 +42,7 @@ export default async function ScheduledPage() {
               <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
                 ชื่อผู้ส่ง
               </label>
-              <div className="input-glass flex items-center justify-between opacity-50 cursor-not-allowed">
+              <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] focus:outline-none px-3 py-2 w-full flex items-center justify-between opacity-50 cursor-not-allowed">
                 <span className="text-sm text-[var(--text-muted)]">เลือกชื่อผู้ส่ง</span>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[var(--text-muted)]"><polyline points="6 9 12 15 18 9" /></svg>
               </div>
@@ -55,7 +55,7 @@ export default async function ScheduledPage() {
               </label>
               <input
                 type="tel"
-                className="input-glass"
+                className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] focus:outline-none px-3 py-2 w-full"
                 placeholder="08XXXXXXXX"
                 disabled
               />
@@ -68,7 +68,7 @@ export default async function ScheduledPage() {
               ข้อความ
             </label>
             <textarea
-              className="input-glass min-h-[100px] resize-none"
+              className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] focus:outline-none px-3 py-2 w-full min-h-[100px] resize-none"
               placeholder="พิมพ์ข้อความที่ต้องการส่ง..."
               rows={4}
               disabled
@@ -81,7 +81,7 @@ export default async function ScheduledPage() {
               <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
                 วันที่
               </label>
-              <input type="date" className="input-glass" disabled />
+              <input type="date" className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] focus:outline-none px-3 py-2 w-full" disabled />
             </div>
 
             {/* Time Picker */}
@@ -89,7 +89,7 @@ export default async function ScheduledPage() {
               <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
                 เวลา
               </label>
-              <input type="time" className="input-glass" disabled />
+              <input type="time" className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] focus:outline-none px-3 py-2 w-full" disabled />
             </div>
           </div>
 
@@ -106,7 +106,7 @@ export default async function ScheduledPage() {
       </div>
 
       {/* Scheduled Messages Table */}
-      <div className="glass p-6">
+      <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[20px] p-6">
         <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-6">
           รายการตั้งเวลา
         </h2>

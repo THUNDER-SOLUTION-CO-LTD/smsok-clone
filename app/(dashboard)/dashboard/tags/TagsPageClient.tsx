@@ -1,213 +1,502 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { createTag, updateTag, deleteTag } from "@/lib/actions/tags";
 import { safeErrorMessage } from "@/lib/error-messages";
+import { useToast } from "@/app/components/ui/Toast";
+import { TAG_COLORS } from "@/lib/tag-utils";
+import type { TagItem } from "@/lib/types/api-responses";
 
-type Tag = {
-  id: string;
-  name: string;
-  color: string;
-  _count: { contactTags: number };
-};
+// shadcn
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 
-const COLORS = [
-  { hex: "#10B981", tw: "bg-emerald-500", label: "Emerald" },
-  { hex: "#8B5CF6", tw: "bg-violet-500",  label: "Violet"  },
-  { hex: "#06B6D4", tw: "bg-cyan-500",    label: "Cyan"    },
-  { hex: "#F59E0B", tw: "bg-amber-500",   label: "Amber"   },
-  { hex: "#EF4444", tw: "bg-red-500",     label: "Red"     },
-  { hex: "#EC4899", tw: "bg-pink-500",    label: "Pink"    },
-  { hex: "#3B82F6", tw: "bg-blue-500",    label: "Blue"    },
-  { hex: "#94A3B8", tw: "bg-slate-400",   label: "Slate"   },
-] as const;
+// Icons
+import { Plus, Pencil, Trash2, Tag, Loader2, Search, ArrowUpDown } from "lucide-react";
 
-function getColorClass(hex: string) {
-  return COLORS.find((c) => c.hex === hex)?.tw ?? "bg-slate-400";
+// ==========================================
+// Types
+// ==========================================
+
+// TagItem imported from api-responses
+
+// ==========================================
+// Nansen-aligned color picker options
+// ==========================================
+
+const COLOR_OPTIONS = TAG_COLORS.map((c) => ({
+  hex: c.hex,
+  name: c.name,
+  dotClass: c.dot,
+}));
+
+function getColorDotClass(hex: string) {
+  const found = COLOR_OPTIONS.find((c) => c.hex === hex);
+  return found ? found.dotClass : "bg-[var(--text-muted)]";
 }
 
-const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
-const cardVariant = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" as const } } };
+// ==========================================
+// Zod schema
+// ==========================================
 
-export default function TagsPageClient({ userId, initialTags }: { userId: string; initialTags: Tag[] }) {
-  const [tags, setTags] = useState<Tag[]>(initialTags);
+const tagFormSchema = z.object({
+  name: z
+    .string()
+    .min(1, "กรุณากรอกชื่อแท็ก")
+    .max(50, "ชื่อแท็กต้องไม่เกิน 50 ตัวอักษร"),
+  color: z.string().min(1),
+});
+
+type TagFormValues = z.infer<typeof tagFormSchema>;
+
+// ==========================================
+// Main Component
+// ==========================================
+
+export default function TagsPageClient({
+  userId,
+  initialTags,
+}: {
+  userId: string;
+  initialTags: TagItem[];
+}) {
+  const router = useRouter();
+  const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
-  const [showCreate, setShowCreate] = useState(false);
-  const [editId, setEditId] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: "", color: "#8B5CF6" });
-  const [error, setError] = useState("");
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+
+  // Dialog states
+  const [showDialog, setShowDialog] = useState(false);
+  const [editingTag, setEditingTag] = useState<TagItem | null>(null);
+  const [showDeleteAlert, setShowDeleteAlert] = useState(false);
+  const [deletingTag, setDeletingTag] = useState<TagItem | null>(null);
+
+  // Form
+  const form = useForm<TagFormValues>({
+    resolver: zodResolver(tagFormSchema),
+    defaultValues: { name: "", color: "#00FFA7" },
+  });
+
+  // ==========================================
+  // Handlers
+  // ==========================================
 
   function openCreate() {
-    setForm({ name: "", color: "#8B5CF6" });
-    setEditId(null);
-    setError("");
-    setShowCreate(true);
+    setEditingTag(null);
+    form.reset({ name: "", color: "#00FFA7" });
+    setShowDialog(true);
   }
 
-  function openEdit(tag: Tag) {
-    setForm({ name: tag.name, color: tag.color });
-    setEditId(tag.id);
-    setError("");
-    setShowCreate(true);
+  function openEdit(tag: TagItem) {
+    setEditingTag(tag);
+    form.reset({ name: tag.name, color: tag.color });
+    setShowDialog(true);
   }
 
-  function handleSave() {
-    if (!form.name.trim()) { setError("กรุณากรอกชื่อแท็ก"); return; }
-    setError("");
+  function handleSubmit(data: TagFormValues) {
     startTransition(async () => {
       try {
-        if (editId) {
-          const updated = await updateTag(userId, editId, { name: form.name.trim(), color: form.color });
-          setTags(prev => prev.map(t => t.id === editId ? { ...t, ...updated } : t));
+        if (editingTag) {
+          await updateTag(userId, editingTag.id, {
+            name: data.name.trim(),
+            color: data.color,
+          });
+          toast("success", "อัปเดตแท็กสำเร็จ!");
         } else {
-          const created = await createTag(userId, { name: form.name.trim(), color: form.color });
-          setTags(prev => [{ ...created, _count: { contactTags: 0 } }, ...prev]);
+          await createTag(userId, {
+            name: data.name.trim(),
+            color: data.color,
+          });
+          toast("success", "สร้างแท็กสำเร็จ!");
         }
-        setShowCreate(false);
+        setShowDialog(false);
+        router.refresh();
       } catch (e) {
-        setError(safeErrorMessage(e));
+        toast("error", safeErrorMessage(e));
       }
     });
   }
 
-  function handleDelete(tagId: string) {
+  function handleDeleteConfirm() {
+    if (!deletingTag) return;
     startTransition(async () => {
-      await deleteTag(userId, tagId);
-      setTags(prev => prev.filter(t => t.id !== tagId));
-      setDeleteConfirm(null);
+      try {
+        await deleteTag(userId, deletingTag.id);
+        toast("success", `ลบแท็ก "${deletingTag.name}" สำเร็จ`);
+        setShowDeleteAlert(false);
+        setDeletingTag(null);
+        router.refresh();
+      } catch (e) {
+        toast("error", safeErrorMessage(e));
+      }
     });
   }
 
+  // ==========================================
+  // Render
+  // ==========================================
+
+  // Search state
+  const [searchQuery, setSearchQuery] = useState("");
+  const filteredTags = initialTags.filter((tag) =>
+    tag.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+  const totalContacts = initialTags.reduce((sum, t) => sum + t._count.contactTags, 0);
+  const activeTags = initialTags.filter((t) => t._count.contactTags > 0).length;
+  const unusedTags = initialTags.length - activeTags;
+
   return (
-    <motion.div className="p-6 md:p-8 max-w-5xl" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+    <div className="pb-20 md:pb-8" style={{ padding: "var(--content-padding-y) var(--content-padding-x)" }}>
+      {/* Page Header — DNA Part 1 */}
+      <div className="page-header">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight gradient-text-mixed">แท็ก</h2>
-          <p className="text-sm text-[var(--text-muted)] mt-1">{tags.length} แท็กทั้งหมด</p>
+          <h1 className="page-title">แท็ก</h1>
+          <p className="page-description">จัดการและจัดระเบียบแท็กรายชื่อผู้ติดต่อ</p>
         </div>
-        <motion.button
+        <Button
           onClick={openCreate}
-          whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-          className="btn-primary px-5 py-2.5 text-sm rounded-xl inline-flex items-center gap-2 cursor-pointer"
+          className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--bg-base)] font-semibold"
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+          <Plus className="w-4 h-4 mr-1.5" />
           สร้างแท็ก
-        </motion.button>
+        </Button>
       </div>
 
-      {/* Create / Edit Modal */}
-      <AnimatePresence>
-        {showCreate && (
-          <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center px-4"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          >
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowCreate(false)} />
-            <motion.div
-              className="relative glass p-6 w-full max-w-md z-10"
-              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              <h3 className="text-lg font-bold text-white mb-5">{editId ? "แก้ไขแท็ก" : "สร้างแท็กใหม่"}</h3>
-              {error && <div className="mb-4 p-3 rounded-xl bg-red-500/8 border border-red-500/15 text-red-400 text-sm">{error}</div>}
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs text-white font-medium uppercase tracking-wider mb-2">ชื่อแท็ก</label>
-                  <input
-                    type="text" maxLength={50} autoFocus
-                    value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                    onKeyDown={e => e.key === "Enter" && handleSave()}
-                    className="input-glass w-full" placeholder="ชื่อแท็ก..."
+      {/* Stats Cards — DNA Part 8 */}
+      <div className="stats-grid">
+        <div className="nansen-stat-card">
+          <div className="label">แท็กทั้งหมด</div>
+          <div className="value">{initialTags.length}</div>
+          <div className="text-xs text-[var(--text-subdued)] mt-1">tags</div>
+        </div>
+        <div className="nansen-stat-card">
+          <div className="label">ใช้งานอยู่</div>
+          <div className="value">{activeTags}</div>
+          <div className="text-xs text-[var(--text-subdued)] mt-1">มีรายชื่อ</div>
+        </div>
+        <div className="nansen-stat-card">
+          <div className="label">ไม่ได้ใช้</div>
+          <div className="value">{unusedTags}</div>
+          <div className="text-xs text-[var(--text-subdued)] mt-1">ว่าง</div>
+        </div>
+        <div className="nansen-stat-card">
+          <div className="label">รายชื่อทั้งหมด</div>
+          <div className="value">{totalContacts.toLocaleString()}</div>
+          <div className="text-xs text-[var(--text-subdued)] mt-1">tagged contacts</div>
+        </div>
+      </div>
+
+      {/* Filter Bar — DNA Part 1 */}
+      <div className="filter-bar">
+        <div className="relative flex-1 max-w-[300px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-subdued)]" />
+          <input
+            type="text"
+            placeholder="ค้นหาแท็ก..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="nansen-input w-full pl-9"
+          />
+        </div>
+      </div>
+
+      {/* Tags Table — DNA Part 2 + Part 8 */}
+      {filteredTags.length > 0 ? (
+        <>
+          {/* Desktop Table */}
+          <div className="hidden md:block overflow-x-auto rounded-[var(--radius-xl)] border border-[var(--border-default)]">
+            <table className="nansen-table">
+              <thead>
+                <tr>
+                  <th style={{ width: 200 }}>
+                    ชื่อแท็ก <ArrowUpDown className="inline w-3 h-3 sort-icon" />
+                  </th>
+                  <th style={{ width: 120 }}>สี</th>
+                  <th style={{ width: 120 }} className="text-right">รายชื่อ</th>
+                  <th style={{ width: 60 }} className="text-center">จัดการ</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredTags.map((tag) => (
+                  <tr key={tag.id} className="group">
+                    <td>
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={`w-3 h-3 rounded-full flex-shrink-0 ${getColorDotClass(tag.color)}`}
+                        />
+                        <span className="font-medium">{tag.name}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <span className="tag-pill" style={{
+                        background: `${tag.color}1a`,
+                        color: tag.color,
+                        borderColor: `${tag.color}33`,
+                      }}>
+                        <span className="dot" style={{ background: tag.color }} />
+                        {COLOR_OPTIONS.find((c) => c.hex === tag.color)?.name || tag.color}
+                      </span>
+                    </td>
+                    <td className="numeric">{tag._count.contactTags.toLocaleString()}</td>
+                    <td className="text-center">
+                      <div className="flex items-center gap-1 justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => openEdit(tag)}
+                          className="w-7 h-7 rounded-lg hover:bg-[rgba(255,255,255,0.04)] flex items-center justify-center text-[var(--text-subdued)] hover:text-white transition-colors"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => { setDeletingTag(tag); setShowDeleteAlert(true); }}
+                          className="w-7 h-7 rounded-lg hover:bg-[rgba(239,68,68,0.06)] flex items-center justify-center text-[var(--text-subdued)] hover:text-red-400 transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile Cards */}
+          <div className="md:hidden space-y-3">
+            {filteredTags.map((tag) => (
+              <div
+                key={tag.id}
+                className="nansen-card p-4 flex items-center justify-between"
+              >
+                <div className="flex items-center gap-3">
+                  <span
+                    className={`w-3 h-3 rounded-full flex-shrink-0 ${getColorDotClass(tag.color)}`}
                   />
-                </div>
-                <div>
-                  <label className="block text-xs text-white font-medium uppercase tracking-wider mb-2">สี</label>
-                  <div className="flex gap-2 flex-wrap">
-                    {COLORS.map(c => (
-                      <button
-                        key={c.hex}
-                        type="button"
-                        onClick={() => setForm(f => ({ ...f, color: c.hex }))}
-                        className={`w-8 h-8 rounded-lg ${c.tw} transition-all cursor-pointer ${form.color === c.hex ? "ring-2 ring-white/60 scale-110" : "hover:scale-105"}`}
-                        title={c.label}
-                      />
-                    ))}
+                  <div>
+                    <div className="text-sm font-medium text-white">{tag.name}</div>
+                    <div className="text-xs text-[var(--text-subdued)] mt-0.5">
+                      {tag._count.contactTags} รายชื่อ
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="flex gap-3 mt-6">
-                <button onClick={() => setShowCreate(false)} className="flex-1 btn-glass py-2.5 rounded-xl text-sm cursor-pointer">ยกเลิก</button>
-                <button onClick={handleSave} disabled={isPending} className="flex-1 btn-primary py-2.5 rounded-xl text-sm disabled:opacity-50 cursor-pointer">
-                  {isPending ? "กำลังบันทึก..." : editId ? "บันทึก" : "สร้าง"}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Delete Confirm Modal */}
-      <AnimatePresence>
-        {deleteConfirm && (
-          <motion.div className="fixed inset-0 z-50 flex items-center justify-center px-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setDeleteConfirm(null)} />
-            <motion.div className="relative glass p-6 w-full max-w-sm z-10 text-center" initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }} transition={{ duration: 0.2 }}>
-              <div className="w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-4">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-red-400"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2" /></svg>
-              </div>
-              <h3 className="text-lg font-bold text-white mb-2">ลบแท็ก</h3>
-              <p className="text-sm text-[var(--text-muted)] mb-6">แท็กที่ลบแล้วจะถูกถอดออกจากรายชื่อทั้งหมด</p>
-              <div className="flex gap-3">
-                <button onClick={() => setDeleteConfirm(null)} className="flex-1 btn-glass py-2.5 rounded-xl text-sm cursor-pointer">ยกเลิก</button>
-                <button onClick={() => handleDelete(deleteConfirm)} disabled={isPending} className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/15 transition-colors disabled:opacity-50 cursor-pointer">ลบ</button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Tags Grid */}
-      {tags.length > 0 ? (
-        <motion.div
-          variants={stagger} initial="hidden" animate="show"
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
-        >
-          {tags.map(tag => (
-            <motion.div key={tag.id} variants={cardVariant} className="glass card-glow p-5 group flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className={`w-4 h-4 rounded-full flex-shrink-0 ${getColorClass(tag.color)}`} style={{ boxShadow: `0 0 8px ${tag.color}66` }} />
-                <div>
-                  <div className="text-sm font-semibold text-white">{tag.name}</div>
-                  <div className="text-xs text-[var(--text-muted)] mt-0.5">{tag._count.contactTags} รายชื่อ</div>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => openEdit(tag)}
+                    className="min-w-[44px] min-h-[44px] flex items-center justify-center text-[var(--text-subdued)] hover:text-[var(--accent)] transition-colors"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => { setDeletingTag(tag); setShowDeleteAlert(true); }}
+                    className="min-w-[44px] min-h-[44px] flex items-center justify-center text-[var(--text-subdued)] hover:text-red-400 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button onClick={() => openEdit(tag)} className="w-8 h-8 rounded-lg hover:bg-white/8 flex items-center justify-center text-[var(--text-muted)] hover:text-slate-200 transition-colors cursor-pointer">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
-                </button>
-                <button onClick={() => setDeleteConfirm(tag.id)} className="w-8 h-8 rounded-lg hover:bg-red-500/10 flex items-center justify-center text-[var(--text-muted)] hover:text-red-400 transition-colors cursor-pointer">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2" /></svg>
-                </button>
-              </div>
-            </motion.div>
-          ))}
-        </motion.div>
-      ) : (
-        <motion.div className="glass p-16 text-center" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
-          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-subtle)] flex items-center justify-center">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="text-[var(--text-muted)]"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z" /><line x1="7" y1="7" x2="7.01" y2="7" strokeWidth="2" /></svg>
+            ))}
           </div>
-          <p className="text-sm text-[var(--text-secondary)] mb-1">ยังไม่มีแท็ก</p>
-          <p className="text-xs text-[var(--text-muted)] mb-6">สร้างแท็กเพื่อจัดกลุ่มรายชื่อของคุณ</p>
-          <button onClick={openCreate} className="btn-primary px-6 py-2.5 rounded-xl text-sm inline-flex items-center gap-2 cursor-pointer">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-            สร้างแท็กแรก
-          </button>
-        </motion.div>
+
+          {/* Pagination info */}
+          <div className="mt-4 text-right text-xs text-[var(--text-subdued)]">
+            แสดง {filteredTags.length} จาก {initialTags.length} แท็ก
+          </div>
+        </>
+      ) : (
+        /* Empty state */
+        <div className="nansen-card p-12 text-center">
+          <div className="w-16 h-16 rounded-full bg-[rgba(0,255,167,0.08)] border border-[rgba(0,255,167,0.15)] flex items-center justify-center mx-auto mb-4">
+            <Tag className="w-8 h-8 text-[var(--accent)]" />
+          </div>
+          <h3 className="text-lg font-semibold text-white mb-2">
+            {searchQuery ? "ไม่พบแท็ก" : "ยังไม่มีแท็ก"}
+          </h3>
+          <p className="text-sm text-[var(--text-subdued)] mb-6">
+            {searchQuery ? `ไม่พบแท็กที่ตรงกับ "${searchQuery}"` : "สร้างแท็กเพื่อจัดกลุ่มรายชื่อของคุณ"}
+          </p>
+          {!searchQuery && (
+            <Button
+              onClick={openCreate}
+              className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--bg-base)] font-semibold"
+            >
+              <Plus className="w-4 h-4 mr-1.5" />
+              สร้างแท็กแรก
+            </Button>
+          )}
+        </div>
       )}
-    </motion.div>
+
+      {/* ==========================================
+          DIALOGS
+          ========================================== */}
+
+      {/* Create / Edit Tag Dialog */}
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent className="bg-[var(--bg-surface)] border-[var(--border-subtle)] rounded-[20px] sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="text-white text-lg">
+              {editingTag ? "แก้ไขแท็ก" : "สร้างแท็กใหม่"}
+            </DialogTitle>
+            <DialogDescription className="text-[var(--text-muted)]">
+              {editingTag
+                ? "แก้ไขชื่อหรือสีของแท็ก"
+                : "ตั้งชื่อและเลือกสีสำหรับแท็กใหม่"}
+            </DialogDescription>
+          </DialogHeader>
+
+          <Form {...form}>
+            <form
+              onSubmit={form.handleSubmit(handleSubmit)}
+              className="space-y-4"
+            >
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs font-semibold uppercase tracking-[0.05em] text-[var(--text-secondary)]">
+                      ชื่อแท็ก
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="ชื่อแท็ก"
+                        maxLength={50}
+                        autoFocus
+                        className="h-11 bg-[var(--bg-base)] border-[var(--border-subtle)] text-white placeholder:text-[var(--text-muted)] rounded-lg focus:border-[rgba(0,255,167,0.6)] focus:ring-[rgba(0,255,167,0.12)]"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Color Picker */}
+              <FormField
+                control={form.control}
+                name="color"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs font-semibold uppercase tracking-[0.05em] text-[var(--text-secondary)]">
+                      สี
+                    </FormLabel>
+                    <div className="flex gap-2 flex-wrap">
+                      {COLOR_OPTIONS.map((c) => (
+                        <button
+                          key={c.hex}
+                          type="button"
+                          onClick={() => field.onChange(c.hex)}
+                          className={`w-7 h-7 rounded-full transition-all ${
+                            field.value === c.hex
+                              ? "ring-2 ring-offset-2 ring-offset-[var(--bg-surface)] scale-110"
+                              : "hover:scale-105"
+                          }`}
+                          style={{
+                            backgroundColor: c.hex,
+                            ...(field.value === c.hex
+                              ? { ringColor: c.hex }
+                              : {}),
+                          }}
+                          title={c.name}
+                        />
+                      ))}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <DialogFooter className="gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowDialog(false)}
+                  className="border-[var(--border-subtle)] text-[var(--text-muted)] hover:text-white bg-transparent"
+                >
+                  ยกเลิก
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isPending}
+                  className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--bg-base)] font-semibold"
+                >
+                  {isPending ? (
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      กำลังบันทึก...
+                    </span>
+                  ) : (
+                    "บันทึก"
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Tag AlertDialog */}
+      <AlertDialog open={showDeleteAlert} onOpenChange={setShowDeleteAlert}>
+        <AlertDialogContent className="bg-[var(--bg-surface)] border-[var(--border-subtle)] rounded-[20px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">
+              ลบแท็ก &ldquo;{deletingTag?.name}&rdquo;?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-[var(--text-muted)]">
+              แท็กจะถูกลบจาก {deletingTag?._count.contactTags || 0}{" "}
+              รายชื่อผู้ติดต่อ
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-[var(--border-subtle)] text-[var(--text-muted)] hover:text-white bg-transparent">
+              ยกเลิก
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              disabled={isPending}
+              className="bg-red-500 hover:bg-red-600 text-white"
+            >
+              {isPending ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  กำลังลบ...
+                </span>
+              ) : (
+                "ลบ"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
 }

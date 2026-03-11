@@ -375,7 +375,7 @@ export default function CampaignsClient({
       <AnimatePresence>
         {showForm && (
           <motion.div
-            className="glass p-6 mb-8"
+            className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[20px] p-6 mb-8"
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
@@ -453,7 +453,7 @@ export default function CampaignsClient({
                 </label>
                 <input
                   type="datetime-local"
-                  className="input-glass"
+                  className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] focus:outline-none px-3 py-2 w-full"
                   value={formSchedule}
                   onChange={(e) => setFormSchedule(e.target.value)}
                 />
@@ -467,7 +467,7 @@ export default function CampaignsClient({
                 <label className="block text-xs text-[var(--text-secondary)] uppercase tracking-wider mb-2">
                   ประมาณการเครดิต
                 </label>
-                <div className="input-glass flex items-center justify-between pointer-events-none">
+                <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] focus:outline-none px-3 py-2 w-full flex items-center justify-between pointer-events-none">
                   <span className="text-[var(--text-secondary)]">
                     {creditEstimate > 0
                       ? `${creditEstimate.toLocaleString()} เครดิต`
@@ -516,7 +516,7 @@ export default function CampaignsClient({
               </motion.button>
               <motion.button
                 onClick={() => setShowForm(false)}
-                className="btn-glass px-5 py-2.5 rounded-xl text-sm font-medium"
+                className="bg-transparent border border-[var(--border-default)] text-[var(--text-primary)] rounded-xl hover:border-[rgba(0,255,167,0.3)] hover:bg-[rgba(0,255,167,0.04)] px-5 py-2.5 rounded-xl text-sm font-medium"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
@@ -531,7 +531,7 @@ export default function CampaignsClient({
       <AnimatePresence>
         {selectedCampaign && (
           <motion.div
-            className="glass p-6 mb-8"
+            className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[20px] p-6 mb-8"
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
@@ -544,7 +544,7 @@ export default function CampaignsClient({
               </div>
               <motion.button
                 onClick={() => setSelectedCampaign(null)}
-                className="btn-glass px-3 py-1.5 text-xs rounded-lg"
+                className="bg-transparent border border-[var(--border-default)] text-[var(--text-primary)] rounded-xl hover:border-[rgba(0,255,167,0.3)] hover:bg-[rgba(0,255,167,0.04)] px-3 py-1.5 text-xs rounded-lg"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
