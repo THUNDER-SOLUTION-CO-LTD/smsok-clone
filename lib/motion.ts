@@ -149,7 +149,7 @@ export const primaryButtonVariants: Variants = {
   idle: { scale: 1 },
   hover: {
     scale: 1.03,
-    boxShadow: "0 0 20px rgba(0, 226, 181, 0.3)",
+    boxShadow: "0 0 20px rgba(0, 255, 167, 0.3)",
     transition: { type: "spring", stiffness: 400, damping: 15 },
   },
   tap: {
