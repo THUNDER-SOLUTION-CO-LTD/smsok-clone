@@ -8,6 +8,7 @@ import { safeErrorMessage } from "@/lib/error-messages";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -18,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { Send, ArrowRight, Loader2 } from "lucide-react";
+import { ArrowRight, Loader2 } from "lucide-react";
 
 type MsgType = "english" | "thai" | "unicode";
 
@@ -50,7 +51,6 @@ export default function SendSmsForm({ userId, senderNames = ["EasySlip"] }: { us
   const creditPerSms = message ? calculateCreditCost(message) : 0;
   const totalCredit = creditPerSms * recipientCount;
 
-  // Character counter progress
   const maxChars = limits.single;
   const charProgress = Math.min((charCount / maxChars) * 100, 100);
 
@@ -75,15 +75,16 @@ export default function SendSmsForm({ userId, senderNames = ["EasySlip"] }: { us
   };
 
   return (
-    <div className="p-6 md:p-8 pb-20 md:pb-8 max-w-6xl space-y-6">
+    <div className="p-4 md:p-6 pb-20 md:pb-6 space-y-6">
+      {/* Page Header */}
       <h1 className="text-2xl font-bold text-white">ส่ง SMS</h1>
 
-      {/* Feedback */}
+      {/* Feedback Alert */}
       {result && (
         <div className={`p-3 rounded-xl text-sm font-medium border transition-opacity duration-200 ${
           result.type === "success"
             ? "bg-[rgba(16,185,129,0.06)] border-[rgba(16,185,129,0.15)] text-[#10B981]"
-            : "bg-[rgba(239,68,68,0.06)] border-[rgba(239,68,68,0.15)] text-[#F87171]"
+            : "bg-[rgba(239,68,68,0.06)] border-[rgba(239,68,68,0.15)] text-[#EF4444]"
         }`}>
           {result.text}
         </div>
@@ -91,26 +92,21 @@ export default function SendSmsForm({ userId, senderNames = ["EasySlip"] }: { us
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* ── Compose Panel ── */}
-        <Card className="lg:col-span-3 bg-[var(--bg-surface)] border-[var(--border-subtle)] rounded-[20px]">
-          <CardContent className="p-6 md:p-8">
-            <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2">
-              <div className="w-8 h-8 rounded-[10px] bg-[rgba(0,255,167,0.08)] flex items-center justify-center">
-                <Send className="w-4 h-4 text-[var(--accent)]" />
-              </div>
-              เขียนข้อความ
-            </h3>
+        <Card className="lg:col-span-3 bg-[#131415] border-[#08283B] rounded-[20px]">
+          <CardContent className="p-5 md:p-6">
+            <h3 className="text-base font-semibold text-white mb-5">เขียนข้อความ</h3>
 
             <div className="space-y-5">
               {/* Sender */}
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-[0.05em] text-[var(--text-secondary)] mb-1.5">ผู้ส่ง</label>
+                <label className="block text-xs font-semibold uppercase tracking-[0.05em] text-[#9BA1A5] mb-1.5">ผู้ส่ง</label>
                 <Select value={senderName} onValueChange={(v) => v && setSenderName(v)}>
-                  <SelectTrigger className="h-11 bg-[var(--bg-base)] border-[var(--border-subtle)] text-white rounded-lg">
+                  <SelectTrigger className="h-11 bg-[#06080b] border-[#08283B] text-white rounded-xl focus:border-[rgba(0,226,181,0.6)] focus:ring-[rgba(0,226,181,0.15)]">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-[var(--bg-surface)] border-[var(--border-subtle)]">
+                  <SelectContent className="bg-[#131415] border-[#08283B] rounded-xl">
                     {senderNames.map((name) => (
-                      <SelectItem key={name} value={name} className="hover:bg-[var(--bg-surface-hover)]">
+                      <SelectItem key={name} value={name} className="hover:bg-[#000000] text-white">
                         {name}
                       </SelectItem>
                     ))}
@@ -120,7 +116,7 @@ export default function SendSmsForm({ userId, senderNames = ["EasySlip"] }: { us
 
               {/* Message Type */}
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-[0.05em] text-[var(--text-secondary)] mb-1.5">ประเภทข้อความ</label>
+                <label className="block text-xs font-semibold uppercase tracking-[0.05em] text-[#9BA1A5] mb-1.5">ประเภทข้อความ</label>
                 <Tabs value={msgType} onValueChange={(v) => setMsgType(v as MsgType)}>
                   <TabsList className="h-9 bg-transparent gap-2 p-0">
                     {([
@@ -131,7 +127,7 @@ export default function SendSmsForm({ userId, senderNames = ["EasySlip"] }: { us
                       <TabsTrigger
                         key={tab.value}
                         value={tab.value}
-                        className="h-9 px-4 rounded-lg text-xs font-medium border border-[var(--border-subtle)] text-[var(--text-secondary)] data-[state=active]:bg-[rgba(0,255,167,0.08)] data-[state=active]:border-[rgba(0,255,167,0.3)] data-[state=active]:text-[var(--accent)]"
+                        className="h-9 px-4 rounded-lg text-xs font-medium border border-[#08283B] text-[#9BA1A5] data-[state=active]:bg-[rgba(0,226,181,0.08)] data-[state=active]:border-[rgba(0,226,181,0.3)] data-[state=active]:text-[#00E2B5]"
                       >
                         {tab.label}
                       </TabsTrigger>
@@ -142,18 +138,18 @@ export default function SendSmsForm({ userId, senderNames = ["EasySlip"] }: { us
 
               {/* Recipients */}
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-[0.05em] text-[var(--text-secondary)] mb-1.5">ผู้รับ</label>
+                <label className="block text-xs font-semibold uppercase tracking-[0.05em] text-[#9BA1A5] mb-1.5">ผู้รับ</label>
                 <Textarea
                   value={recipients}
                   onChange={(e) => setRecipients(e.target.value)}
-                  className={`bg-[var(--bg-base)] border-[var(--border-subtle)] text-white placeholder:text-[var(--text-secondary)] rounded-lg resize-none focus:border-[rgba(0,255,167,0.6)] focus:ring-[rgba(0,255,167,0.12)] ${phoneError ? "border-[rgba(239,68,68,0.6)]" : validPhones.length > 0 ? "border-[rgba(16,185,129,0.4)]" : ""}`}
+                  className={`bg-[#06080b] border-[#08283B] text-white placeholder:text-[#9BA1A5] rounded-xl resize-none focus:border-[rgba(0,226,181,0.6)] focus:ring-[rgba(0,226,181,0.15)] ${phoneError ? "border-[rgba(239,68,68,0.6)]" : validPhones.length > 0 ? "border-[rgba(16,185,129,0.4)]" : ""}`}
                   rows={4}
                   placeholder={"กรอกเบอร์โทร (คั่นด้วย Enter หรือ comma)\n0891234567\n0891234568"}
                 />
                 {phoneError ? (
                   <p className="text-[#F87171] text-xs mt-1">{phoneError}</p>
                 ) : (
-                  <p className="text-xs text-[var(--text-secondary)] mt-1">
+                  <p className="text-xs text-[#9BA1A5] mt-1">
                     {validPhones.length > 0 ? (
                       <><span className="text-[#10B981]">{validPhones.length} เบอร์ถูกต้อง</span>{invalidPhones.length > 0 && <>, <span className="text-[#F87171]">{invalidPhones.length} ไม่ถูกต้อง</span></>}</>
                     ) : (
@@ -165,17 +161,17 @@ export default function SendSmsForm({ userId, senderNames = ["EasySlip"] }: { us
 
               {/* Message */}
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-[0.05em] text-[var(--text-secondary)] mb-1.5">ข้อความ</label>
+                <label className="block text-xs font-semibold uppercase tracking-[0.05em] text-[#9BA1A5] mb-1.5">ข้อความ</label>
                 <Textarea
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  className="bg-[var(--bg-base)] border-[var(--border-subtle)] text-white placeholder:text-[var(--text-secondary)] rounded-lg resize-none focus:border-[rgba(0,255,167,0.6)] focus:ring-[rgba(0,255,167,0.12)]"
+                  className="bg-[#06080b] border-[#08283B] text-white placeholder:text-[#9BA1A5] rounded-xl resize-none focus:border-[rgba(0,226,181,0.6)] focus:ring-[rgba(0,226,181,0.15)]"
                   rows={5}
                   placeholder="พิมพ์ข้อความ SMS ที่นี่..."
                   maxLength={1000}
                 />
                 <div className="flex items-center justify-between mt-1.5">
-                  <p className="text-xs text-[var(--text-secondary)]">
+                  <p className="text-xs text-[#9BA1A5]">
                     {smsCounterText(message) || `0/${limits.single} ตัวอักษร · 0 SMS`}
                   </p>
                   {message.length > 0 && (
@@ -185,9 +181,9 @@ export default function SendSmsForm({ userId, senderNames = ["EasySlip"] }: { us
                   )}
                 </div>
                 {/* Progress bar */}
-                <div className="h-0.5 mt-1 rounded-full bg-[var(--border-subtle)] overflow-hidden">
+                <div className="h-0.5 mt-1 rounded-full bg-[#08283B] overflow-hidden">
                   <div
-                    className="h-full rounded-full bg-[var(--accent)] transition-all duration-200"
+                    className="h-full rounded-full bg-[#00E2B5] transition-all duration-200"
                     style={{ width: `${charProgress}%` }}
                   />
                 </div>
@@ -199,45 +195,45 @@ export default function SendSmsForm({ userId, senderNames = ["EasySlip"] }: { us
         {/* ── Preview & Cost Panel ── */}
         <div className="lg:col-span-2 space-y-6 lg:sticky lg:top-[80px] lg:self-start pb-20 lg:pb-0">
           {/* Preview */}
-          <Card className="bg-[var(--bg-surface)] border-[var(--border-subtle)] rounded-[20px]">
+          <Card className="bg-[#131415] border-[#08283B] rounded-[20px]">
             <CardContent className="p-5">
-              <h3 className="text-xs font-semibold uppercase tracking-[0.05em] text-[var(--text-secondary)] mb-4">ตัวอย่าง</h3>
-              <div className="bg-[var(--bg-base)] border border-[var(--border-subtle)] rounded-xl p-4 min-h-[120px]">
-                <div className="text-xs text-[var(--accent)] mb-2">From: {senderName || "EasySlip"}</div>
+              <h3 className="text-xs font-semibold uppercase tracking-[0.05em] text-[#9BA1A5] mb-4">ตัวอย่าง</h3>
+              <div className="bg-[#06080b] border border-[#08283B] rounded-xl p-4 min-h-[120px]">
+                <div className="text-xs text-[#00E2B5] mb-2">From: {senderName || "EasySlip"}</div>
                 <p className="text-sm text-white whitespace-pre-wrap">
-                  {message || <span className="text-[var(--text-secondary)]">ข้อความจะแสดงที่นี่...</span>}
+                  {message || <span className="text-[#9BA1A5]">ข้อความจะแสดงที่นี่...</span>}
                 </p>
               </div>
             </CardContent>
           </Card>
 
           {/* Cost Summary */}
-          <Card className="bg-[var(--bg-surface)] border-[var(--border-subtle)] rounded-[20px]">
+          <Card className="bg-[#131415] border-[#08283B] rounded-[20px]">
             <CardContent className="p-5">
-              <h3 className="text-xs font-semibold uppercase tracking-[0.05em] text-[var(--text-secondary)] mb-4">สรุปค่าใช้จ่าย</h3>
+              <h3 className="text-xs font-semibold uppercase tracking-[0.05em] text-[#9BA1A5] mb-4">สรุปค่าใช้จ่าย</h3>
               <div className="space-y-2.5">
-                <div className="flex justify-between text-[13px] border-b border-[var(--border-subtle)] pb-2.5">
-                  <span className="text-[var(--text-secondary)]">ผู้รับ</span>
+                <div className="flex justify-between text-[13px] border-b border-[#08283B] pb-2.5">
+                  <span className="text-[#9BA1A5]">ผู้รับ</span>
                   <span className="text-white">{recipientCount} เบอร์</span>
                 </div>
-                <div className="flex justify-between text-[13px] border-b border-[var(--border-subtle)] pb-2.5">
-                  <span className="text-[var(--text-secondary)]">SMS/เบอร์</span>
+                <div className="flex justify-between text-[13px] border-b border-[#08283B] pb-2.5">
+                  <span className="text-[#9BA1A5]">SMS/เบอร์</span>
                   <span className="text-white">{smsCount}</span>
                 </div>
-                <div className="flex justify-between text-[13px] border-b border-[var(--border-subtle)] pb-2.5">
-                  <span className="text-[var(--text-secondary)]">เครดิต/SMS</span>
+                <div className="flex justify-between text-[13px] border-b border-[#08283B] pb-2.5">
+                  <span className="text-[#9BA1A5]">เครดิต/SMS</span>
                   <span className="text-white">{creditPerSms}</span>
                 </div>
                 <div className="flex justify-between pt-1">
                   <span className="text-base font-bold text-white">รวม</span>
-                  <span className="text-base font-bold text-[var(--accent)]">{totalCredit} เครดิต</span>
+                  <span className="text-base font-bold text-[#00E2B5]">{totalCredit} เครดิต</span>
                 </div>
               </div>
 
               <Button
                 onClick={handleSend}
                 disabled={isPending || !recipients.trim() || !message.trim() || !!phoneError}
-                className="w-full mt-4 h-12 bg-[var(--accent)] hover:bg-[#0AE99C] text-[var(--bg-base)] rounded-xl font-semibold"
+                className="w-full mt-4 h-12 bg-[#00E2B5] hover:bg-[#0AE99C] text-[#06080b] rounded-[20px] font-semibold disabled:opacity-50"
               >
                 {isPending ? (
                   <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" />กำลังส่ง...</span>
@@ -251,16 +247,16 @@ export default function SendSmsForm({ userId, senderNames = ["EasySlip"] }: { us
       </div>
 
       {/* Mobile Sticky CTA */}
-      <div className="lg:hidden fixed bottom-16 left-0 right-0 z-40 bg-[var(--bg-base)] border-t border-[var(--border-subtle)] px-4 py-3 safe-area-bottom">
+      <div className="lg:hidden fixed bottom-16 left-0 right-0 z-40 bg-[#06080b] border-t border-[#08283B] px-4 py-3 safe-area-bottom">
         <div className="flex items-center justify-between gap-4">
           <div className="text-sm">
-            <span className="text-[var(--text-secondary)]">รวม: </span>
-            <span className="text-base font-bold text-[var(--accent)]">{totalCredit} เครดิต</span>
+            <span className="text-[#9BA1A5]">รวม: </span>
+            <span className="text-base font-bold text-[#00E2B5]">{totalCredit} เครดิต</span>
           </div>
           <Button
             onClick={handleSend}
             disabled={isPending || !recipients.trim() || !message.trim() || !!phoneError}
-            className="h-11 px-6 bg-[var(--accent)] hover:bg-[#0AE99C] text-[var(--bg-base)] rounded-xl font-semibold"
+            className="h-11 px-6 bg-[#00E2B5] hover:bg-[#0AE99C] text-[#06080b] rounded-[20px] font-semibold disabled:opacity-50"
           >
             {isPending ? (
               <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" />ส่ง...</span>
