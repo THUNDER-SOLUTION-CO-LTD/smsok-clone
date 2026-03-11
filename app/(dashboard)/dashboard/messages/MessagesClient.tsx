@@ -29,14 +29,14 @@ import type { MessageItem, PaginationMeta } from "@/lib/types/api-responses";
 
 const statusConfig: Record<string, { badge: string; label: string }> = {
   delivered: { badge: "bg-[rgba(16,185,129,0.08)] text-[#34D399] border-[rgba(16,185,129,0.2)]", label: "ส่งสำเร็จ" },
-  sent:      { badge: "bg-[rgba(0,255,167,0.08)] text-[#00FFA7] border-[rgba(0,255,167,0.2)]", label: "ส่งแล้ว" },
+  sent:      { badge: "bg-[rgba(0,255,167,0.08)] text-[var(--accent)] border-[rgba(0,255,167,0.2)]", label: "ส่งแล้ว" },
   pending:   { badge: "bg-[rgba(245,158,11,0.08)] text-[#FBBF24] border-[rgba(245,158,11,0.2)]", label: "รอส่ง" },
   failed:    { badge: "bg-[rgba(239,68,68,0.08)] text-[#F87171] border-[rgba(239,68,68,0.2)]", label: "ล้มเหลว" },
 };
 
 const typeConfig: Record<string, string> = {
-  SMS: "bg-[rgba(71,121,255,0.08)] text-[#4779FF]",
-  OTP: "bg-[rgba(0,255,167,0.08)] text-[#00FFA7]",
+  SMS: "bg-[rgba(71,121,255,0.08)] text-[var(--accent-secondary)]",
+  OTP: "bg-[rgba(0,255,167,0.08)] text-[var(--accent)]",
 };
 
 function detectType(content: string): "OTP" | "SMS" {
@@ -91,11 +91,11 @@ export default function MessagesClient({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[#F2F4F5]">ประวัติการส่ง</h1>
-          <p className="text-sm text-[#949FA8] mt-1">{total} รายการทั้งหมด</p>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">ประวัติการส่ง</h1>
+          <p className="text-sm text-[var(--text-muted)] mt-1">{total} รายการทั้งหมด</p>
         </div>
         <Link href="/dashboard/send">
-          <Button className="bg-[#00FFA7] hover:bg-[#33FFB9] text-[#061019] rounded-[20px] font-semibold gap-2">
+          <Button className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--text-on-accent)] rounded-[20px] font-semibold gap-2">
             ส่ง SMS <ArrowRight className="w-4 h-4" />
           </Button>
         </Link>
@@ -105,53 +105,53 @@ export default function MessagesClient({
       <div className="space-y-3">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#949FA8]" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
             <Input
               type="text"
-              className="pl-10 h-11 bg-[#061019] border-[#2B3540] text-[#F2F4F5] placeholder:text-[#949FA8] rounded-xl focus:border-[rgba(0,255,167,0.6)] focus:ring-[rgba(0,255,167,0.12)]"
+              className="pl-10 h-11 bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] rounded-xl focus:border-[rgba(0,255,167,0.6)] focus:ring-[rgba(0,255,167,0.12)]"
               placeholder="ค้นหาเบอร์, เนื้อหา, ผู้ส่ง..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
           <Select value={typeFilter} onValueChange={(v) => v && setTypeFilter(v)}>
-            <SelectTrigger className="w-full sm:w-[140px] h-11 bg-[#061019] border-[#2B3540] text-[#F2F4F5] rounded-xl">
+            <SelectTrigger className="w-full sm:w-[140px] h-11 bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] rounded-xl">
               <SelectValue placeholder="ประเภท" />
             </SelectTrigger>
-            <SelectContent className="bg-[#121C26] border-[#2B3540] rounded-xl">
-              <SelectItem value="all" className="text-[#F2F4F5] hover:bg-[#1A2833]">ทุกประเภท</SelectItem>
-              <SelectItem value="SMS" className="text-[#F2F4F5] hover:bg-[#1A2833]">SMS</SelectItem>
-              <SelectItem value="OTP" className="text-[#F2F4F5] hover:bg-[#1A2833]">OTP</SelectItem>
+            <SelectContent className="bg-[var(--bg-surface)] border-[var(--border-default)] rounded-xl">
+              <SelectItem value="all" className="text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]">ทุกประเภท</SelectItem>
+              <SelectItem value="SMS" className="text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]">SMS</SelectItem>
+              <SelectItem value="OTP" className="text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]">OTP</SelectItem>
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={(v) => v && setStatusFilter(v)}>
-            <SelectTrigger className="w-full sm:w-[160px] h-11 bg-[#061019] border-[#2B3540] text-[#F2F4F5] rounded-xl">
+            <SelectTrigger className="w-full sm:w-[160px] h-11 bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] rounded-xl">
               <SelectValue placeholder="สถานะ" />
             </SelectTrigger>
-            <SelectContent className="bg-[#121C26] border-[#2B3540] rounded-xl">
-              <SelectItem value="all" className="text-[#F2F4F5] hover:bg-[#1A2833]">ทุกสถานะ</SelectItem>
-              <SelectItem value="delivered" className="text-[#F2F4F5] hover:bg-[#1A2833]">ส่งสำเร็จ</SelectItem>
-              <SelectItem value="sent" className="text-[#F2F4F5] hover:bg-[#1A2833]">ส่งแล้ว</SelectItem>
-              <SelectItem value="pending" className="text-[#F2F4F5] hover:bg-[#1A2833]">รอส่ง</SelectItem>
-              <SelectItem value="failed" className="text-[#F2F4F5] hover:bg-[#1A2833]">ล้มเหลว</SelectItem>
+            <SelectContent className="bg-[var(--bg-surface)] border-[var(--border-default)] rounded-xl">
+              <SelectItem value="all" className="text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]">ทุกสถานะ</SelectItem>
+              <SelectItem value="delivered" className="text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]">ส่งสำเร็จ</SelectItem>
+              <SelectItem value="sent" className="text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]">ส่งแล้ว</SelectItem>
+              <SelectItem value="pending" className="text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]">รอส่ง</SelectItem>
+              <SelectItem value="failed" className="text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]">ล้มเหลว</SelectItem>
             </SelectContent>
           </Select>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
-            <label className="text-[11px] text-[#949FA8] uppercase tracking-wider font-medium">ตั้งแต่</label>
-            <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 text-sm w-full sm:w-[150px] bg-[#061019] border-[#2B3540] text-[#F2F4F5] rounded-lg" />
+            <label className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider font-medium">ตั้งแต่</label>
+            <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 text-sm w-full sm:w-[150px] bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] rounded-lg" />
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-[11px] text-[#949FA8] uppercase tracking-wider font-medium">ถึง</label>
-            <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 text-sm w-full sm:w-[150px] bg-[#061019] border-[#2B3540] text-[#F2F4F5] rounded-lg" />
+            <label className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider font-medium">ถึง</label>
+            <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 text-sm w-full sm:w-[150px] bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] rounded-lg" />
           </div>
           {hasFilters && (
             <Button
               variant="ghost"
               size="sm"
               onClick={() => { setSearch(""); setStatusFilter("all"); setTypeFilter("all"); setDateFrom(""); setDateTo(""); }}
-              className="text-xs text-[#949FA8] hover:text-[#F2F4F5]"
+              className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]"
             >
               ล้างตัวกรอง
             </Button>
@@ -168,16 +168,16 @@ export default function MessagesClient({
             const status = statusConfig[msg.status] ?? statusConfig.pending;
             const msgType = detectType(msg.content);
             return (
-              <Card key={msg.id} className="bg-[#121C26] border-[#2B3540] rounded-[16px]">
+              <Card key={msg.id} className="bg-[var(--bg-surface)] border-[var(--border-default)] rounded-[16px]">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-[#F2F4F5] font-mono">{msg.recipient}</span>
+                    <span className="text-sm text-[var(--text-primary)] font-mono">{msg.recipient}</span>
                     <Badge variant="outline" className={`text-[11px] px-2.5 py-0.5 rounded-full border ${status.badge}`}>
                       {status.label}
                     </Badge>
                   </div>
-                  <p className="text-xs text-[#949FA8] mb-3 line-clamp-2">{msg.content}</p>
-                  <div className="flex items-center justify-between text-xs text-[#949FA8]">
+                  <p className="text-xs text-[var(--text-muted)] mb-3 line-clamp-2">{msg.content}</p>
+                  <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
                     <div className="flex items-center gap-2">
                       <Badge variant="outline" className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full border ${typeConfig[msgType]}`}>
                         {msgType}
@@ -200,18 +200,18 @@ export default function MessagesClient({
         </div>
 
         {/* Desktop Table */}
-        <Card className="hidden md:block bg-[#121C26] border-[#2B3540] rounded-[20px] overflow-hidden">
+        <Card className="hidden md:block bg-[var(--bg-surface)] border-[var(--border-default)] rounded-[20px] overflow-hidden">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-[#16222D] border-none hover:bg-[#16222D]">
-                  <TableHead className="text-[12px] uppercase text-[#949FA8] font-semibold tracking-[0.05em] whitespace-nowrap">เวลา</TableHead>
-                  <TableHead className="text-[12px] uppercase text-[#949FA8] font-semibold tracking-[0.05em]">ผู้รับ</TableHead>
-                  <TableHead className="text-[12px] uppercase text-[#949FA8] font-semibold tracking-[0.05em] hidden md:table-cell">เนื้อหา</TableHead>
-                  <TableHead className="text-[12px] uppercase text-[#949FA8] font-semibold tracking-[0.05em] text-center hidden md:table-cell">ประเภท</TableHead>
-                  <TableHead className="text-[12px] uppercase text-[#949FA8] font-semibold tracking-[0.05em] hidden lg:table-cell">ผู้ส่ง</TableHead>
-                  <TableHead className="text-[12px] uppercase text-[#949FA8] font-semibold tracking-[0.05em] text-right">ราคา</TableHead>
-                  <TableHead className="text-[12px] uppercase text-[#949FA8] font-semibold tracking-[0.05em] text-center">สถานะ</TableHead>
+                <TableRow className="bg-[var(--bg-surface-hover)] border-none hover:bg-[var(--bg-surface-hover)]">
+                  <TableHead className="text-[12px] uppercase text-[var(--text-muted)] font-semibold tracking-[0.05em] whitespace-nowrap">เวลา</TableHead>
+                  <TableHead className="text-[12px] uppercase text-[var(--text-muted)] font-semibold tracking-[0.05em]">ผู้รับ</TableHead>
+                  <TableHead className="text-[12px] uppercase text-[var(--text-muted)] font-semibold tracking-[0.05em] hidden md:table-cell">เนื้อหา</TableHead>
+                  <TableHead className="text-[12px] uppercase text-[var(--text-muted)] font-semibold tracking-[0.05em] text-center hidden md:table-cell">ประเภท</TableHead>
+                  <TableHead className="text-[12px] uppercase text-[var(--text-muted)] font-semibold tracking-[0.05em] hidden lg:table-cell">ผู้ส่ง</TableHead>
+                  <TableHead className="text-[12px] uppercase text-[var(--text-muted)] font-semibold tracking-[0.05em] text-right">ราคา</TableHead>
+                  <TableHead className="text-[12px] uppercase text-[var(--text-muted)] font-semibold tracking-[0.05em] text-center">สถานะ</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -221,16 +221,16 @@ export default function MessagesClient({
                   return (
                     <TableRow
                       key={msg.id}
-                      className={`border-b border-[#2B3540] hover:bg-[#0D1620] transition-colors duration-150 h-10 ${i % 2 === 1 ? "bg-[#0A1420]" : "bg-transparent"}`}
+                      className={`border-b border-[var(--border-default)] hover:bg-[var(--bg-surface)] transition-colors duration-150 h-10 ${i % 2 === 1 ? "bg-[var(--bg-base)]" : "bg-transparent"}`}
                     >
-                      <TableCell className="text-xs text-[#949FA8] whitespace-nowrap py-2">
+                      <TableCell className="text-xs text-[var(--text-muted)] whitespace-nowrap py-2">
                         {new Date(msg.createdAt).toLocaleString("th-TH", {
                           year: "2-digit", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
                         })}
                       </TableCell>
-                      <TableCell className="text-sm text-[#F2F4F5] font-mono py-2">{msg.recipient}</TableCell>
+                      <TableCell className="text-sm text-[var(--text-primary)] font-mono py-2">{msg.recipient}</TableCell>
                       <TableCell className="hidden md:table-cell py-2">
-                        <span className="text-xs text-[#949FA8] truncate block max-w-[200px]" title={msg.content}>
+                        <span className="text-xs text-[var(--text-muted)] truncate block max-w-[200px]" title={msg.content}>
                           {msg.content.length > 40 ? `${msg.content.slice(0, 40)}...` : msg.content}
                         </span>
                       </TableCell>
@@ -239,9 +239,9 @@ export default function MessagesClient({
                           {msgType}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-xs text-[#949FA8] hidden lg:table-cell py-2">{msg.senderName}</TableCell>
+                      <TableCell className="text-xs text-[var(--text-muted)] hidden lg:table-cell py-2">{msg.senderName}</TableCell>
                       <TableCell className="text-right py-2">
-                        <span className="text-xs text-[#949FA8] font-mono">฿{msg.creditCost}</span>
+                        <span className="text-xs text-[var(--text-muted)] font-mono">฿{msg.creditCost}</span>
                       </TableCell>
                       <TableCell className="text-center py-2">
                         <Badge variant="outline" className={`text-[11px] px-2.5 py-0.5 rounded-full border ${status.badge}`}>
@@ -256,7 +256,7 @@ export default function MessagesClient({
           </div>
 
           {/* Pagination */}
-          <div className="border-t border-[#2B3540] px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-[#949FA8]">
+          <div className="border-t border-[var(--border-default)] px-4 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-[var(--text-muted)]">
             <span>
               {hasFilters
                 ? `กรอง: พบ ${filtered.length} รายการ จากหน้านี้ (${showingFrom}–${showingTo} จาก ${total} ทั้งหมด)`
@@ -268,7 +268,7 @@ export default function MessagesClient({
                 <button
                   onClick={() => goToPage(page - 1)}
                   disabled={page <= 1}
-                  className="w-9 h-9 rounded-lg border border-[#2B3540] flex items-center justify-center text-[#949FA8] hover:bg-[#1A2833] hover:text-[#F2F4F5] disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                  className="w-9 h-9 rounded-lg border border-[var(--border-default)] flex items-center justify-center text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
@@ -286,8 +286,8 @@ export default function MessagesClient({
                         onClick={() => goToPage(p)}
                         className={`w-8 h-8 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                           p === page
-                            ? "bg-[rgba(0,255,167,0.08)] border border-[rgba(0,255,167,0.3)] text-[#00FFA7]"
-                            : "border border-[#2B3540] text-[#949FA8] hover:bg-[#1A2833] hover:text-[#F2F4F5]"
+                            ? "bg-[rgba(0,255,167,0.08)] border border-[rgba(0,255,167,0.3)] text-[var(--accent)]"
+                            : "border border-[var(--border-default)] text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]"
                         }`}
                       >
                         {p}
@@ -295,12 +295,12 @@ export default function MessagesClient({
                     );
                   })}
                 </div>
-                <span className="sm:hidden text-[#949FA8]">หน้า {page}/{totalPages}</span>
+                <span className="sm:hidden text-[var(--text-muted)]">หน้า {page}/{totalPages}</span>
 
                 <button
                   onClick={() => goToPage(page + 1)}
                   disabled={page >= totalPages}
-                  className="w-9 h-9 rounded-lg border border-[#2B3540] flex items-center justify-center text-[#949FA8] hover:bg-[#1A2833] hover:text-[#F2F4F5] disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                  className="w-9 h-9 rounded-lg border border-[var(--border-default)] flex items-center justify-center text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
@@ -311,20 +311,20 @@ export default function MessagesClient({
 
         {/* Mobile Pagination */}
         {totalPages > 1 && (
-          <div className="md:hidden flex items-center justify-between px-1 py-3 text-xs text-[#949FA8]">
+          <div className="md:hidden flex items-center justify-between px-1 py-3 text-xs text-[var(--text-muted)]">
             <span>หน้า {page}/{totalPages}</span>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => goToPage(page - 1)}
                 disabled={page <= 1}
-                className="min-w-[44px] min-h-[44px] rounded-lg border border-[#2B3540] flex items-center justify-center text-[#949FA8] hover:bg-[#1A2833] hover:text-[#F2F4F5] disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                className="min-w-[44px] min-h-[44px] rounded-lg border border-[var(--border-default)] flex items-center justify-center text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
               <button
                 onClick={() => goToPage(page + 1)}
                 disabled={page >= totalPages}
-                className="min-w-[44px] min-h-[44px] rounded-lg border border-[#2B3540] flex items-center justify-center text-[#949FA8] hover:bg-[#1A2833] hover:text-[#F2F4F5] disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                className="min-w-[44px] min-h-[44px] rounded-lg border border-[var(--border-default)] flex items-center justify-center text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
@@ -334,22 +334,22 @@ export default function MessagesClient({
         </>
       ) : messages.length > 0 ? (
         /* No filter results */
-        <Card className="bg-[#121C26] border-[#2B3540] rounded-[20px]">
+        <Card className="bg-[var(--bg-surface)] border-[var(--border-default)] rounded-[20px]">
           <CardContent className="p-12 text-center">
-            <Search className="w-12 h-12 text-[#949FA8] mx-auto mb-4" />
-            <p className="text-sm text-[#F2F4F5] mb-1">ไม่พบผลลัพธ์</p>
-            <p className="text-xs text-[#949FA8]">ลองเปลี่ยนคำค้นหาหรือตัวกรอง</p>
+            <Search className="w-12 h-12 text-[var(--text-muted)] mx-auto mb-4" />
+            <p className="text-sm text-[var(--text-primary)] mb-1">ไม่พบผลลัพธ์</p>
+            <p className="text-xs text-[var(--text-muted)]">ลองเปลี่ยนคำค้นหาหรือตัวกรอง</p>
           </CardContent>
         </Card>
       ) : (
         /* Empty state */
-        <Card className="bg-[#121C26] border-[#2B3540] rounded-[20px]">
+        <Card className="bg-[var(--bg-surface)] border-[var(--border-default)] rounded-[20px]">
           <CardContent className="p-12 text-center">
-            <Inbox className="w-12 h-12 text-[#949FA8] mx-auto mb-4" />
-            <p className="text-lg font-semibold text-[#F2F4F5] mb-1">ยังไม่มีข้อความ</p>
-            <p className="text-sm text-[#949FA8] mb-5">ส่ง SMS ครั้งแรกเลย!</p>
+            <Inbox className="w-12 h-12 text-[var(--text-muted)] mx-auto mb-4" />
+            <p className="text-lg font-semibold text-[var(--text-primary)] mb-1">ยังไม่มีข้อความ</p>
+            <p className="text-sm text-[var(--text-muted)] mb-5">ส่ง SMS ครั้งแรกเลย!</p>
             <Link href="/dashboard/send">
-              <Button className="bg-[#00FFA7] hover:bg-[#33FFB9] text-[#061019] rounded-[20px] font-semibold gap-2">
+              <Button className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--text-on-accent)] rounded-[20px] font-semibold gap-2">
                 ส่ง SMS <ArrowRight className="w-4 h-4" />
               </Button>
             </Link>

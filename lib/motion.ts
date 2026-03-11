@@ -175,22 +175,22 @@ export const iconTap = { scale: 0.9 };
 export const cardHover: Variants = {
   rest: {
     y: 0,
-    boxShadow: "0 0 0 0 rgba(0, 226, 181, 0)",
-    borderColor: "#08283B",
+    boxShadow: "0 0 0 0 rgba(0, 255, 167, 0)",
+    borderColor: "#2B3540",
   },
   hover: {
     y: -4,
-    boxShadow: "0 8px 30px rgba(0, 226, 181, 0.1)",
-    borderColor: "#00E2B5",
+    boxShadow: "0 8px 30px rgba(0, 255, 167, 0.1)",
+    borderColor: "#00FFA7",
     transition: { type: "spring", stiffness: 300, damping: 20 },
   },
 };
 
 export const toggleVariants: Variants = {
-  off: { x: 0, backgroundColor: "#131415" },
+  off: { x: 0, backgroundColor: "#121C26" },
   on: {
     x: 20,
-    backgroundColor: "#00E2B5",
+    backgroundColor: "#00FFA7",
     transition: { ...springs.micro },
   },
 };
