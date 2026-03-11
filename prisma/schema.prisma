@@ -97,6 +97,10 @@ model Contact {
   email             String?
   tags              String?
   smsConsent        Boolean              @default(true) @map("sms_consent")
+  consentStatus     String               @default("OPTED_IN") @map("consent_status") // OPTED_IN | OPTED_OUT | PENDING
+  consentAt         DateTime?            @map("consent_at")
+  optOutAt          DateTime?            @map("opt_out_at")
+  optOutReason      String?              @map("opt_out_reason")
   createdAt         DateTime             @default(now()) @map("created_at")
   groups            ContactGroupMember[]
   contactTags       ContactTag[]
@@ -112,9 +116,11 @@ model CustomField {
   id        String             @id @default(cuid())
   userId    String             @map("user_id")
   name      String
-  type      String             @default("text") // text | number | date | select
+  key       String?            // machine-readable key e.g. "birthday"
+  type      String             @default("text") // text | number | date | select | boolean
   options   String?            // JSON array for select type
   required  Boolean            @default(false)
+  position  Int                @default(0)
   createdAt DateTime           @default(now()) @map("created_at")
   values    CustomFieldValue[]
   user      User               @relation(fields: [userId], references: [id])

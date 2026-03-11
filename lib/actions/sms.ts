@@ -38,13 +38,13 @@ export async function sendSms(userId: string, data: unknown, channel: "WEB" | "A
     throw new Error("ชื่อผู้ส่งยังไม่ได้รับอนุมัติ");
   }
 
-  // Check SMS consent — respect opt-out
+  // Check SMS consent — respect opt-out (both legacy smsConsent and new consentStatus)
   const recipientPhone = normalizePhone(input.recipient);
   const recipientContact = await db.contact.findUnique({
     where: { userId_phone: { userId, phone: recipientPhone } },
-    select: { smsConsent: true },
+    select: { smsConsent: true, consentStatus: true },
   });
-  if (recipientContact && !recipientContact.smsConsent) {
+  if (recipientContact && (!recipientContact.smsConsent || recipientContact.consentStatus === "OPTED_OUT")) {
     throw new Error("ผู้รับปฏิเสธการรับ SMS (opt-out) ไม่สามารถส่งได้");
   }
 

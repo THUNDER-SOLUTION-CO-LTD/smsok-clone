@@ -35,8 +35,13 @@ export async function POST(req: NextRequest) {
 
   // Opt-out ALL contacts with this phone across all users
   const result = await prisma.contact.updateMany({
-    where: { phone: normalized, smsConsent: true },
-    data: { smsConsent: false },
+    where: { phone: normalized, consentStatus: { not: "OPTED_OUT" } },
+    data: {
+      smsConsent: false,
+      consentStatus: "OPTED_OUT",
+      optOutAt: new Date(),
+      optOutReason: "STOP keyword",
+    },
   });
 
   return Response.json({

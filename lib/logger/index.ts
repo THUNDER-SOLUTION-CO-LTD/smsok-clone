@@ -5,7 +5,7 @@
  *   import { log, withRequestContext, generateRequestId } from "@/lib/logger"
  */
 
-export { log, createComponentLogger } from "./logger"
+export { log, log as logger, createComponentLogger } from "./logger"
 export {
   withRequestContext,
   getRequestContext,

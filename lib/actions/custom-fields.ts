@@ -15,7 +15,7 @@ export async function createCustomField(
   userId: string,
   data: { name: string; type: string; options?: string[]; required?: boolean }
 ) {
-  const validTypes = ["text", "number", "date", "select"];
+  const validTypes = ["text", "number", "date", "select", "boolean"];
   if (!validTypes.includes(data.type)) {
     throw new Error("ประเภทฟิลด์ไม่ถูกต้อง");
   }
@@ -24,8 +24,8 @@ export async function createCustomField(
   }
 
   const count = await prisma.customField.count({ where: { userId } });
-  if (count >= 20) {
-    throw new Error("สร้าง Custom Field ได้สูงสุด 20 รายการ");
+  if (count >= 50) {
+    throw new Error("สร้าง Custom Field ได้สูงสุด 50 รายการ");
   }
 
   return prisma.customField.create({
@@ -51,7 +51,7 @@ export async function updateCustomField(
   if (!field) throw new Error("ไม่พบ Custom Field");
 
   if (data.type) {
-    const validTypes = ["text", "number", "date", "select"];
+    const validTypes = ["text", "number", "date", "select", "boolean"];
     if (!validTypes.includes(data.type)) {
       throw new Error("ประเภทฟิลด์ไม่ถูกต้อง");
     }
