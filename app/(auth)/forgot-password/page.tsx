@@ -1,140 +1,171 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { forgotPassword } from "@/lib/actions";
-import { blockNonNumeric, fieldCls } from "@/lib/form-utils";
-import { motion, AnimatePresence } from "framer-motion";
 import { safeErrorMessage } from "@/lib/error-messages";
+import { blockNonNumeric } from "@/lib/form-utils";
+
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from "@/components/ui/form";
+import { Send, ArrowLeft, ArrowRight, Lock, CheckCircle, Loader2 } from "lucide-react";
+
+const forgotPasswordSchema = z.object({
+  phone: z.string().regex(/^0[0-9]\d{8}$/, "เบอร์โทรไม่ถูกต้อง (ตัวอย่าง: 0891234567)"),
+});
+
+type FormValues = z.infer<typeof forgotPasswordSchema>;
 
 export default function ForgotPasswordPage() {
-  const [phone, setPhone] = useState("");
-  const [phoneError, setPhoneError] = useState("");
-  const [isPending, startTransition] = useTransition();
-  const [result, setResult] = useState<"success" | "error" | null>(null);
+  const [success, setSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [submittedPhone, setSubmittedPhone] = useState("");
 
-  function validatePhone(value: string) {
-    if (value && !/^0[689]\d{8}$/.test(value)) {
-      setPhoneError("เบอร์โทรไม่ถูกต้อง (ตัวอย่าง: 0891234567)");
-    } else {
-      setPhoneError("");
+  const form = useForm<FormValues>({
+    resolver: zodResolver(forgotPasswordSchema),
+    defaultValues: { phone: "" },
+  });
+
+  const isSubmitting = form.formState.isSubmitting;
+
+  async function onSubmit(data: FormValues) {
+    setErrorMsg("");
+    try {
+      await forgotPassword(data.phone);
+      setSubmittedPhone(data.phone);
+      setSuccess(true);
+    } catch (e) {
+      setErrorMsg(safeErrorMessage(e));
     }
   }
 
-  function handleSubmit() {
-    if (!phone.trim() || phoneError) return;
-    startTransition(async () => {
-      try {
-        await forgotPassword(phone);
-        setResult("success");
-      } catch (e) {
-        setErrorMsg(safeErrorMessage(e));
-        setResult("error");
-      }
-    });
-  }
-
   return (
-    <div className="min-h-screen flex items-center justify-center px-6 mesh-bg relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center px-6 bg-[var(--bg-base)]">
       {/* Back button */}
       <Link
         href="/"
-        className="fixed top-5 left-5 z-20 flex items-center gap-1.5 text-white/40 hover:text-white transition-colors duration-200"
+        className="fixed top-5 left-5 z-10 flex items-center gap-1.5 text-[var(--text-muted)] hover:text-white transition-colors duration-200"
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M19 12H5M12 5l-7 7 7 7" />
-        </svg>
-        <span className="text-sm">กลับหน้าหลัก</span>
+        <ArrowLeft className="w-4 h-4" />
+        <span className="text-[13px]">กลับหน้าหลัก</span>
       </Link>
 
-      {/* Animated blobs */}
-      <div className="fixed top-[30%] left-[10%] w-[300px] h-[300px] rounded-full pointer-events-none blob-anim" style={{ background: "radial-gradient(circle, rgba(129,140,248,0.10) 0%, transparent 70%)" }} />
-      <div className="fixed bottom-[20%] right-[15%] w-[250px] h-[250px] rounded-full pointer-events-none blob-anim" style={{ background: "radial-gradient(circle, rgba(139,92,246,0.08) 0%, transparent 70%)", animationDelay: "4s" }} />
-
-      <div className="w-full max-w-md relative z-10">
-        <div className="text-center mb-8 animate-fade-in">
-          <Link href="/" className="inline-flex items-center gap-2.5 group">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" className="text-violet-400 group-hover:drop-shadow-[0_0_8px_rgba(139,92,246,0.6)] transition-all">
-              <path d="M12 2L2 7l10 5 10-5-10-5z" fill="currentColor" opacity="0.3" />
-              <path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            <span className="text-2xl font-bold gradient-text-mixed">SMSOK</span>
-          </Link>
-        </div>
-
-        <div className="glass p-8 sm:p-10 animate-fade-in" style={{ animationDelay: "0.1s" }}>
-          <AnimatePresence mode="wait">
-            {result === "success" ? (
-              <motion.div key="success" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-center py-4">
-                <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/15 flex items-center justify-center mx-auto mb-6">
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-emerald-400">
-                    <rect x="5" y="2" width="14" height="20" rx="2" /><line x1="12" y1="18" x2="12" y2="18" strokeWidth="2" strokeLinecap="round" />
-                  </svg>
-                </div>
-                <h2 className="text-2xl font-bold text-white mb-2">ส่ง SMS แล้ว!</h2>
-                <p className="text-white/40 text-sm mb-6 leading-relaxed">
-                  รหัสรีเซ็ตรหัสผ่านถูกส่งไปที่ <span className="text-white/70">{phone}</span>
-                  <br />ใช้รหัสนี้กับขั้นตอน reset password ภายใน 5 นาที
-                </p>
-                <Link href="/login" className="btn-primary px-8 py-3 rounded-xl text-sm font-semibold inline-flex items-center gap-2">
-                  ไปหน้า Login →
-                </Link>
-              </motion.div>
-            ) : (
-              <motion.div key="form" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                <div className="text-center mb-8">
-                  <div className="w-14 h-14 rounded-2xl bg-violet-500/10 border border-violet-500/15 flex items-center justify-center mx-auto mb-4">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-violet-400">
-                      <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0110 0v4" />
-                    </svg>
+      <div className="w-full max-w-[420px]">
+        <Card className="bg-[var(--bg-surface)] border-[var(--border-subtle)] rounded-[20px] shadow-none">
+          {success ? (
+            <>
+              <CardHeader className="text-center pb-0 pt-8 px-8">
+                <Link href="/" className="inline-flex items-center gap-2 justify-center mb-4">
+                  <div className="w-7 h-7 rounded-lg bg-[var(--accent)] flex items-center justify-center">
+                    <Send className="w-3.5 h-3.5 text-[var(--bg-base)]" />
                   </div>
-                  <h1 className="text-2xl font-bold text-white mb-1">ลืมรหัสผ่าน</h1>
-                  <p className="text-white/40 text-sm">กรอกเบอร์โทรที่ลงทะเบียนไว้</p>
+                  <span className="text-xl font-bold text-white">SMSOK</span>
+                </Link>
+                <div className="w-12 h-12 rounded-full bg-[rgba(16,185,129,0.08)] border border-[rgba(16,185,129,0.15)] flex items-center justify-center mx-auto mb-4">
+                  <CheckCircle className="w-6 h-6 text-[#10B981]" />
                 </div>
+                <h1 className="text-2xl font-bold text-white">ส่งลิงก์รีเซ็ตแล้ว</h1>
+                <p className="text-sm text-[var(--text-muted)] mt-1 leading-relaxed">
+                  ตรวจสอบ SMS ที่เบอร์ <span className="text-white">{submittedPhone}</span>
+                </p>
+              </CardHeader>
+              <CardContent className="px-8 pt-6 pb-8">
+                <Link href="/login">
+                  <Button className="w-full h-12 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--bg-base)] rounded-xl text-[15px] font-semibold transition-all duration-200 hover:shadow-[0_4px_16px_rgba(0,255,167,0.25)] group">
+                    <span className="flex items-center gap-2">
+                      ไปหน้า Login
+                      <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
+                    </span>
+                  </Button>
+                </Link>
+              </CardContent>
+            </>
+          ) : (
+            <>
+              <CardHeader className="text-center pb-0 pt-8 px-8">
+                <Link href="/" className="inline-flex items-center gap-2 justify-center mb-4">
+                  <div className="w-7 h-7 rounded-lg bg-[var(--accent)] flex items-center justify-center">
+                    <Send className="w-3.5 h-3.5 text-[var(--bg-base)]" />
+                  </div>
+                  <span className="text-xl font-bold text-white">SMSOK</span>
+                </Link>
+                <div className="w-12 h-12 rounded-full bg-[rgba(0,255,167,0.08)] border border-[rgba(0,255,167,0.15)] flex items-center justify-center mx-auto mb-4">
+                  <Lock className="w-6 h-6 text-[var(--accent)]" />
+                </div>
+                <h1 className="text-2xl font-bold text-white">ลืมรหัสผ่าน</h1>
+                <p className="text-sm text-[var(--text-muted)] mt-1">กรอกเบอร์โทรเพื่อรับลิงก์รีเซ็ตรหัสผ่าน</p>
+              </CardHeader>
 
-                {result === "error" && errorMsg && (
-                  <div className="mb-4 p-3 rounded-xl bg-red-500/8 border border-red-500/15 text-red-400 text-sm text-center">
+              <CardContent className="px-8 pt-6 pb-2">
+                {errorMsg && (
+                  <div className="mb-4 p-3 rounded-lg bg-[rgba(239,68,68,0.06)] border border-[rgba(239,68,68,0.15)] text-[#F87171] text-[13px] text-center">
                     {errorMsg}
                   </div>
                 )}
 
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-xs text-white font-medium uppercase tracking-wider mb-2">เบอร์โทรที่ลงทะเบียน</label>
-                    <input
-                      type="tel" inputMode="numeric" maxLength={10}
-                      value={phone}
-                      onKeyDown={blockNonNumeric}
-                      onChange={(e) => { setPhone(e.target.value); validatePhone(e.target.value); }}
-                      onKeyUp={(e) => e.key === "Enter" && handleSubmit()}
-                      className={fieldCls(phoneError, phone)}
-                      placeholder="0891234567"
-                      autoFocus
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+                    <FormField
+                      control={form.control}
+                      name="phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs font-semibold uppercase tracking-[0.05em] text-[var(--text-secondary)]">
+                            เบอร์โทรศัพท์
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              type="tel"
+                              inputMode="numeric"
+                              maxLength={10}
+                              placeholder="0891234567"
+                              onKeyDown={blockNonNumeric}
+                              className="h-11 bg-[var(--bg-base)] border-[var(--border-subtle)] text-white placeholder:text-[var(--text-muted)] rounded-lg focus:border-[rgba(0,255,167,0.6)] focus:ring-[rgba(0,255,167,0.12)]"
+                              autoFocus
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                    {phoneError && <p className="text-red-400 text-xs mt-1">{phoneError}</p>}
-                  </div>
 
-                  <motion.button
-                    onClick={handleSubmit}
-                    disabled={isPending || !phone.trim() || !!phoneError}
-                    className="w-full btn-primary py-3 rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
-                    whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
-                  >
-                    {isPending
-                      ? <><svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>กำลังส่ง SMS...</>
-                      : <>รับรหัสรีเซ็ตทาง SMS</>}
-                  </motion.button>
-                </div>
+                    <Button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="w-full h-12 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--bg-base)] rounded-xl text-[15px] font-semibold transition-all duration-200 hover:shadow-[0_4px_16px_rgba(0,255,167,0.25)] group"
+                    >
+                      {isSubmitting ? (
+                        <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" />กำลังส่ง SMS...</span>
+                      ) : (
+                        <span className="flex items-center gap-2">ส่งลิงก์รีเซ็ต<ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" /></span>
+                      )}
+                    </Button>
+                  </form>
+                </Form>
+              </CardContent>
 
-                <p className="text-center text-white/25 text-sm mt-6">
+              <CardFooter className="justify-center pb-8 pt-4">
+                <p className="text-[13px] text-[var(--text-muted)]">
                   จำรหัสได้แล้ว?{" "}
-                  <Link href="/login" className="text-violet-400 hover:text-violet-300 transition-colors">เข้าสู่ระบบ →</Link>
+                  <Link href="/login" className="text-[var(--accent-blue)] hover:underline transition-colors duration-150">เข้าสู่ระบบ</Link>
                 </p>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+              </CardFooter>
+            </>
+          )}
+        </Card>
       </div>
     </div>
   );

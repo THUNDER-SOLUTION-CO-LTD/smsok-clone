@@ -1,156 +1,192 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { blockThai, fieldCls } from "@/lib/form-utils";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { loginSchema } from "@/lib/validations";
+import type { LoginResponse } from "@/lib/types/api-responses";
+
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from "@/components/ui/form";
+import { Send, ArrowLeft, ArrowRight, Eye, EyeOff, Loader2 } from "lucide-react";
+
+type LoginValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [errors, setErrors] = useState<Record<string, string>>({});
   const [serverError, setServerError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
-  function validateEmail(v: string) {
-    const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
-    setErrors(prev => ({ ...prev, email: v && !isValid ? "อีเมลไม่ถูกต้อง" : "" }));
-  }
+  const form = useForm<LoginValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: "", password: "" },
+  });
 
-  const hasErrors = Object.values(errors).some(Boolean);
-  const isComplete = email.trim() && password.trim();
+  const isSubmitting = form.formState.isSubmitting;
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!isComplete || hasErrors) return;
+  async function onSubmit(data: LoginValues) {
     setServerError("");
-    startTransition(async () => {
-      try {
-        const res = await fetch("/api/auth/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          setServerError(data.error || "เกิดข้อผิดพลาด กรุณาลองใหม่");
-          return;
-        }
-        router.push(data.redirectTo ?? "/dashboard");
-      } catch {
-        setServerError("ไม่สามารถเชื่อมต่อได้ กรุณาลองใหม่");
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: data.email.trim().toLowerCase(), password: data.password }),
+      });
+      const result: LoginResponse = await res.json();
+      if (!res.ok) {
+        setServerError((result as { error?: string }).error || "เกิดข้อผิดพลาด กรุณาลองใหม่");
+        return;
       }
-    });
+      if (result.needs2FA) {
+        router.push(`/2fa?token=${encodeURIComponent(result.challengeToken)}`);
+        return;
+      }
+      router.push(result.redirectTo ?? "/dashboard");
+    } catch {
+      setServerError("ไม่สามารถเชื่อมต่อได้ กรุณาลองใหม่");
+    }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-6 mesh-bg relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center px-6 bg-[var(--bg-base)]">
       {/* Back button */}
       <Link
         href="/"
-        className="fixed top-5 left-5 z-20 flex items-center gap-1.5 text-white/40 hover:text-white transition-colors duration-200 group"
+        className="fixed top-5 left-5 z-10 flex items-center gap-1.5 text-[var(--text-muted)] hover:text-white transition-colors duration-200"
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M19 12H5M12 5l-7 7 7 7" />
-        </svg>
-        <span className="text-sm">กลับหน้าหลัก</span>
+        <ArrowLeft className="w-4 h-4" />
+        <span className="text-[13px]">กลับหน้าหลัก</span>
       </Link>
 
-      {/* Animated blobs */}
-      <div className="fixed top-[20%] left-[15%] w-[400px] h-[400px] rounded-full pointer-events-none blob-anim" style={{ background: "radial-gradient(circle, rgba(139,92,246,0.12) 0%, transparent 70%)" }} />
-      <div className="fixed bottom-[15%] right-[10%] w-[300px] h-[300px] rounded-full pointer-events-none blob-anim" style={{ background: "radial-gradient(circle, rgba(59,130,246,0.10) 0%, transparent 70%)", animationDelay: "3s" }} />
-
-      <div className="w-full max-w-md relative z-10">
-        {/* Logo */}
-        <div className="text-center mb-8 animate-fade-in">
-          <Link href="/" className="inline-flex items-center gap-2.5 group">
-            <div className="relative">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" className="text-violet-400 transition-all group-hover:drop-shadow-[0_0_8px_rgba(139,92,246,0.6)]">
-                <path d="M12 2L2 7l10 5 10-5-10-5z" fill="currentColor" opacity="0.3" />
-                <path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              <div className="absolute inset-0 bg-violet-400/20 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
-            </div>
-            <span className="text-2xl font-bold gradient-text-mixed">SMSOK</span>
-          </Link>
-        </div>
-
-        {/* Glass Card */}
-        <div className="glass p-8 sm:p-10 animate-fade-in" style={{ animationDelay: "0.1s" }}>
-          <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-white mb-1">ยินดีต้อนรับกลับ</h1>
-            <p className="text-white/40 text-sm">เข้าสู่ระบบเพื่อจัดการการส่ง SMS ของคุณ</p>
-          </div>
-
-          {serverError && (
-            <div className="mb-6 p-3 rounded-xl bg-red-500/8 border border-red-500/15 text-red-400 text-sm text-center animate-shake">
-              {serverError}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="block text-xs text-white font-medium uppercase tracking-wider mb-2">อีเมล</label>
-              <input
-                type="email" name="email" required
-                value={email}
-                onKeyDown={blockThai}
-                onChange={(e) => { setEmail(e.target.value); validateEmail(e.target.value); }}
-                className={fieldCls(errors.email, email)}
-                placeholder="you@example.com"
-              />
-              {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email}</p>}
-            </div>
-            <div>
-              <label className="block text-xs text-white font-medium uppercase tracking-wider mb-2">รหัสผ่าน</label>
-              <input
-                type="password" name="password" required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className={fieldCls(errors.password, password)}
-                placeholder="••••••••"
-              />
-            </div>
-            <div className="flex justify-end">
-              <Link href="/forgot-password" className="text-xs text-violet-400/70 hover:text-violet-400 transition-colors">
-                ลืมรหัสผ่าน?
-              </Link>
-            </div>
-            <button
-              type="submit"
-              disabled={isPending || hasErrors}
-              className="w-full btn-primary py-3 rounded-xl text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              {isPending ? (
-                <span className="flex items-center gap-2">
-                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>
-                  กำลังเข้าสู่ระบบ...
-                </span>
-              ) : (
-                <>
-                  เข้าสู่ระบบ
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M5 12h14M12 5l7 7-7 7" />
-                  </svg>
-                </>
-              )}
-            </button>
-          </form>
-
-          <p className="text-center text-white/25 text-sm mt-6">
-            ยังไม่มีบัญชี?{" "}
-            <Link href="/register" className="text-violet-400 hover:text-violet-300 transition-colors">
-              สมัครฟรี →
+      <div className="w-full max-w-[420px]">
+        <Card className="bg-[var(--bg-surface)] border-[var(--border-subtle)] rounded-[20px] shadow-none">
+          <CardHeader className="text-center pb-0 pt-8 px-8">
+            {/* Logo */}
+            <Link href="/" className="inline-flex items-center gap-2 justify-center mb-4">
+              <div className="w-7 h-7 rounded-lg bg-[var(--accent)] flex items-center justify-center">
+                <Send className="w-3.5 h-3.5 text-[var(--bg-base)]" />
+              </div>
+              <span className="text-xl font-bold text-white">SMSOK</span>
             </Link>
-          </p>
-        </div>
+            <h1 className="text-2xl font-bold text-white">เข้าสู่ระบบ</h1>
+            <p className="text-sm text-[var(--text-muted)] mt-1">ลงชื่อเข้าใช้งานบัญชีของคุณ</p>
+          </CardHeader>
 
-        {/* Testimonial */}
-        <div className="mt-5 glass p-5 text-center animate-fade-in" style={{ animationDelay: "0.25s" }}>
-          <p className="text-sm text-white/30 italic">&ldquo;ส่ง SMS 10,000+ ข้อความในคลิกเดียว&rdquo;</p>
-          <p className="text-xs text-white/15 mt-2">ธุรกิจกว่า 500+ ไว้วางใจ</p>
-        </div>
+          <CardContent className="px-8 pt-6 pb-2">
+            {serverError && (
+              <div className="mb-4 p-3 rounded-lg bg-[rgba(239,68,68,0.06)] border border-[rgba(239,68,68,0.15)] text-[#F87171] text-[13px] text-center">
+                {serverError}
+              </div>
+            )}
+
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-semibold uppercase tracking-[0.05em] text-[var(--text-secondary)]">
+                        EMAIL
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="email"
+                          placeholder="you@example.com"
+                          className="h-11 bg-[var(--bg-base)] border-[var(--border-subtle)] text-white placeholder:text-[var(--text-muted)] rounded-lg focus:border-[rgba(0,255,167,0.6)] focus:ring-[rgba(0,255,167,0.12)]"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <div className="flex items-center justify-between">
+                        <FormLabel className="text-xs font-semibold uppercase tracking-[0.05em] text-[var(--text-secondary)]">
+                          รหัสผ่าน
+                        </FormLabel>
+                        <Link
+                          href="/forgot-password"
+                          className="text-[13px] text-[var(--accent-blue)] hover:underline transition-colors duration-150"
+                        >
+                          ลืมรหัสผ่าน?
+                        </Link>
+                      </div>
+                      <FormControl>
+                        <div className="relative">
+                          <Input
+                            type={showPassword ? "text" : "password"}
+                            placeholder="••••••••"
+                            className="h-11 bg-[var(--bg-base)] border-[var(--border-subtle)] text-white placeholder:text-[var(--text-muted)] rounded-lg pr-11 focus:border-[rgba(0,255,167,0.6)] focus:ring-[rgba(0,255,167,0.12)]"
+                            {...field}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors duration-150"
+                          >
+                            {showPassword ? <EyeOff className="w-[18px] h-[18px]" /> : <Eye className="w-[18px] h-[18px]" />}
+                          </button>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full h-12 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--bg-base)] rounded-xl text-[15px] font-semibold transition-all duration-200 hover:shadow-[0_4px_16px_rgba(0,255,167,0.25)] group"
+                >
+                  {isSubmitting ? (
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      กำลังเข้าสู่ระบบ...
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      เข้าสู่ระบบ
+                      <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
+                    </span>
+                  )}
+                </Button>
+              </form>
+            </Form>
+          </CardContent>
+
+          <CardFooter className="justify-center pb-8 pt-4">
+            <p className="text-[13px] text-[var(--text-muted)]">
+              ยังไม่มีบัญชี?{" "}
+              <Link href="/register" className="text-[var(--accent-blue)] hover:underline transition-colors duration-150">
+                สมัครฟรี
+              </Link>
+            </p>
+          </CardFooter>
+        </Card>
+
+        {/* Trust badge */}
+        <p className="text-center text-xs text-[var(--text-muted)] mt-6">
+          ใช้งานโดยธุรกิจกว่า 10,000+ ราย
+        </p>
       </div>
     </div>
   );
