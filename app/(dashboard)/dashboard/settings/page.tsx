@@ -52,14 +52,14 @@ export default async function SettingsPage({
 
           <div className="relative flex flex-col sm:flex-row items-start sm:items-center gap-5 mb-6">
             {/* Avatar */}
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#00FFA7]/30 to-[#4779FF]/20 border border-[rgba(0,255,167,0.15)] flex items-center justify-center flex-shrink-0">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[var(--accent)]/30 to-[var(--accent-secondary)]/20 border border-[rgba(0,255,167,0.15)] flex items-center justify-center flex-shrink-0">
               <span className="text-xl font-bold text-[var(--text-primary)]">{initials}</span>
             </div>
             <div className="flex-1">
               <h2 className="text-lg font-semibold text-[var(--text-primary)]">{fullUser.name}</h2>
               <p className="text-sm text-[var(--text-muted)]">{fullUser.email}</p>
               <div className="flex items-center gap-3 mt-2">
-                <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-md bg-[rgba(0,255,167,0.1)] text-[#00FFA7] border border-[rgba(0,255,167,0.15)]">
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-md bg-[rgba(0,255,167,0.1)] text-[var(--accent)] border border-[rgba(0,255,167,0.15)]">
                   {fullUser.role}
                 </span>
                 <span className="text-[11px] text-[var(--text-muted)]">สมาชิกตั้งแต่ {memberSince}</span>
@@ -91,7 +91,7 @@ export default async function SettingsPage({
               />
               <p className="text-[10px] text-[var(--text-muted)] mt-1">
                 เบอร์โทรไม่สามารถเปลี่ยนได้หลังสมัคร{" "}
-                <span className="text-[#00FFA7]">ติดต่อ support หากจำเป็น</span>
+                <span className="text-[var(--accent)]">ติดต่อ support หากจำเป็น</span>
               </p>
             </div>
           </div>
@@ -106,23 +106,23 @@ export default async function SettingsPage({
           <div className="bg-[var(--bg-surface)] border border-[rgba(0,255,167,0.12)] rounded-[20px] p-5 card-hover">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs text-[var(--text-muted)]">เครดิตคงเหลือ</span>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[#00FFA7]">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[var(--accent)]">
                 <circle cx="12" cy="12" r="10" /><text x="12" y="16" textAnchor="middle" fill="currentColor" stroke="none" fontSize="12" fontWeight="bold">฿</text>
               </svg>
             </div>
             <p className="text-2xl font-bold text-[var(--accent)]">{fullUser.credits.toLocaleString()}</p>
-            <Link href="/dashboard/topup" className="text-[10px] text-[#00FFA7] hover:text-[#00FFA7]/80 transition-colors mt-1 inline-block">
+            <Link href="/dashboard/topup" className="text-[10px] text-[var(--accent)] hover:text-[var(--accent)]/80 transition-colors mt-1 inline-block">
               เติมเครดิต →
             </Link>
           </div>
           <div className="bg-[var(--bg-surface)] border border-[rgba(0,255,167,0.12)] rounded-[20px] p-5 card-hover">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs text-[var(--text-muted)]">บทบาท</span>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[#00FFA7]">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[var(--accent)]">
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
               </svg>
             </div>
-            <p className="text-2xl font-bold text-[#00FFA7] capitalize">{fullUser.role}</p>
+            <p className="text-2xl font-bold text-[var(--accent)] capitalize">{fullUser.role}</p>
           </div>
           <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[20px] p-5 card-hover">
             <div className="flex items-center justify-between mb-2">
@@ -141,7 +141,7 @@ export default async function SettingsPage({
         <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[20px] p-6 md:p-8">
           <h2 className="text-base font-semibold text-white mb-5 flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-[rgba(0,255,167,0.1)] border border-[rgba(0,255,167,0.15)] flex items-center justify-center">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[#00FFA7]">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[var(--accent)]">
                 <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0110 0v4" />
               </svg>
             </div>
