@@ -1,6 +1,7 @@
 import { prisma as db } from "./db";
 import { NextRequest } from "next/server";
 import { startApiLog, setApiLogUser, setApiLogApiKey, finishApiLog, ERROR_CODES } from "./api-log";
+import { hashApiKey } from "./actions/api-keys";
 
 /**
  * Authenticate API request via Bearer token
@@ -30,8 +31,11 @@ export async function authenticateApiKey(req: NextRequest) {
     throw new ApiError(401, "Invalid API key format", ERROR_CODES.AUTH_INVALID);
   }
 
+  // Hash key for lookup (keys stored as SHA-256 hashes)
+  const keyHash = hashApiKey(key);
+
   const apiKey = await db.apiKey.findUnique({
-    where: { key },
+    where: { key: keyHash },
     select: {
       id: true,
       isActive: true,

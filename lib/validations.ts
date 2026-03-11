@@ -408,6 +408,13 @@ export const createApiKeySchema = z.object({
   name: sanitizedNameSchema(1, 100, "กรุณาตั้งชื่อ API Key", "ชื่อ API Key ต้องไม่เกิน 100 ตัวอักษร"),
 });
 
+export const updateAutoTopupSchema = z.object({
+  enabled: z.boolean(),
+  threshold: z.number().int().min(0, "Threshold ต้องไม่ต่ำกว่า 0"),
+  packageId: z.string().cuid("กรุณาเลือกแพ็กเกจ"),
+  maxPerMonth: z.number().int().min(1).max(50).default(5),
+});
+
 export const createCampaignSchema = z.object({
   name: sanitizedNameSchema(1, 100, "กรุณากรอกชื่อแคมเปญ", "ชื่อแคมเปญต้องไม่เกิน 100 ตัวอักษร"),
   contactGroupId: z.string().cuid().optional(),

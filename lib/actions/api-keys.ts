@@ -3,7 +3,7 @@
 import { prisma as db } from "../db";
 import { createApiKeySchema, idSchema } from "../validations";
 import { revalidatePath } from "next/cache";
-import { randomBytes } from "crypto";
+import { randomBytes, createHash } from "crypto";
 
 // ==========================================
 // Generate API key (sk_live_xxxxx format)
@@ -11,6 +11,14 @@ import { randomBytes } from "crypto";
 
 function generateApiKey(): string {
   return "sk_live_" + randomBytes(32).toString("hex");
+}
+
+export function hashApiKey(key: string): string {
+  return createHash("sha256").update(key).digest("hex");
+}
+
+function maskApiKey(key: string): string {
+  return key.slice(0, 12) + "..." + key.slice(-4);
 }
 
 // ==========================================
@@ -27,18 +35,21 @@ export async function createApiKey(userId: string, data: unknown) {
   }
 
   const key = generateApiKey();
+  const keyHash = hashApiKey(key);
+  const keyPrefix = maskApiKey(key);
 
   const apiKey = await db.apiKey.create({
     data: {
       userId,
       name: input.name,
-      key,
+      key: keyHash,
+      keyPrefix,
     },
   });
 
   revalidatePath("/dashboard/api-keys");
 
-  // Return the key only once (on creation)
+  // Return the full key only once (on creation) — never stored in plaintext
   return {
     id: apiKey.id,
     name: apiKey.name,
@@ -57,7 +68,7 @@ export async function getApiKeys(userId: string) {
     select: {
       id: true,
       name: true,
-      key: true,
+      keyPrefix: true,
       isActive: true,
       lastUsed: true,
       createdAt: true,
@@ -65,9 +76,13 @@ export async function getApiKeys(userId: string) {
     orderBy: { createdAt: "desc" },
   });
 
-  return keys.map((k: typeof keys[number]) => ({
-    ...k,
-    key: k.key.slice(0, 12) + "..." + k.key.slice(-4),
+  return keys.map((k) => ({
+    id: k.id,
+    name: k.name,
+    key: k.keyPrefix || "sk_live_****...****",
+    isActive: k.isActive,
+    lastUsed: k.lastUsed,
+    createdAt: k.createdAt,
   }));
 }
 

@@ -157,6 +157,23 @@ export type ApiKeyListItem = {
   createdAt: Date
 }
 
+// ── Auto-Topup Responses ────────────────────────────────
+
+export type AutoTopupResponse = {
+  id: string
+  enabled: boolean
+  threshold: number
+  packageId: string
+  maxPerMonth: number
+  usedThisMonth: number
+  package?: {
+    id: string
+    name: string
+    credits: number
+    price: string
+  }
+}
+
 // ── Contact Responses ───────────────────────────────────
 
 export type ContactItem = {

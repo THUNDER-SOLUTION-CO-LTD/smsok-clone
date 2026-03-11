@@ -78,7 +78,8 @@ model ApiKey {
   id        String    @id @default(cuid())
   userId    String    @map("user_id")
   name      String
-  key       String    @unique
+  key       String    @unique           // SHA-256 hash of the actual key
+  keyPrefix String    @default("")  @map("key_prefix") // "sk_live_xxxx...xxxx" for display
   isActive  Boolean   @default(true) @map("is_active")
   lastUsed  DateTime? @map("last_used")
   createdAt DateTime  @default(now()) @map("created_at")
