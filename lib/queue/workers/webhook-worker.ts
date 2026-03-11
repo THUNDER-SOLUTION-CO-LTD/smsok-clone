@@ -1,13 +1,17 @@
 /**
- * Webhook Worker — delivers webhook events.
+ * Webhook Worker — delivers webhook events via queue (replaces fire-and-forget).
  * Concurrency: 20 | Rate limit: 50/sec | Retry: 5x exponential (30s base)
  *
  * Uses safeFetch for SSRF + DNS rebinding protection.
+ * Logs every attempt to WebhookLog. Auto-disables after 10 consecutive failures.
  */
 
 import { Worker } from "bullmq"
 import { workerConnectionOptions } from "../connection"
 import { QUEUE_NAMES, QUEUE_CONFIG, type WebhookJobData, type WebhookJobResult } from "../types"
+import { prisma } from "../../db"
+
+const MAX_RESPONSE_BYTES = 1024 * 1024
 
 export function createWebhookWorker() {
   const config = QUEUE_CONFIG[QUEUE_NAMES.SMS_WEBHOOK]
@@ -15,7 +19,7 @@ export function createWebhookWorker() {
   const worker = new Worker<WebhookJobData, WebhookJobResult>(
     QUEUE_NAMES.SMS_WEBHOOK,
     async (job) => {
-      const { url, secret, event, payload, correlationId } = job.data
+      const { webhookId, url, secret, event, payload, correlationId } = job.data
 
       const { safeFetch } = await import("../../url-safety")
       const { createHmac, randomBytes } = await import("crypto")
@@ -29,35 +33,85 @@ export function createWebhookWorker() {
       const signature = createHmac("sha256", secret).update(body).digest("hex")
 
       const start = Date.now()
+      let statusCode: number | null = null
+      let responseBody: string | null = null
+      let success = false
 
-      const res = await safeFetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Webhook-Signature": signature,
-          "X-Webhook-Event": event,
-          "X-Webhook-Delivery": randomBytes(16).toString("hex"),
-        },
-        body,
-        signal: AbortSignal.timeout(10_000),
-      })
+      try {
+        const res = await safeFetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Webhook-Signature": signature,
+            "X-Webhook-Event": event,
+            "X-Webhook-Delivery": randomBytes(16).toString("hex"),
+          },
+          body,
+          signal: AbortSignal.timeout(10_000),
+        })
+
+        statusCode = res.status
+        success = res.ok
+
+        // Read response body with size limit
+        try {
+          const text = await res.text()
+          responseBody = text.length > MAX_RESPONSE_BYTES
+            ? text.slice(0, MAX_RESPONSE_BYTES) + "...[truncated]"
+            : text
+        } catch {
+          responseBody = null
+        }
+      } catch (err) {
+        responseBody = err instanceof Error ? err.message : "Unknown error"
+      }
 
       const latency = Date.now() - start
-      const success = res.ok
 
-      if (!success) {
-        throw new Error(`Webhook delivery failed: HTTP ${res.status}`)
+      // Log attempt to WebhookLog
+      await prisma.webhookLog.create({
+        data: {
+          webhookId,
+          event,
+          payload: JSON.parse(body),
+          response: responseBody ? { body: responseBody } : undefined,
+          statusCode,
+          latency,
+          success,
+        },
+      }).catch(() => {})
+
+      if (success) {
+        // Reset fail count on success
+        await prisma.webhook.update({
+          where: { id: webhookId },
+          data: { failCount: 0 },
+        }).catch(() => {})
+
+        console.log(
+          `[Webhook Worker] ✓ correlationId=${correlationId} event=${event} status=${statusCode} latency=${latency}ms jobId=${job.id}`
+        )
+
+        return { statusCode, success: true, latency }
       }
 
-      console.log(
-        `[Webhook Worker] ✓ correlationId=${correlationId} event=${event} status=${res.status} latency=${latency}ms jobId=${job.id}`
-      )
+      // Increment fail count
+      const webhook = await prisma.webhook.update({
+        where: { id: webhookId },
+        data: { failCount: { increment: 1 } },
+        select: { failCount: true },
+      }).catch(() => null)
 
-      return {
-        statusCode: res.status,
-        success: true,
-        latency,
+      // Auto-disable after 10 consecutive failures
+      if (webhook && webhook.failCount >= 10) {
+        await prisma.webhook.update({
+          where: { id: webhookId },
+          data: { active: false },
+        }).catch(() => {})
+        console.warn(`[Webhook Worker] ⚠ Webhook ${webhookId} auto-disabled after ${webhook.failCount} failures`)
       }
+
+      throw new Error(`Webhook delivery failed: HTTP ${statusCode}`)
     },
     {
       connection: workerConnectionOptions,

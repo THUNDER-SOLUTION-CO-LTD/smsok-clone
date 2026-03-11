@@ -1,11 +1,15 @@
 /**
  * Single SMS Worker — standard priority.
  * Concurrency: 30 | Rate limit: 50/sec | Retry: 5x exponential
+ *
+ * Updates Message status in DB + dispatches webhook events on status change.
  */
 
 import { Worker } from "bullmq"
 import { workerConnectionOptions } from "../connection"
 import { QUEUE_NAMES, QUEUE_CONFIG, type SmsJobData, type SmsJobResult } from "../types"
+import { prisma } from "../../db"
+import { dispatchWebhookEvent } from "../../webhook-dispatch"
 
 export function createSingleWorker() {
   const config = QUEUE_CONFIG[QUEUE_NAMES.SMS_SINGLE]
@@ -13,7 +17,7 @@ export function createSingleWorker() {
   const worker = new Worker<SmsJobData, SmsJobResult>(
     QUEUE_NAMES.SMS_SINGLE,
     async (job) => {
-      const { recipients, message, sender, correlationId } = job.data
+      const { id, recipients, message, sender, correlationId, userId } = job.data
 
       const phone = recipients[0]
       if (!phone) {
@@ -24,18 +28,55 @@ export function createSingleWorker() {
       const result = await sendSingleSms(phone, message, sender)
 
       if (!result.success) {
+        // Update message status to failed
+        if (id) {
+          await prisma.message.update({
+            where: { id },
+            data: { status: "failed", errorCode: result.error || "SEND_FAILED" },
+          }).catch(() => {})
+        }
+
+        // Dispatch webhook for failure
+        dispatchWebhookEvent(userId, "sms.failed", {
+          messageId: id,
+          phone,
+          error: result.error,
+          correlationId,
+        })
+
+        // Permanent failure — don't retry
         if (result.error?.includes("INVALID_NUMBER")) {
           throw new Error(`INVALID_NUMBER: ${result.error}`)
         }
         throw new Error(result.error || "SMS send failed")
       }
 
+      // Update message status to sent
+      if (id) {
+        await prisma.message.update({
+          where: { id },
+          data: {
+            status: "sent",
+            sentAt: new Date(),
+            gatewayId: result.jobId || null,
+          },
+        }).catch(() => {})
+      }
+
+      // Dispatch webhook for success
+      dispatchWebhookEvent(userId, "sms.sent", {
+        messageId: id,
+        phone,
+        providerMsgId: result.jobId,
+        correlationId,
+      })
+
       console.log(
         `[Single Worker] ✓ correlationId=${correlationId} phone=${phone} jobId=${job.id}`
       )
 
       return {
-        smsId: job.data.id,
+        smsId: id,
         providerMsgId: result.jobId,
         status: "sent" as const,
         creditCost: 1,

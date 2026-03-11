@@ -1,15 +1,18 @@
 /**
- * Batch SMS Worker — processes multi-recipient jobs.
+ * Batch SMS Worker — splits multi-recipient jobs into individual sms-single queue jobs.
  * Concurrency: 10 | Rate limit: 200/sec | Retry: 5x exponential
  *
- * Splits recipients into chunks and sends sequentially per job.
+ * Instead of sending directly, creates individual jobs in sms-single queue
+ * for better retry handling and progress tracking per recipient.
  */
 
 import { Worker } from "bullmq"
 import { workerConnectionOptions } from "../connection"
 import { QUEUE_NAMES, QUEUE_CONFIG, type SmsJobData, type SmsJobResult } from "../types"
+import { singleQueue } from "../queues"
+import { randomBytes } from "crypto"
 
-const CHUNK_SIZE = 50 // Send 50 at a time within each job
+const CHUNK_SIZE = 50
 
 export function createBatchWorker() {
   const config = QUEUE_CONFIG[QUEUE_NAMES.SMS_BATCH]
@@ -17,42 +20,47 @@ export function createBatchWorker() {
   const worker = new Worker<SmsJobData, SmsJobResult>(
     QUEUE_NAMES.SMS_BATCH,
     async (job) => {
-      const { recipients, message, sender, correlationId } = job.data
+      const { recipients, message, sender, correlationId, userId, type, messageType } = job.data
 
       if (recipients.length === 0) {
         throw new Error("No recipients")
       }
 
-      const { sendSingleSms } = await import("../../sms-gateway")
+      let dispatched = 0
 
-      let sent = 0
-      let failed = 0
-
-      // Process in chunks to avoid overwhelming the gateway
+      // Split into individual jobs in sms-single queue
       for (let i = 0; i < recipients.length; i += CHUNK_SIZE) {
         const chunk = recipients.slice(i, i + CHUNK_SIZE)
 
-        const results = await Promise.allSettled(
-          chunk.map((phone) => sendSingleSms(phone, message, sender))
-        )
+        const jobs = chunk.map((phone) => ({
+          name: "single-from-batch",
+          data: {
+            id: randomBytes(12).toString("hex"),
+            correlationId,
+            userId,
+            type: "single" as const,
+            recipients: [phone],
+            message,
+            sender,
+            messageType,
+          },
+        }))
 
-        for (const r of results) {
-          if (r.status === "fulfilled" && r.value.success) sent++
-          else failed++
-        }
+        await singleQueue.addBulk(jobs)
+        dispatched += chunk.length
 
-        // Update progress for monitoring
-        await job.updateProgress(Math.round(((i + chunk.length) / recipients.length) * 100))
+        // Update progress
+        await job.updateProgress(Math.round((dispatched / recipients.length) * 100))
       }
 
       console.log(
-        `[Batch Worker] ✓ correlationId=${correlationId} sent=${sent} failed=${failed} total=${recipients.length} jobId=${job.id}`
+        `[Batch Worker] ✓ correlationId=${correlationId} dispatched=${dispatched} jobs to sms-single queue jobId=${job.id}`
       )
 
       return {
         smsId: job.data.id,
-        status: failed === recipients.length ? "failed" as const : "sent" as const,
-        creditCost: sent,
+        status: "sent" as const,
+        creditCost: dispatched,
       }
     },
     {
