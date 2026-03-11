@@ -89,8 +89,7 @@ function isLogMethod(name: string): boolean {
 }
 
 /** Main contextual logger — import this everywhere. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const log: any = createContextualLogger()
+export const log: pino.Logger = createContextualLogger()
 
 /** Create a child logger with a fixed component name. */
 export function createComponentLogger(component: string): pino.Logger {

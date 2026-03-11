@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { timingSafeEqual } from "crypto";
 import { prisma } from "@/lib/db";
 
 /**
@@ -11,10 +12,10 @@ import { prisma } from "@/lib/db";
  * Auth: Shared secret via X-Webhook-Secret header
  */
 export async function POST(req: NextRequest) {
-  // Verify webhook secret
+  // Verify webhook secret (timing-safe to prevent brute-force via side-channel)
   const secret = req.headers.get("x-webhook-secret");
   const expectedSecret = process.env.STOP_WEBHOOK_SECRET;
-  if (!expectedSecret || secret !== expectedSecret) {
+  if (!expectedSecret || !secret || !timingSafeEqual(Buffer.from(secret), Buffer.from(expectedSecret))) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -44,9 +45,5 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  return Response.json({
-    success: true,
-    phone: normalized,
-    contactsUpdated: result.count,
-  });
+  return Response.json({ success: true });
 }
