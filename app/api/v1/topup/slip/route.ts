@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const input = uploadSlipSchema.parse(body);
-    const result = await uploadSlip(input.transactionId, input.slipUrl);
+    const result = await uploadSlip(user.id, input.transactionId, input.slipUrl);
     return apiResponse(result);
   } catch (error) {
     return apiError(error);

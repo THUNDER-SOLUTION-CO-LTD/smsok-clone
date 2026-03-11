@@ -1,6 +1,10 @@
 import { NextRequest } from "next/server";
-import { timingSafeEqual } from "crypto";
+import { timingSafeEqual, createHash } from "crypto";
 import { prisma } from "@/lib/db";
+
+function hashForCompare(value: string): Buffer {
+  return createHash("sha256").update(value).digest();
+}
 
 /**
  * POST /api/v1/webhooks/stop — handle STOP/opt-out webhook from SMS gateway
@@ -12,10 +16,10 @@ import { prisma } from "@/lib/db";
  * Auth: Shared secret via X-Webhook-Secret header
  */
 export async function POST(req: NextRequest) {
-  // Verify webhook secret (timing-safe to prevent brute-force via side-channel)
+  // Verify webhook secret (hash both sides to fixed 32-byte length, preventing length oracle)
   const secret = req.headers.get("x-webhook-secret");
   const expectedSecret = process.env.STOP_WEBHOOK_SECRET;
-  if (!expectedSecret || !secret || !timingSafeEqual(Buffer.from(secret), Buffer.from(expectedSecret))) {
+  if (!expectedSecret || !secret || !timingSafeEqual(hashForCompare(secret), hashForCompare(expectedSecret))) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 

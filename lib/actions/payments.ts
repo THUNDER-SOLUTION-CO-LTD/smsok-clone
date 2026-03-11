@@ -94,7 +94,7 @@ export async function purchasePackage(
 // Upload slip for verification
 // ==========================================
 
-export async function uploadSlip(transactionId: string, slipUrl: string) {
+export async function uploadSlip(userId: string, transactionId: string, slipUrl: string) {
   idSchema.parse({ id: transactionId });
 
   // SSRF protection — block internal URLs
@@ -106,6 +106,7 @@ export async function uploadSlip(transactionId: string, slipUrl: string) {
     where: { id: transactionId },
   });
   if (!transaction) throw new Error("ไม่พบรายการ");
+  if (transaction.userId !== userId) throw new Error("ไม่มีสิทธิ์เข้าถึงรายการนี้");
   if (transaction.status !== "pending") throw new Error("รายการนี้ดำเนินการแล้ว");
 
   await db.transaction.update({
