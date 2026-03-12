@@ -783,9 +783,9 @@ export function generateOpenAPISpec() {
       "/balance": {
         get: {
           tags: ["Account"],
-          summary: "Get balance details",
+          summary: "Get remaining SMS quota details",
           responses: {
-            "200": { description: "Balance information" },
+            "200": { description: "Remaining SMS quota information" },
             "401": { $ref: "#/components/responses/Unauthorized" },
           },
         },
@@ -1413,7 +1413,7 @@ export function generateOpenAPISpec() {
           },
         },
       },
-      "/topup": {
+      "/packages/purchase": {
         post: {
           tags: ["Billing"],
           summary: "Purchase SMS package",
@@ -1441,10 +1441,10 @@ export function generateOpenAPISpec() {
           },
         },
       },
-      "/topup/slip": {
+      "/packages/purchase/verify-slip": {
         post: {
           tags: ["Billing"],
-          summary: "Upload payment slip for verification",
+          summary: "Upload package-purchase slip for verification",
           requestBody: {
             required: true,
             content: {
@@ -1482,14 +1482,16 @@ export function generateOpenAPISpec() {
           },
         },
       },
-      "/auto-topup": {
+      "/packages/auto-topup": {
         get: {
           tags: ["Billing"],
+          deprecated: true,
           summary: "Get auto-purchase settings (deprecated)",
           responses: { "200": { description: "Auto-purchase configuration (deprecated)" } },
         },
         put: {
           tags: ["Billing"],
+          deprecated: true,
           summary: "Update auto-purchase settings (deprecated)",
           requestBody: {
             required: true,
@@ -1508,7 +1510,7 @@ export function generateOpenAPISpec() {
               },
             },
           },
-          responses: { "200": { description: "Auto top-up updated" } },
+          responses: { "200": { description: "Auto purchase settings updated (deprecated)" } },
         },
       },
 

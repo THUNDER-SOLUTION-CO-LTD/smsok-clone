@@ -4,7 +4,7 @@ import { getSession } from "@/lib/auth";
 import { prisma as db } from "@/lib/db";
 import { applyRateLimit } from "@/lib/rate-limit";
 
-// GET /api/credit-balance — SMS balance + thresholds
+// GET /api/credit-balance — SMS quota summary + thresholds
 export async function GET(req: NextRequest) {
   try {
     const session = await getSession();
@@ -37,7 +37,22 @@ export async function GET(req: NextRequest) {
     else if (percentage <= 20) threshold = "20%";
     else if (percentage <= 50) threshold = "50%";
 
+    const quotaSummary = {
+      remaining_credits: remainingCredits,
+      remaining_messages: remainingCredits,
+      total_quota: totalCredits,
+      used_quota: usedCredits,
+      percentage,
+      threshold,
+    };
+
     return apiResponse({
+      remaining_credits: remainingCredits,
+      remaining_messages: remainingCredits,
+      total_quota: totalCredits,
+      used_quota: usedCredits,
+      quotaSummary,
+      quota: quotaSummary,
       totalCredits,
       usedCredits,
       remainingCredits,

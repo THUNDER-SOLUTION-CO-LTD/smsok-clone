@@ -12,7 +12,7 @@ import {
 import { z } from "zod";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "application/pdf"];
-const TOPUP_STATUSES = [
+const PURCHASE_VERIFICATION_STATUSES = [
   "PENDING",
   "PROCESSING",
   "PENDING_REVIEW",
@@ -22,7 +22,7 @@ const TOPUP_STATUSES = [
   "EXPIRED",
 ] as const;
 
-const legacyTopupSchema = z.object({
+const packagePurchaseInputSchema = z.object({
   packageId: z.string().trim().min(1).optional(),
   credits: z.preprocess(
     (value) => (value === "" || value == null ? undefined : Number(value)),
@@ -37,7 +37,7 @@ const legacyTopupSchema = z.object({
   note: z.string().trim().max(500).optional(),
 });
 
-type LegacyTopupInput = z.infer<typeof legacyTopupSchema>;
+type PackagePurchaseInput = z.infer<typeof packagePurchaseInputSchema>;
 
 type TierRecord = {
   id: string;
@@ -61,7 +61,7 @@ async function readUpload(req: NextRequest): Promise<{
   slipUrl: string;
   fileName: string | null;
   fileSize: number | null;
-  input: LegacyTopupInput;
+  input: PackagePurchaseInput;
 }> {
   const contentType = req.headers.get("content-type") || "";
 
@@ -76,7 +76,7 @@ async function readUpload(req: NextRequest): Promise<{
     }
 
     const payload = await fileToBase64(file);
-    const input = legacyTopupSchema.parse({
+    const input = packagePurchaseInputSchema.parse({
       packageId: formData.get("packageId"),
       credits: formData.get("credits"),
       amount: formData.get("amount"),
@@ -108,7 +108,7 @@ async function readUpload(req: NextRequest): Promise<{
     throw new ApiError(400, "กรุณาแนบสลิปแบบ base64 ใน field 'payload'");
   }
 
-  const input = legacyTopupSchema.parse(body);
+  const input = packagePurchaseInputSchema.parse(body);
   const approxBytes = Math.ceil((payload.length * 3) / 4);
 
   return {
@@ -135,11 +135,14 @@ function buildCompatResponse(payment: {
     slipId: payment.id,
     paymentId: payment.id,
     transactionId: payment.id,
+    packagePurchaseId: payment.id,
     status: payment.status,
     verified: payment.status === "COMPLETED",
     matchedPackage: payment.packageTier?.name ?? null,
+    packageName: payment.packageTier?.name ?? null,
     tierCode: payment.packageTier?.tierCode ?? null,
     smsAdded: payment.status === "COMPLETED" ? payment.packageTier?.totalSms ?? 0 : 0,
+    smsQuota: payment.status === "COMPLETED" ? payment.packageTier?.totalSms ?? 0 : 0,
     invoiceNumber: payment.invoiceNumber ?? null,
     invoiceUrl: payment.invoiceUrl ?? null,
   };
@@ -170,7 +173,7 @@ function checkReceiverAccount(account: string | null | undefined) {
   };
 }
 
-async function resolveTier(input: LegacyTopupInput): Promise<TierRecord | null> {
+async function resolveTier(input: PackagePurchaseInput): Promise<TierRecord | null> {
   const select = {
     id: true,
     name: true,
@@ -233,7 +236,7 @@ async function resolveTier(input: LegacyTopupInput): Promise<TierRecord | null> 
   return null;
 }
 
-// POST /api/v1/payments/topup/verify-slip — verify slip image
+// POST /api/v1/payments/topup/verify-slip — legacy compatibility alias for package-purchase slip verification
 export async function POST(req: NextRequest) {
   try {
     const session = await getSession();
@@ -286,7 +289,7 @@ export async function POST(req: NextRequest) {
       ? Math.abs(detectedSatang - totals.totalAmount) <= 100
       : false;
 
-    const status: (typeof TOPUP_STATUSES)[number] =
+    const status: (typeof PURCHASE_VERIFICATION_STATUSES)[number] =
       verification.success && verification.data
         ? duplicateId
           ? "PENDING_REVIEW"
@@ -306,7 +309,7 @@ export async function POST(req: NextRequest) {
       : null;
     const historyNote =
       status === "COMPLETED"
-        ? "EasySlip verified from legacy v1 topup flow"
+        ? "EasySlip verified from package purchase flow"
         : duplicateId
           ? `Duplicate slip reference already used by ${duplicateId}`
           : verification.success && verification.data
@@ -344,7 +347,7 @@ export async function POST(req: NextRequest) {
           creditsAdded: tier.totalSms,
           idempotencyKey: verification.data?.transRef ?? null,
           metadata: {
-            source: "legacy-v1-topup",
+            source: "package-purchase-v1",
             submittedDate: upload.input.date ?? null,
             submittedTime: upload.input.time ?? null,
             note: upload.input.note ?? null,
@@ -397,7 +400,7 @@ export async function POST(req: NextRequest) {
           paymentId: created.id,
           toStatus: "PENDING",
           changedBy: "system",
-          note: "Legacy v1 topup created payment record",
+          note: "Package purchase slip verification created payment record",
         },
       });
 

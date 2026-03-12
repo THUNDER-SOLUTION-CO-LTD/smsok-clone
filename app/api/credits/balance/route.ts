@@ -3,7 +3,7 @@ import { getSession } from "@/lib/auth";
 import { getRemainingQuota } from "@/lib/package/quota";
 import { applyRateLimit } from "@/lib/rate-limit";
 
-// GET /api/credits/balance — normalized balance endpoint for send/otp UIs
+// GET /api/credits/balance — normalized remaining-quota endpoint for send/otp UIs
 export async function GET() {
   try {
     const session = await getSession();
@@ -15,11 +15,21 @@ export async function GET() {
     const quota = await getRemainingQuota(session.id);
     const expiry = quota.packages[0]?.expiresAt ?? null;
 
+    const quotaSummary = {
+      remaining_credits: quota.totalRemaining,
+      remaining_messages: quota.totalRemaining,
+      total_quota: quota.totalSms,
+      used_quota: quota.totalUsed,
+      expiry,
+    };
+
     return apiResponse({
       remaining_credits: quota.totalRemaining,
       remaining_messages: quota.totalRemaining,
       total_quota: quota.totalSms,
       used_quota: quota.totalUsed,
+      quotaSummary,
+      quota: quotaSummary,
       balance: quota.totalRemaining,
       smsRemaining: quota.totalRemaining,
       remaining: quota.totalRemaining,

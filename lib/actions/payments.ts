@@ -179,7 +179,7 @@ export async function adminGetPendingTransactions() {
   });
 }
 
-export async function verifyTopupSlip(userId: string, payload: string) {
+export async function verifyPackagePurchaseSlip(userId: string, payload: string) {
   if (!payload || typeof payload !== "string") {
     throw new Error("กรุณาแนบสลิปแบบ base64");
   }
@@ -210,7 +210,7 @@ export async function verifyTopupSlip(userId: string, payload: string) {
   });
 
   const result = await db.$transaction(async (tx) => {
-    const topupTransaction = await tx.transaction.create({
+    const purchaseTransaction = await tx.transaction.create({
       data: {
         userId,
         packageId: matchedTier?.id ?? null,
@@ -242,7 +242,7 @@ export async function verifyTopupSlip(userId: string, payload: string) {
     }
 
     return {
-      transactionId: topupTransaction.id,
+      transactionId: purchaseTransaction.id,
       reference: slipData.transRef,
       amount: slipData.amount,
       matchedPackage: matchedTier?.name ?? null,
@@ -253,4 +253,8 @@ export async function verifyTopupSlip(userId: string, payload: string) {
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/topup");
   return result;
+}
+
+export async function verifyTopupSlip(userId: string, payload: string) {
+  return verifyPackagePurchaseSlip(userId, payload);
 }

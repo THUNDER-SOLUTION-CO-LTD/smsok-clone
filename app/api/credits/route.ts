@@ -3,7 +3,7 @@ import { getSession } from "@/lib/auth";
 import { prisma as db } from "@/lib/db";
 import { applyRateLimit } from "@/lib/rate-limit";
 
-// GET /api/credits — balance, usage, expiry, and purchase history
+// GET /api/credits — package quota summary, usage, expiry, and purchase history
 export async function GET() {
   try {
     const session = await getSession();
@@ -53,17 +53,22 @@ export async function GET() {
     else if (percentage <= 20) threshold = "20%";
     else if (percentage <= 50) threshold = "50%";
 
-    return apiResponse({
-      remaining_credits: remainingCredits,
+    const quotaSummary = {
       total_quota: totalCredits,
       used_quota: usedCredits,
-      quotaSummary: {
-        total_quota: totalCredits,
-        used_quota: usedCredits,
-        remaining_credits: remainingCredits,
-        percentage,
-        threshold,
-      },
+      remaining_credits: remainingCredits,
+      remaining_messages: remainingCredits,
+      percentage,
+      threshold,
+    };
+
+    return apiResponse({
+      remaining_credits: remainingCredits,
+      remaining_messages: remainingCredits,
+      total_quota: totalCredits,
+      used_quota: usedCredits,
+      quotaSummary,
+      quota: quotaSummary,
       balance: {
         totalCredits,
         usedCredits,
@@ -78,6 +83,7 @@ export async function GET() {
         smsTotal: pkg.smsTotal,
         smsUsed: pkg.smsUsed,
         smsRemaining: pkg.smsTotal - pkg.smsUsed,
+        remaining_credits: pkg.smsTotal - pkg.smsUsed,
         purchasedAt: pkg.purchasedAt,
         expiresAt: pkg.expiresAt,
         status: pkg.isActive && pkg.expiresAt > now ? "ACTIVE" : "EXPIRED",

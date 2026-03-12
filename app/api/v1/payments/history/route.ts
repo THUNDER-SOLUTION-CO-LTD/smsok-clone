@@ -65,6 +65,8 @@ export async function GET(req: NextRequest) {
     ]);
 
     const items = payments.map((payment) => ({
+      smsAdded: payment.creditsAdded ?? payment.packageTier?.totalSms ?? 0,
+      smsQuota: payment.creditsAdded ?? payment.packageTier?.totalSms ?? 0,
       id: payment.id,
       transactionId: payment.id,
       packageId: payment.packageTier?.id ?? null,

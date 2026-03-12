@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
   try {
     const user = await authenticateRequestUser(req);
 
-    const [userData, recentMessages, recentTopups] = await Promise.all([
+    const [userData, recentMessages, recentPackagePurchases] = await Promise.all([
       prisma.user.findUnique({
         where: { id: user.id },
         select: { notificationsReadAt: true },
@@ -18,11 +18,20 @@ export async function GET(req: NextRequest) {
         take: 5,
         select: { id: true, recipient: true, status: true, createdAt: true, content: true },
       }),
-      prisma.transaction.findMany({
-        where: { userId: user.id, status: "verified" },
+      prisma.payment.findMany({
+        where: { userId: user.id, status: "COMPLETED" },
         orderBy: { createdAt: "desc" },
         take: 5,
-        select: { id: true, amount: true, createdAt: true },
+        select: {
+          id: true,
+          totalAmount: true,
+          createdAt: true,
+          packageTier: {
+            select: {
+              name: true,
+            },
+          },
+        },
       }),
     ]);
 
@@ -41,12 +50,12 @@ export async function GET(req: NextRequest) {
         createdAt: m.createdAt.toISOString(),
         read: readAt ? m.createdAt <= readAt : false,
       })),
-      ...recentTopups.map((t) => ({
-        id: `txn_${t.id}`,
-        type: "topup",
-        message: `ซื้อแพ็กเกจสำเร็จ (฿${(t.amount / 100).toLocaleString()})`,
-        createdAt: t.createdAt.toISOString(),
-        read: readAt ? t.createdAt <= readAt : false,
+      ...recentPackagePurchases.map((purchase) => ({
+        id: `payment_${purchase.id}`,
+        type: "package_purchase",
+        message: `ซื้อแพ็กเกจ SMS${purchase.packageTier?.name ? ` ${purchase.packageTier.name}` : ""} สำเร็จ (฿${((purchase.totalAmount ?? 0) / 100).toLocaleString()})`,
+        createdAt: purchase.createdAt.toISOString(),
+        read: readAt ? purchase.createdAt <= readAt : false,
       })),
     ]
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
