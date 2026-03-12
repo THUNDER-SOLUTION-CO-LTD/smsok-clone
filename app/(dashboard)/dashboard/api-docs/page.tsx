@@ -157,8 +157,8 @@ const endpoints: Endpoint[] = [
   "purpose": "verify",
   "expiresAt": "2026-03-09T10:35:00Z",
   "expiresIn": 300,
-  "creditUsed": 1,
-  "creditsRemaining": 1499
+  "smsUsed": 1,
+  "smsRemaining": 1499
 }`,
     rateLimit: "3 req/5min per phone",
     responseFields: [
@@ -167,8 +167,8 @@ const endpoints: Endpoint[] = [
       { name: "purpose", type: "string", description: "วัตถุประสงค์: verify, login, transaction" },
       { name: "expiresAt", type: "string (ISO8601)", description: "เวลาหมดอายุ" },
       { name: "expiresIn", type: "number", description: "วินาทีที่เหลือก่อนหมดอายุ (300)" },
-      { name: "creditUsed", type: "number", description: "SMS ที่ใช้" },
-      { name: "creditsRemaining", type: "number", description: "SMS คงเหลือ" },
+      { name: "smsUsed", type: "number", description: "SMS ที่ใช้" },
+      { name: "smsRemaining", type: "number", description: "SMS คงเหลือ" },
     ],
     errors: [
       { code: "400", description: "เบอร์โทรศัพท์ไม่ถูกต้อง" },

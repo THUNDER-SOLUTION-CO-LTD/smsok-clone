@@ -245,8 +245,8 @@ export default function QuotationsPage() {
         {!loading && !fetchError && paged.length === 0 && (
           <EmptyState
             icon={<FileText className="w-10 h-10" />}
-            title="ไม่พบใบเสนอราคา"
-            subtitle="ลองเปลี่ยนตัวกรองหรือค้นหาด้วยคำอื่น"
+            title={searchQuery || statusFilter ? "ไม่พบใบเสนอราคาที่ตรงกับตัวกรอง" : "ยังไม่มีใบเสนอราคา"}
+            subtitle={searchQuery || statusFilter ? "ลองเปลี่ยนตัวกรองหรือค้นหาด้วยคำอื่น" : "สร้างใบเสนอราคาใหม่เพื่อเริ่มต้น"}
           />
         )}
 

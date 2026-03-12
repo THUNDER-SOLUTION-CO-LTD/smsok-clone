@@ -1,4 +1,4 @@
-// ── Purchase Package Types & Mock Data ──
+// ── Purchase Package Types ──
 // Spec: SMSOK-PURCHASE-PACKAGE-V2-WIREFRAMES-SPEC.md
 
 export type PackageGroup = "sme" | "enterprise";
@@ -87,7 +87,7 @@ export async function fetchPackageTiers(): Promise<PackageTier[]> {
     const res = await fetch("/api/v1/packages");
     if (!res.ok) return [];
     const data = await res.json();
-    return (data.data ?? data.packages ?? []) as PackageTier[];
+    return (data.data ?? data.packages ?? data.tiers ?? []) as PackageTier[];
   } catch {
     return [];
   }

@@ -50,7 +50,7 @@ const RESOURCE_LABELS: Record<RbacResource, string> = {
   tag: "Tags",
   billing: "Billing",
   invoice: "Invoices",
-  credit: "Credits",
+  credit: "SMS Quota",
   transaction: "Transactions",
   api_key: "API Keys",
   webhook: "Webhooks",
