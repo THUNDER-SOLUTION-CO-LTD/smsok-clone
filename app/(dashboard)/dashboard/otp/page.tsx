@@ -511,7 +511,7 @@ function OverviewTab({
     },
     {
       label: "เวลาเฉลี่ยยืนยัน",
-      value: `${stats.avgVerifyTime} วิ`,
+      value: stats.avgVerifyTime > 0 ? `${stats.avgVerifyTime} วิ` : "—",
       delta: stats.timeDelta,
       icon: Timer,
       color: "var(--info)",

@@ -199,19 +199,26 @@ export async function createContact(userIdOrData: string | unknown, maybeData?: 
             optOutReason: null,
           };
 
-  const contact = await db.contact.create({
-    data: {
-      userId,
-      name: input.name,
-      phone: input.phone,
-      email: input.email || null,
-      tags: input.tags || null,
-      ...consentData,
-    },
-  });
+  try {
+    const contact = await db.contact.create({
+      data: {
+        userId,
+        name: input.name,
+        phone: input.phone,
+        email: input.email || null,
+        tags: input.tags || null,
+        ...consentData,
+      },
+    });
 
-  revalidatePath("/dashboard/contacts");
-  return contact;
+    revalidatePath("/dashboard/contacts");
+    return contact;
+  } catch (err) {
+    if (err instanceof Error && "code" in err && (err as { code: string }).code === "P2002") {
+      throw new Error("เบอร์โทรนี้มีอยู่แล้ว");
+    }
+    throw err;
+  }
 }
 
 // ==========================================
