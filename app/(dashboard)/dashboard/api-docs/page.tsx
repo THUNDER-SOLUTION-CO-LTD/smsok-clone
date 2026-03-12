@@ -50,15 +50,15 @@ const endpoints: Endpoint[] = [
     response: `{
   "id": "cm9abc123xyz",
   "status": "pending",
-  "credits_used": 1,
-  "credits_remaining": 1499
+  "sms_used": 1,
+  "sms_remaining": 1499
 }`,
     rateLimit: "10 req/min",
     responseFields: [
       { name: "id", type: "string", description: "รหัสข้อความ (cuid)" },
       { name: "status", type: "string", description: "สถานะ: pending, sent, delivered, failed" },
-      { name: "credits_used", type: "number", description: "SMS ที่ใช้" },
-      { name: "credits_remaining", type: "number", description: "SMS คงเหลือ" },
+      { name: "sms_used", type: "number", description: "SMS ที่ใช้" },
+      { name: "sms_remaining", type: "number", description: "SMS คงเหลือ" },
     ],
     errors: [
       { code: "400", description: "ข้อมูลไม่ถูกต้อง (sender/to/message)" },
@@ -79,14 +79,14 @@ const endpoints: Endpoint[] = [
 }`,
     response: `{
   "total_messages": 2,
-  "credits_used": 2,
-  "credits_remaining": 1498
+  "sms_used": 2,
+  "sms_remaining": 1498
 }`,
     rateLimit: "5 req/min",
     responseFields: [
       { name: "total_messages", type: "number", description: "จำนวนข้อความทั้งหมด" },
-      { name: "credits_used", type: "number", description: "SMS ที่ใช้ทั้งหมด" },
-      { name: "credits_remaining", type: "number", description: "SMS คงเหลือหลังส่ง" },
+      { name: "sms_used", type: "number", description: "SMS ที่ใช้ทั้งหมด" },
+      { name: "sms_remaining", type: "number", description: "SMS คงเหลือหลังส่ง" },
     ],
     errors: [
       { code: "400", description: "ข้อมูลไม่ถูกต้อง หรือเบอร์เกิน 10,000" },
@@ -332,8 +332,8 @@ const endpoints: Endpoint[] = [
 
   // Account
   {
-    method: "GET", path: "/api/v1/balance", title: "Check Balance", category: "Account",
-    description: "ตรวจสอบ SMS คงเหลือ",
+    method: "GET", path: "/api/v1/balance", title: "ตรวจสอบโควต้า", category: "Account",
+    description: "ตรวจสอบจำนวนข้อความคงเหลือ",
     headers: "Authorization: Bearer <API_KEY>",
     response: `{
   "credits": 1500,

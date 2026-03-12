@@ -29,9 +29,13 @@ export async function getGroups(userId: string) {
   });
 }
 
-export async function createGroup(userId: string, data: unknown) {
-  userId = await resolveActionUserId(userId);
-  const parsed = createGroupSchema.safeParse(data);
+export async function createGroup(data: unknown): Promise<Awaited<ReturnType<typeof db.contactGroup.create>>>;
+export async function createGroup(userId: string, data: unknown): Promise<Awaited<ReturnType<typeof db.contactGroup.create>>>;
+export async function createGroup(userIdOrData: string | unknown, maybeData?: unknown) {
+  const userId = await resolveActionUserId(
+    maybeData === undefined ? undefined : userIdOrData as string,
+  );
+  const parsed = createGroupSchema.safeParse(maybeData === undefined ? userIdOrData : maybeData);
   if (!parsed.success) {
     throw new Error(parsed.error.issues[0]?.message || "ข้อมูลไม่ถูกต้อง");
   }
@@ -42,9 +46,13 @@ export async function createGroup(userId: string, data: unknown) {
   return group;
 }
 
-export async function updateGroup(userId: string, groupId: string, data: unknown) {
-  userId = await resolveActionUserId(userId);
-  const parsed = createGroupSchema.safeParse(data);
+export async function updateGroup(groupId: string, data: unknown): Promise<Awaited<ReturnType<typeof db.contactGroup.update>>>;
+export async function updateGroup(userId: string, groupId: string, data: unknown): Promise<Awaited<ReturnType<typeof db.contactGroup.update>>>;
+export async function updateGroup(userIdOrGroupId: string, groupIdOrData: string | unknown, maybeData?: unknown) {
+  const hasExplicitUserId = maybeData !== undefined;
+  const userId = await resolveActionUserId(hasExplicitUserId ? userIdOrGroupId : undefined);
+  const groupId = hasExplicitUserId ? groupIdOrData as string : userIdOrGroupId;
+  const parsed = createGroupSchema.safeParse(hasExplicitUserId ? maybeData : groupIdOrData);
   if (!parsed.success) {
     throw new Error(parsed.error.issues[0]?.message || "ข้อมูลไม่ถูกต้อง");
   }
@@ -59,16 +67,26 @@ export async function updateGroup(userId: string, groupId: string, data: unknown
   return updated;
 }
 
-export async function deleteGroup(userId: string, groupId: string) {
-  userId = await resolveActionUserId(userId);
+export async function deleteGroup(groupId: string): Promise<void>;
+export async function deleteGroup(userId: string, groupId: string): Promise<void>;
+export async function deleteGroup(userIdOrGroupId: string, maybeGroupId?: string) {
+  const userId = await resolveActionUserId(
+    maybeGroupId === undefined ? undefined : userIdOrGroupId,
+  );
+  const groupId = maybeGroupId ?? userIdOrGroupId;
   const existing = await db.contactGroup.findFirst({ where: { id: groupId, userId } });
   if (!existing) throw new Error("ไม่พบกลุ่ม");
   await db.contactGroup.delete({ where: { id: groupId } });
   revalidatePath("/dashboard/groups");
 }
 
-export async function getGroupContacts(userId: string, groupId: string) {
-  userId = await resolveActionUserId(userId);
+export async function getGroupContacts(groupId: string): Promise<Awaited<ReturnType<typeof db.contactGroupMember.findMany>>>;
+export async function getGroupContacts(userId: string, groupId: string): Promise<Awaited<ReturnType<typeof db.contactGroupMember.findMany>>>;
+export async function getGroupContacts(userIdOrGroupId: string, maybeGroupId?: string) {
+  const userId = await resolveActionUserId(
+    maybeGroupId === undefined ? undefined : userIdOrGroupId,
+  );
+  const groupId = maybeGroupId ?? userIdOrGroupId;
   const group = await db.contactGroup.findFirst({ where: { id: groupId, userId } });
   if (!group) throw new Error("ไม่พบกลุ่ม");
   return db.contactGroupMember.findMany({
@@ -78,8 +96,13 @@ export async function getGroupContacts(userId: string, groupId: string) {
   });
 }
 
-export async function addContactToGroup(userId: string, groupId: string, contactId: string) {
-  userId = await resolveActionUserId(userId);
+export async function addContactToGroup(groupId: string, contactId: string): Promise<Awaited<ReturnType<typeof db.contactGroupMember.create>>>;
+export async function addContactToGroup(userId: string, groupId: string, contactId: string): Promise<Awaited<ReturnType<typeof db.contactGroupMember.create>>>;
+export async function addContactToGroup(userIdOrGroupId: string, groupIdOrContactId: string, maybeContactId?: string) {
+  const hasExplicitUserId = maybeContactId !== undefined;
+  const userId = await resolveActionUserId(hasExplicitUserId ? userIdOrGroupId : undefined);
+  const groupId = hasExplicitUserId ? groupIdOrContactId : userIdOrGroupId;
+  const contactId = hasExplicitUserId ? maybeContactId as string : groupIdOrContactId;
   const [group, contact] = await Promise.all([
     db.contactGroup.findFirst({ where: { id: groupId, userId } }),
     db.contact.findFirst({ where: { id: contactId, userId } }),
@@ -102,8 +125,13 @@ export async function addContactToGroup(userId: string, groupId: string, contact
   return member;
 }
 
-export async function removeContactFromGroup(userId: string, groupId: string, contactId: string) {
-  userId = await resolveActionUserId(userId);
+export async function removeContactFromGroup(groupId: string, contactId: string): Promise<void>;
+export async function removeContactFromGroup(userId: string, groupId: string, contactId: string): Promise<void>;
+export async function removeContactFromGroup(userIdOrGroupId: string, groupIdOrContactId: string, maybeContactId?: string) {
+  const hasExplicitUserId = maybeContactId !== undefined;
+  const userId = await resolveActionUserId(hasExplicitUserId ? userIdOrGroupId : undefined);
+  const groupId = hasExplicitUserId ? groupIdOrContactId : userIdOrGroupId;
+  const contactId = hasExplicitUserId ? maybeContactId as string : groupIdOrContactId;
   const group = await db.contactGroup.findFirst({ where: { id: groupId, userId } });
   if (!group) throw new Error("ไม่พบกลุ่ม");
   await db.contactGroupMember.delete({
@@ -112,8 +140,13 @@ export async function removeContactFromGroup(userId: string, groupId: string, co
   revalidatePath("/dashboard/groups");
 }
 
-export async function bulkRemoveFromGroup(userId: string, groupId: string, contactIds: string[]) {
-  userId = await resolveActionUserId(userId);
+export async function bulkRemoveFromGroup(groupId: string, contactIds: string[]): Promise<{ removed: number }>;
+export async function bulkRemoveFromGroup(userId: string, groupId: string, contactIds: string[]): Promise<{ removed: number }>;
+export async function bulkRemoveFromGroup(userIdOrGroupId: string, groupIdOrContactIds: string | string[], maybeContactIds?: string[]) {
+  const hasExplicitUserId = Array.isArray(maybeContactIds);
+  const userId = await resolveActionUserId(hasExplicitUserId ? userIdOrGroupId : undefined);
+  const groupId = hasExplicitUserId ? groupIdOrContactIds as string : userIdOrGroupId;
+  const contactIds = hasExplicitUserId ? maybeContactIds : groupIdOrContactIds as string[];
   const group = await db.contactGroup.findFirst({ where: { id: groupId, userId } });
   if (!group) throw new Error("ไม่พบกลุ่ม");
   if (contactIds.length === 0) throw new Error("กรุณาเลือกรายชื่อ");
@@ -245,8 +278,13 @@ export async function importContactsToGroup(
   };
 }
 
-export async function getContactsNotInGroup(userId: string, groupId: string, search?: string) {
-  userId = await resolveActionUserId(userId);
+export async function getContactsNotInGroup(groupId: string, search?: string): Promise<Awaited<ReturnType<typeof db.contact.findMany>>>;
+export async function getContactsNotInGroup(userId: string, groupId: string, search?: string): Promise<Awaited<ReturnType<typeof db.contact.findMany>>>;
+export async function getContactsNotInGroup(userIdOrGroupId: string, groupIdOrSearch?: string, maybeSearch?: string) {
+  const hasExplicitUserId = maybeSearch !== undefined;
+  const userId = await resolveActionUserId(hasExplicitUserId ? userIdOrGroupId : undefined);
+  const groupId = hasExplicitUserId ? groupIdOrSearch as string : userIdOrGroupId;
+  const search = hasExplicitUserId ? maybeSearch : groupIdOrSearch;
   const group = await db.contactGroup.findFirst({ where: { id: groupId, userId } });
   if (!group) throw new Error("ไม่พบกลุ่ม");
 

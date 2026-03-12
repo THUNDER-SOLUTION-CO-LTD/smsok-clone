@@ -247,7 +247,7 @@ export function EmptyState({ icon, title, subtitle, action }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center py-16 px-4">
       <div className="text-[var(--text-secondary)] mb-3">{icon}</div>
-      <h3 className="text-lg font-semibold text-white mb-1">{title}</h3>
+      <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-1">{title}</h3>
       {subtitle && (
         <p className="text-sm text-[var(--text-secondary)] mb-4">{subtitle}</p>
       )}

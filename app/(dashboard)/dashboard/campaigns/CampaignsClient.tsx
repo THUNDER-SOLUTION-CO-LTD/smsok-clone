@@ -167,12 +167,14 @@ export default function CampaignsClient({
   groups,
   templates,
   senderNames = ["EasySlip"],
+  loadError = false,
 }: {
   userId: string;
   initialCampaigns: Campaign[];
   groups: ContactGroup[];
   templates: Template[];
   senderNames?: string[];
+  loadError?: boolean;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -383,6 +385,16 @@ export default function CampaignsClient({
           }`}
         >
           {feedback.text}
+        </div>
+      )}
+
+      {/* Load error banner */}
+      {loadError && (
+        <div className="mb-4 px-4 py-3 rounded-xl text-sm font-medium bg-[rgba(239,68,68,0.08)] text-[var(--error)] border border-[rgba(239,68,68,0.2)] flex items-center justify-between">
+          <span>ไม่สามารถโหลดข้อมูลแคมเปญได้ กรุณาลองใหม่</span>
+          <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+            ลองใหม่
+          </Button>
         </div>
       )}
 

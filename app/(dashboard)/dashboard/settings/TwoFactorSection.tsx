@@ -640,7 +640,7 @@ export default function TwoFactorSection() {
                   {/* QR Code */}
                   <div
                     className="flex justify-center p-4 rounded-xl self-center"
-                    style={{ background: "#FFFFFF" }}
+                    style={{ background: "white" }}
                   >
                     <img
                       src={setupData.qrCode}

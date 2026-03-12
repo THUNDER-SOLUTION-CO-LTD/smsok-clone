@@ -20,7 +20,7 @@ export default async function CampaignsPage() {
       />
     );
   } catch {
-    // Graceful fallback — show empty state instead of error boundary
+    // Graceful fallback — show error banner + empty data instead of error boundary
     return (
       <CampaignsClient
         userId={user.id}
@@ -28,6 +28,7 @@ export default async function CampaignsPage() {
         groups={[]}
         templates={[]}
         senderNames={["EasySlip"]}
+        loadError
       />
     );
   }
