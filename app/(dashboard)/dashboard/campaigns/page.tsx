@@ -7,15 +7,28 @@ export default async function CampaignsPage() {
   const user = await getSession();
   if (!user) redirect("/login");
 
-  const { campaigns, groups, templates, senderNames } = await loadCampaignsPageData(user.id);
+  try {
+    const { campaigns, groups, templates, senderNames } = await loadCampaignsPageData(user.id);
 
-  return (
-    <CampaignsClient
-      userId={user.id}
-      initialCampaigns={campaigns}
-      groups={groups}
-      templates={templates}
-      senderNames={senderNames}
-    />
-  );
+    return (
+      <CampaignsClient
+        userId={user.id}
+        initialCampaigns={campaigns}
+        groups={groups}
+        templates={templates}
+        senderNames={senderNames}
+      />
+    );
+  } catch {
+    // Graceful fallback — show empty state instead of error boundary
+    return (
+      <CampaignsClient
+        userId={user.id}
+        initialCampaigns={[]}
+        groups={[]}
+        templates={[]}
+        senderNames={["EasySlip"]}
+      />
+    );
+  }
 }

@@ -11,6 +11,7 @@ const CAMPAIGN_PAGE_STATUSES = new Set([
   "completed",
   "failed",
   "cancelled",
+  "paused",
 ] as const);
 const RECOVERABLE_PRISMA_ERROR_NAMES = new Set([
   "PrismaClientKnownRequestError",
@@ -27,7 +28,8 @@ type CampaignPageStatus =
   | "running"
   | "completed"
   | "failed"
-  | "cancelled";
+  | "cancelled"
+  | "paused";
 
 type RawCampaign = Awaited<ReturnType<typeof getCampaigns>>["campaigns"][number];
 
@@ -67,13 +69,29 @@ export type CampaignPageData = {
   senderNames: string[];
 };
 
+const STATUS_ALIASES: Record<string, CampaignPageStatus> = {
+  queuing: "sending",
+  queued: "sending",
+  pending: "scheduled",
+  active: "running",
+  stopped: "cancelled",
+};
+
 export function normalizeCampaignStatus(status: string | null | undefined): CampaignPageStatus {
   const normalized = status?.toLowerCase();
+  if (!normalized) return "draft";
 
-  if (normalized && CAMPAIGN_PAGE_STATUSES.has(normalized as CampaignPageStatus)) {
+  if (CAMPAIGN_PAGE_STATUSES.has(normalized as CampaignPageStatus)) {
     return normalized as CampaignPageStatus;
   }
 
+  // Map known backend aliases
+  if (normalized in STATUS_ALIASES) {
+    return STATUS_ALIASES[normalized];
+  }
+
+  // Unknown status — log and fallback to draft
+  logger.warn("Unknown campaign status", { status });
   return "draft";
 }
 

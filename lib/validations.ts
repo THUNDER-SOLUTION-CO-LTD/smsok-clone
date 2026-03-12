@@ -4,6 +4,7 @@ import {
   normalizeApiKeyPermission,
   normalizeApiKeyPermissions,
 } from "./api-key-permissions";
+import { SENDER_NAME_REGEX } from "./sender-name-validation";
 
 // Re-export password policy for frontend
 export { passwordSchema, getPasswordStrength, isCommonPassword, PASSWORD_RULES } from "./password-policy";
@@ -226,7 +227,7 @@ export const sendSmsSchema = z.object({
     .string()
     .min(3, "ชื่อผู้ส่งต้องมีอย่างน้อย 3 ตัวอักษร")
     .max(11, "ชื่อผู้ส่งต้องไม่เกิน 11 ตัวอักษร")
-    .regex(/^[A-Za-z0-9 ]+$/, "ชื่อผู้ส่งต้องเป็นตัวอักษรภาษาอังกฤษ ตัวเลข หรือช่องว่างเท่านั้น"),
+    .regex(SENDER_NAME_REGEX, "ชื่อผู้ส่งต้องเป็นตัวอักษรภาษาอังกฤษและตัวเลขเท่านั้น"),
   recipient: phoneSchema,
   message: messageSchema(1, 1000, "กรุณากรอกข้อความ", "ข้อความต้องไม่เกิน 1,000 ตัวอักษร"),
 });
@@ -236,7 +237,7 @@ export const sendBatchSmsSchema = z.object({
     .string()
     .min(3)
     .max(11)
-    .regex(/^[A-Za-z0-9 ]+$/),
+    .regex(SENDER_NAME_REGEX, "ชื่อผู้ส่งต้องเป็นตัวอักษรภาษาอังกฤษและตัวเลขเท่านั้น"),
   recipients: z
     .array(phoneSchema)
     .min(1, "ต้องมีเบอร์โทรอย่างน้อย 1 เบอร์")
@@ -390,7 +391,7 @@ export const requestSenderNameSchema = z.object({
         .string()
         .min(3, "ชื่อผู้ส่งต้องมีอย่างน้อย 3 ตัวอักษร")
         .max(11, "ชื่อผู้ส่งต้องไม่เกิน 11 ตัวอักษร")
-        .regex(/^[A-Za-z0-9.\-_ ]+$/, "ต้องเป็น A-Z, 0-9, .-_ หรือช่องว่างเท่านั้น (กสทช.)")
+        .regex(SENDER_NAME_REGEX, "ต้องเป็น A-Z และ 0-9 เท่านั้น")
     )
     .transform((value: string) => value.toUpperCase()),
 });
@@ -534,7 +535,7 @@ export const createCampaignSchema = z.object({
     .string()
     .min(3, "ชื่อผู้ส่งต้องมีอย่างน้อย 3 ตัวอักษร")
     .max(11, "ชื่อผู้ส่งต้องไม่เกิน 11 ตัวอักษร")
-    .regex(/^[A-Za-z0-9 ]+$/, "ชื่อผู้ส่งต้องเป็นตัวอักษรภาษาอังกฤษ ตัวเลข หรือช่องว่างเท่านั้น")
+    .regex(SENDER_NAME_REGEX, "ชื่อผู้ส่งต้องเป็นตัวอักษรภาษาอังกฤษและตัวเลขเท่านั้น")
     .optional(),
   scheduledAt: z.coerce.date().optional(),
 });

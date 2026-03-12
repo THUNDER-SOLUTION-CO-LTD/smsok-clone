@@ -67,24 +67,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 // ─── Types ────────────────────────────────────────────────────────────────
-type CampaignStatus = "draft" | "scheduled" | "sending" | "running" | "completed" | "failed" | "cancelled";
+import type { CampaignPageCampaign } from "@/lib/campaigns/page-data";
 
-type Campaign = {
-  id: string;
-  name: string;
-  status: CampaignStatus;
-  groupName: string;
-  templateName: string;
-  senderName: string;
-  scheduledAt: string | null;
-  totalRecipients: number;
-  sentCount: number;
-  deliveredCount: number;
-  failedCount: number;
-  creditReserved: number;
-  creditUsed: number;
-  createdAt: string;
-};
+type CampaignStatus = CampaignPageCampaign["status"];
+type Campaign = CampaignPageCampaign;
 
 type ContactGroup = { id: string; name: string; count: number };
 type Template = { id: string; name: string; body: string };
@@ -101,6 +87,7 @@ const STATUS_CONFIG: Record<
   completed: { label: "สำเร็จ",    color: "var(--success)", bg: "rgba(var(--success-rgb),0.08)" },
   failed:    { label: "ล้มเหลว",   color: "var(--error)", bg: "rgba(var(--error-rgb),0.08)" },
   cancelled: { label: "ยกเลิก",    color: "var(--error)", bg: "rgba(var(--error-rgb),0.08)" },
+  paused:    { label: "หยุดชั่วคราว", color: "var(--warning)", bg: "rgba(var(--warning-rgb,245,158,11),0.08)" },
 };
 
 // ─── Filter pill config ─────────────────────────────────────────────────
@@ -232,10 +219,10 @@ export default function CampaignsClient({
   // Stats
   const totalCount = campaigns.length;
   const completedCount = campaigns.filter((c) => c.status === "completed").length;
-  const activeCount = campaigns.filter((c) => c.status === "sending" || c.status === "running").length;
+  const activeCount = campaigns.filter((c) => c.status === "sending" || c.status === "running" || c.status === "paused").length;
   const draftCount = campaigns.filter((c) => c.status === "draft").length;
   const activeRemaining = campaigns
-    .filter((c) => c.status === "sending" || c.status === "running")
+    .filter((c) => c.status === "sending" || c.status === "running" || c.status === "paused")
     .reduce((sum, c) => sum + (c.totalRecipients - c.sentCount), 0);
   const completionRate = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
@@ -731,6 +718,28 @@ export default function CampaignsClient({
                 </Button>
               </div>
             )}
+            {selectedCampaign.status === "paused" && (
+              <div className="mt-5 pt-4 border-t border-[var(--table-border)] flex items-center gap-3">
+                <Button
+                  onClick={() => handleSend(selectedCampaign.id)}
+                  disabled={sendingIds.has(selectedCampaign.id)}
+                  className="bg-[var(--accent)] text-[var(--text-on-accent)] hover:bg-[var(--accent)]/90 font-semibold cursor-pointer"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mr-1.5">
+                    <polygon points="5 3 19 12 5 21 5 3" />
+                  </svg>
+                  ส่งต่อ
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => handleCancel(selectedCampaign.id)}
+                  className="border-[rgba(239,68,68,0.2)] text-[var(--error)] hover:bg-[rgba(239,68,68,0.08)] cursor-pointer"
+                >
+                  <X className="w-4 h-4 mr-1.5" />
+                  ยกเลิกแคมเปญ
+                </Button>
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -831,6 +840,17 @@ export default function CampaignsClient({
                             >
                               <Pause className="w-4 h-4 mr-2" />
                               หยุดชั่วคราว
+                            </DropdownMenuItem>
+                          )}
+                          {campaign.status === "paused" && (
+                            <DropdownMenuItem
+                              className="text-[var(--accent)] hover:text-[var(--accent)] focus:text-[var(--accent)] focus:bg-[rgba(var(--accent-rgb),0.08)] cursor-pointer"
+                              onClick={() => handleSend(campaign.id)}
+                            >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mr-2">
+                                <polygon points="5 3 19 12 5 21 5 3" />
+                              </svg>
+                              ส่งต่อ
                             </DropdownMenuItem>
                           )}
                           {(campaign.status === "draft" || campaign.status === "scheduled") && (
