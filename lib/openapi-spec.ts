@@ -21,7 +21,7 @@ export function generateOpenAPISpec() {
     ],
     tags: [
       { name: "Auth", description: "Authentication & registration" },
-      { name: "Account", description: "User profile & credits" },
+      { name: "Account", description: "User profile & SMS quota" },
       { name: "SMS", description: "Send single, batch, and scheduled SMS" },
       { name: "OTP", description: "One-time password generation & verification" },
       { name: "Contacts", description: "Contact management & import/export" },
@@ -31,7 +31,7 @@ export function generateOpenAPISpec() {
       { name: "Campaigns", description: "Marketing campaigns" },
       { name: "Analytics", description: "Sending statistics & reports" },
       { name: "Logs", description: "Message logs & delivery reports" },
-      { name: "Billing", description: "Packages, top-up, transactions" },
+      { name: "Billing", description: "Packages & transactions" },
       { name: "API Keys", description: "API key management" },
       { name: "Sender Names", description: "Sender name requests & approval" },
       { name: "Webhooks", description: "Webhook endpoints for event notifications" },
@@ -463,7 +463,7 @@ export function generateOpenAPISpec() {
         post: {
           tags: ["SMS"],
           summary: "Send single SMS",
-          description: "Send an SMS to a single Thai phone number. Costs 1 credit per 70 Thai chars or 160 English chars.",
+          description: "Send an SMS to a single Thai phone number. Costs 1 SMS per 70 Thai chars or 160 English chars.",
           requestBody: {
             required: true,
             content: {
@@ -722,10 +722,10 @@ export function generateOpenAPISpec() {
       "/credits": {
         get: {
           tags: ["Account"],
-          summary: "Check credit balance",
+          summary: "Check SMS quota",
           responses: {
             "200": {
-              description: "Credit balance",
+              description: "SMS quota",
               content: {
                 "application/json": {
                   schema: {
@@ -1403,7 +1403,7 @@ export function generateOpenAPISpec() {
           security: [],
           responses: {
             "200": {
-              description: "Available credit packages",
+              description: "Available SMS packages",
               content: {
                 "application/json": {
                   schema: { type: "array", items: { $ref: "#/components/schemas/Package" } },
@@ -1416,7 +1416,7 @@ export function generateOpenAPISpec() {
       "/topup": {
         post: {
           tags: ["Billing"],
-          summary: "Purchase credit package",
+          summary: "Purchase SMS package",
           requestBody: {
             required: true,
             content: {
@@ -1485,12 +1485,12 @@ export function generateOpenAPISpec() {
       "/auto-topup": {
         get: {
           tags: ["Billing"],
-          summary: "Get auto top-up settings",
-          responses: { "200": { description: "Auto top-up configuration" } },
+          summary: "Get auto-purchase settings (deprecated)",
+          responses: { "200": { description: "Auto-purchase configuration (deprecated)" } },
         },
         put: {
           tags: ["Billing"],
-          summary: "Update auto top-up settings",
+          summary: "Update auto-purchase settings (deprecated)",
           requestBody: {
             required: true,
             content: {
@@ -2297,10 +2297,10 @@ export function generateOpenAPISpec() {
       "/admin/support/customers/{id}/credit-adjust": {
         post: {
           tags: ["Admin - Support"],
-          summary: "Adjust customer credits",
+          summary: "Adjust customer SMS quota",
           security: [{ AdminAuth: [] }],
           parameters: [{ $ref: "#/components/parameters/IdPath" }],
-          responses: { "200": { description: "Credits adjusted" } },
+          responses: { "200": { description: "SMS quota adjusted" } },
         },
       },
       "/admin/support/customers/{id}/suspend": {

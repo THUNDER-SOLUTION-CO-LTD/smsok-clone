@@ -48,7 +48,7 @@ export default function SendSmsForm({ senderNames: rawNames = ["EasySlip"] }: { 
   const messageTextareaRef = useRef<HTMLTextAreaElement>(null);
   const lastCursorPos = useRef<{ start: number; end: number } | null>(null);
 
-  // Fetch credit balance on mount
+  // Fetch SMS quota on mount
   useEffect(() => {
     async function fetchBalance() {
       try {

@@ -443,7 +443,7 @@ const ENDPOINTS: Record<string, Endpoint> = {
     id: "credits-balance",
     method: "GET",
     path: "/credits/balance",
-    description: "Get the current SMS balance for your account.",
+    description: "Get the current SMS quota for your account.",
     category: "credits",
     params: [],
     statusCodes: [

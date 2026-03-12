@@ -84,7 +84,10 @@ export default function RegisterPage() {
   });
 
   const password = form.watch("password");
+  const consentService = form.watch("consentService");
+  const consentThirdParty = form.watch("consentThirdParty");
   const isSubmitting = form.formState.isSubmitting;
+  const termsAccepted = consentService === true && consentThirdParty === true;
 
   // Countdown timer for OTP
   useEffect(() => {
@@ -473,7 +476,7 @@ export default function RegisterPage() {
 
                     <Button
                       type="submit"
-                      disabled={isSubmitting}
+                      disabled={isSubmitting || !termsAccepted}
                       className="w-full h-11 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--bg-base)] rounded-xl text-[15px] font-semibold transition-all duration-200 hover:shadow-[0_4px_16px_rgba(0,255,167,0.25)] group disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isSubmitting ? (

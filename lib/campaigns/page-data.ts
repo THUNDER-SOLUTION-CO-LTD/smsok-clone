@@ -91,7 +91,7 @@ export function normalizeCampaignStatus(status: string | null | undefined): Camp
   }
 
   // Unknown status — log and fallback to draft
-  logger.warn("Unknown campaign status", { status });
+  logger.warn?.("Unknown campaign status", { status });
   return "draft";
 }
 

@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
       ...recentTopups.map((t) => ({
         id: `txn_${t.id}`,
         type: "topup",
-        message: `ซื้อ package สำเร็จ (฿${(t.amount / 100).toLocaleString()})`,
+        message: `ซื้อแพ็กเกจสำเร็จ (฿${(t.amount / 100).toLocaleString()})`,
         createdAt: t.createdAt.toISOString(),
         read: readAt ? t.createdAt <= readAt : false,
       })),

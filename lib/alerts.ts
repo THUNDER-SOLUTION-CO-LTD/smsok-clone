@@ -19,7 +19,7 @@ export const ALERT_RULES = {
   },
   creditBalanceLow: {
     threshold: 100, // credits remaining
-    message: "Credit balance below 100",
+    message: "SMS เหลือน้อยกว่า 100 ข้อความ",
   },
   apiLatency: {
     threshold: 2000, // ms

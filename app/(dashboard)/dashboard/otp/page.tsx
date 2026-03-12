@@ -204,7 +204,7 @@ function QuickTestPanel() {
   const [isPending, startTransition] = useTransition();
   const [smsRemaining, setSmsRemaining] = useState<number | null>(null);
 
-  // Fetch credit balance — graceful fallback chain
+  // Fetch SMS quota — graceful fallback chain
   useEffect(() => {
     async function fetchBalance() {
       try {

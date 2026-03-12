@@ -757,7 +757,7 @@ function EndpointCard({ endpoint, isExpanded, onToggle, id }: { endpoint: Endpoi
                   </div>
                 </div>
 
-                {/* Credit Cost */}
+                {/* SMS Cost */}
                 {endpoint.creditCost && (
                   <div className="mb-4 flex items-center gap-2 text-xs">
                     <span className="w-5 h-5 rounded-md bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
