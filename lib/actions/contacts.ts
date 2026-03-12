@@ -43,11 +43,23 @@ export async function getContactById(userId: string, contactId: string) {
 // ==========================================
 
 export async function updateContactConsent(
+  contactId: string,
+  data: { smsConsent: boolean; optOutReason?: string },
+): Promise<Awaited<ReturnType<typeof db.contact.update>>>;
+export async function updateContactConsent(
   userId: string,
   contactId: string,
-  data: { smsConsent: boolean; optOutReason?: string }
+  data: { smsConsent: boolean; optOutReason?: string },
+): Promise<Awaited<ReturnType<typeof db.contact.update>>>;
+export async function updateContactConsent(
+  userIdOrContactId: string,
+  contactIdOrData: string | { smsConsent: boolean; optOutReason?: string },
+  maybeData?: { smsConsent: boolean; optOutReason?: string },
 ) {
-  userId = await resolveActionUserId(userId);
+  const hasExplicitUserId = maybeData !== undefined;
+  const userId = await resolveActionUserId(hasExplicitUserId ? userIdOrContactId : undefined);
+  const contactId = hasExplicitUserId ? contactIdOrData as string : userIdOrContactId;
+  const data = hasExplicitUserId ? maybeData : contactIdOrData as { smsConsent: boolean; optOutReason?: string };
   idSchema.parse({ id: contactId });
 
   const contact = await db.contact.findFirst({
@@ -116,11 +128,23 @@ export async function getContacts(userId: string, filters?: unknown) {
 // ==========================================
 
 export async function searchContactsBasic(
+  search: string,
+  limit?: number,
+): Promise<Awaited<ReturnType<typeof db.contact.findMany>>>;
+export async function searchContactsBasic(
   userId: string,
   search: string,
-  limit = 50,
+  limit?: number,
+): Promise<Awaited<ReturnType<typeof db.contact.findMany>>>;
+export async function searchContactsBasic(
+  userIdOrSearch: string,
+  searchOrLimit?: string | number,
+  maybeLimit = 50,
 ) {
-  userId = await resolveActionUserId(userId);
+  const hasExplicitUserId = typeof searchOrLimit === "string";
+  const userId = await resolveActionUserId(hasExplicitUserId ? userIdOrSearch : undefined);
+  const search = hasExplicitUserId ? searchOrLimit as string : userIdOrSearch;
+  const limit = typeof searchOrLimit === "number" ? searchOrLimit : maybeLimit;
   return db.contact.findMany({
     where: {
       userId,
@@ -143,9 +167,13 @@ export async function searchContactsBasic(
 // Create contact
 // ==========================================
 
-export async function createContact(userId: string, data: unknown) {
-  userId = await resolveActionUserId(userId);
-  const input = createContactSchema.parse(data);
+export async function createContact(data: unknown): Promise<Awaited<ReturnType<typeof db.contact.create>>>;
+export async function createContact(userId: string, data: unknown): Promise<Awaited<ReturnType<typeof db.contact.create>>>;
+export async function createContact(userIdOrData: string | unknown, maybeData?: unknown) {
+  const userId = await resolveActionUserId(
+    maybeData === undefined ? undefined : userIdOrData as string,
+  );
+  const input = createContactSchema.parse(maybeData === undefined ? userIdOrData : maybeData);
 
   const existing = await db.contact.findUnique({
     where: { userId_phone: { userId, phone: input.phone } },
@@ -190,10 +218,14 @@ export async function createContact(userId: string, data: unknown) {
 // Update contact
 // ==========================================
 
-export async function updateContact(userId: string, contactId: string, data: unknown) {
-  userId = await resolveActionUserId(userId);
+export async function updateContact(contactId: string, data: unknown): Promise<Awaited<ReturnType<typeof db.contact.update>>>;
+export async function updateContact(userId: string, contactId: string, data: unknown): Promise<Awaited<ReturnType<typeof db.contact.update>>>;
+export async function updateContact(userIdOrContactId: string, contactIdOrData: string | unknown, maybeData?: unknown) {
+  const hasExplicitUserId = maybeData !== undefined;
+  const userId = await resolveActionUserId(hasExplicitUserId ? userIdOrContactId : undefined);
+  const contactId = hasExplicitUserId ? contactIdOrData as string : userIdOrContactId;
   idSchema.parse({ id: contactId });
-  const input = updateContactSchema.parse(data);
+  const input = updateContactSchema.parse(hasExplicitUserId ? maybeData : contactIdOrData);
 
   const contact = await db.contact.findFirst({
     where: { id: contactId, userId },
@@ -225,8 +257,13 @@ export async function updateContact(userId: string, contactId: string, data: unk
 // Delete contact
 // ==========================================
 
-export async function deleteContact(userId: string, contactId: string) {
-  userId = await resolveActionUserId(userId);
+export async function deleteContact(contactId: string): Promise<void>;
+export async function deleteContact(userId: string, contactId: string): Promise<void>;
+export async function deleteContact(userIdOrContactId: string, maybeContactId?: string) {
+  const userId = await resolveActionUserId(
+    maybeContactId === undefined ? undefined : userIdOrContactId,
+  );
+  const contactId = maybeContactId ?? userIdOrContactId;
   idSchema.parse({ id: contactId });
 
   const contact = await db.contact.findFirst({
@@ -244,10 +281,20 @@ export async function deleteContact(userId: string, contactId: string) {
 // ==========================================
 
 export async function importContacts(
+  contacts: { name: string; phone: string; email?: string; tags?: string }[],
+): Promise<{ imported: number; skipped: number; total: number; invalidRows: { row: number; error: string }[] }>;
+export async function importContacts(
   userId: string,
-  contacts: { name: string; phone: string; email?: string; tags?: string }[]
+  contacts: { name: string; phone: string; email?: string; tags?: string }[],
+): Promise<{ imported: number; skipped: number; total: number; invalidRows: { row: number; error: string }[] }>;
+export async function importContacts(
+  userIdOrContacts: string | { name: string; phone: string; email?: string; tags?: string }[],
+  maybeContacts?: { name: string; phone: string; email?: string; tags?: string }[],
 ) {
-  userId = await resolveActionUserId(userId);
+  const userId = await resolveActionUserId(
+    maybeContacts === undefined ? undefined : userIdOrContacts as string,
+  );
+  const contacts = maybeContacts ?? userIdOrContacts as { name: string; phone: string; email?: string; tags?: string }[];
   if (!Array.isArray(contacts) || contacts.length === 0) throw new Error("ไม่มีรายชื่อที่จะนำเข้า");
   if (contacts.length > 200) throw new Error("นำเข้าได้สูงสุด 200 รายชื่อต่อครั้ง");
 
@@ -337,11 +384,23 @@ export async function exportContacts(userId: string) {
 // ==========================================
 
 export async function addContactsToGroup(
+  groupId: string,
+  contactIds: string[],
+): Promise<void>;
+export async function addContactsToGroup(
   userId: string,
   groupId: string,
-  contactIds: string[]
+  contactIds: string[],
+): Promise<void>;
+export async function addContactsToGroup(
+  userIdOrGroupId: string,
+  groupIdOrContactIds: string | string[],
+  maybeContactIds?: string[],
 ) {
-  userId = await resolveActionUserId(userId);
+  const hasExplicitUserId = Array.isArray(maybeContactIds);
+  const userId = await resolveActionUserId(hasExplicitUserId ? userIdOrGroupId : undefined);
+  const groupId = hasExplicitUserId ? groupIdOrContactIds as string : userIdOrGroupId;
+  const contactIds = hasExplicitUserId ? maybeContactIds : groupIdOrContactIds as string[];
   addContactsToGroupSchema.parse({ groupId, contactIds });
 
   // Verify group ownership
@@ -372,8 +431,13 @@ export async function addContactsToGroup(
 // Bulk delete contacts
 // ==========================================
 
-export async function bulkDeleteContacts(userId: string, contactIds: string[]) {
-  userId = await resolveActionUserId(userId);
+export async function bulkDeleteContacts(contactIds: string[]): Promise<{ deleted: number }>;
+export async function bulkDeleteContacts(userId: string, contactIds: string[]): Promise<{ deleted: number }>;
+export async function bulkDeleteContacts(userIdOrContactIds: string | string[], maybeContactIds?: string[]) {
+  const userId = await resolveActionUserId(
+    Array.isArray(maybeContactIds) ? userIdOrContactIds as string : undefined,
+  );
+  const contactIds = maybeContactIds ?? userIdOrContactIds as string[];
   if (contactIds.length === 0) throw new Error("กรุณาเลือกรายชื่อ");
 
   const contacts = await db.contact.findMany({
@@ -396,12 +460,16 @@ export async function bulkDeleteContacts(userId: string, contactIds: string[]) {
 // ==========================================
 
 export async function bulkUpdateTags(
-  userId: string,
-  contactIds: string[],
-  tag: string,
-  action: "add" | "remove",
+  userIdOrContactIds: string | string[],
+  contactIdsOrTag: string[] | string,
+  tagOrAction: string,
+  maybeAction?: "add" | "remove",
 ) {
-  userId = await resolveActionUserId(userId);
+  const hasExplicitUserId = maybeAction !== undefined;
+  const userId = await resolveActionUserId(hasExplicitUserId ? userIdOrContactIds as string : undefined);
+  const contactIds = hasExplicitUserId ? contactIdsOrTag as string[] : userIdOrContactIds as string[];
+  const tag = hasExplicitUserId ? tagOrAction as string : contactIdsOrTag as string;
+  const action = hasExplicitUserId ? maybeAction as "add" | "remove" : tagOrAction as "add" | "remove";
   if (contactIds.length === 0) throw new Error("กรุณาเลือกรายชื่อ");
   if (!tag.trim()) throw new Error("กรุณาระบุแท็ก");
 
