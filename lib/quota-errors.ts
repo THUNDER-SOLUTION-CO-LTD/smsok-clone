@@ -5,7 +5,7 @@ export class InsufficientCreditsError extends Error {
   constructor(
     public readonly creditsRequired: number,
     public readonly creditsRemaining: number,
-    message = "เครดิต SMS ไม่เพียงพอ กรุณาเติมเครดิต",
+    message = "ข้อความไม่เพียงพอ กรุณาซื้อแพคเกจ",
   ) {
     super(message);
     this.name = "InsufficientCreditsError";

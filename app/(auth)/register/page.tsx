@@ -30,7 +30,7 @@ import {
   InputOTPGroup,
   InputOTPSlot,
 } from "@/components/ui/input-otp";
-import { Send, ArrowLeft, ArrowRight, Eye, EyeOff, Loader2, Smartphone, Check } from "lucide-react";
+import { Send, ArrowLeft, ArrowRight, Eye, EyeOff, Loader2, Smartphone, Check, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { clearLogoutMarker } from "@/components/AuthGuard";
 
@@ -55,6 +55,7 @@ export default function RegisterPage() {
   const [step, setStep] = useState<Step>("form");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [capsLockOn, setCapsLockOn] = useState(false);
   const [formError, setFormError] = useState("");
 
   // OTP state
@@ -301,12 +302,26 @@ export default function RegisterPage() {
                           <FormLabel className="text-xs font-semibold uppercase tracking-[0.05em] text-[var(--text-secondary)]">รหัสผ่าน</FormLabel>
                           <FormControl>
                             <div className="relative">
-                              <Input type={showPassword ? "text" : "password"} placeholder="••••••••" className="h-11 bg-[var(--bg-base)] border-[var(--border-subtle)] text-white placeholder:text-[var(--text-muted)] rounded-lg pr-11 focus:border-[rgba(var(--accent-rgb),0.6)] focus:ring-[rgba(0,255,167,0.12)]" {...field} />
+                              <Input
+                                {...field}
+                                type={showPassword ? "text" : "password"}
+                                placeholder="••••••••"
+                                className="h-11 bg-[var(--bg-base)] border-[var(--border-subtle)] text-white placeholder:text-[var(--text-muted)] rounded-lg pr-11 focus:border-[rgba(var(--accent-rgb),0.6)] focus:ring-[rgba(0,255,167,0.12)]"
+                                onKeyDown={(e) => setCapsLockOn(e.getModifierState("CapsLock"))}
+                                onKeyUp={(e) => setCapsLockOn(e.getModifierState("CapsLock"))}
+                                onBlur={(e) => { setCapsLockOn(false); field.onBlur(); }}
+                              />
                               <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors duration-150">
                                 {showPassword ? <EyeOff className="w-[18px] h-[18px]" /> : <Eye className="w-[18px] h-[18px]" />}
                               </button>
                             </div>
                           </FormControl>
+                          {capsLockOn && (
+                            <p role="alert" className="flex items-center gap-1 text-xs font-medium text-[var(--warning)] animate-fade-in mt-1">
+                              <AlertTriangle className="w-3 h-3" />
+                              Caps Lock เปิดอยู่
+                            </p>
+                          )}
                           <FormMessage />
                           {password && (
                             <>
@@ -347,12 +362,26 @@ export default function RegisterPage() {
                           <FormLabel className="text-xs font-semibold uppercase tracking-[0.05em] text-[var(--text-secondary)]">ยืนยันรหัสผ่าน</FormLabel>
                           <FormControl>
                             <div className="relative">
-                              <Input type={showConfirm ? "text" : "password"} placeholder="••••••••" className="h-11 bg-[var(--bg-base)] border-[var(--border-subtle)] text-white placeholder:text-[var(--text-muted)] rounded-lg pr-11 focus:border-[rgba(var(--accent-rgb),0.6)] focus:ring-[rgba(0,255,167,0.12)]" {...field} />
+                              <Input
+                                {...field}
+                                type={showConfirm ? "text" : "password"}
+                                placeholder="••••••••"
+                                className="h-11 bg-[var(--bg-base)] border-[var(--border-subtle)] text-white placeholder:text-[var(--text-muted)] rounded-lg pr-11 focus:border-[rgba(var(--accent-rgb),0.6)] focus:ring-[rgba(0,255,167,0.12)]"
+                                onKeyDown={(e) => setCapsLockOn(e.getModifierState("CapsLock"))}
+                                onKeyUp={(e) => setCapsLockOn(e.getModifierState("CapsLock"))}
+                                onBlur={(e) => { setCapsLockOn(false); field.onBlur(); }}
+                              />
                               <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors duration-150">
                                 {showConfirm ? <EyeOff className="w-[18px] h-[18px]" /> : <Eye className="w-[18px] h-[18px]" />}
                               </button>
                             </div>
                           </FormControl>
+                          {capsLockOn && (
+                            <p role="alert" className="flex items-center gap-1 text-xs font-medium text-[var(--warning)] animate-fade-in mt-1">
+                              <AlertTriangle className="w-3 h-3" />
+                              Caps Lock เปิดอยู่
+                            </p>
+                          )}
                           <FormMessage />
                         </FormItem>
                       )}

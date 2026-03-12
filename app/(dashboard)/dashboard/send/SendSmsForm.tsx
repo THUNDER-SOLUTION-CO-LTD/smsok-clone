@@ -46,6 +46,7 @@ export default function SendSmsForm({ senderNames: rawNames = ["EasySlip"] }: { 
   const [isTestSending, setIsTestSending] = useState(false);
 
   const messageTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const lastCursorPos = useRef<{ start: number; end: number } | null>(null);
 
   // Fetch credit balance on mount
   useEffect(() => {
@@ -86,8 +87,10 @@ export default function SendSmsForm({ senderNames: rawNames = ["EasySlip"] }: { 
   const insertVariable = useCallback((variable: string) => {
     const textarea = messageTextareaRef.current;
     if (textarea) {
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
+      // Use saved cursor position (from before button click stole focus), fallback to current
+      const saved = lastCursorPos.current;
+      const start = saved?.start ?? textarea.selectionStart;
+      const end = saved?.end ?? textarea.selectionEnd;
       const newMessage = message.substring(0, start) + variable + message.substring(end);
       setMessage(newMessage);
       setTimeout(() => {
@@ -99,26 +102,28 @@ export default function SendSmsForm({ senderNames: rawNames = ["EasySlip"] }: { 
     }
   }, [message]);
 
-  // Variable autocomplete
+  // Variable autocomplete — replaces the partial "{{..." typed text with the full token
+  const autocompleteInsert = useCallback((variable: string) => {
+    const textarea = messageTextareaRef.current;
+    if (!textarea) return;
+    const cursorPos = textarea.selectionStart;
+    const textBefore = message.substring(0, cursorPos);
+    const match = textBefore.match(/\{\{(\w*)$/);
+    if (match) {
+      const replaceStart = cursorPos - match[0].length;
+      const newMessage = message.substring(0, replaceStart) + variable + message.substring(cursorPos);
+      setMessage(newMessage);
+      setTimeout(() => {
+        const newPos = replaceStart + variable.length;
+        textarea.selectionStart = textarea.selectionEnd = newPos;
+        textarea.focus();
+      }, 0);
+    }
+  }, [message]);
+
   const autocomplete = useVariableAutocomplete(
     messageTextareaRef,
-    useCallback((variable: string) => {
-      const textarea = messageTextareaRef.current;
-      if (!textarea) return;
-      const cursorPos = textarea.selectionStart;
-      const textBefore = message.substring(0, cursorPos);
-      const match = textBefore.match(/\{\{(\w*)$/);
-      if (match) {
-        const replaceStart = cursorPos - match[0].length;
-        const newMessage = message.substring(0, replaceStart) + variable + message.substring(cursorPos);
-        setMessage(newMessage);
-        setTimeout(() => {
-          const newPos = replaceStart + variable.length;
-          textarea.selectionStart = textarea.selectionEnd = newPos;
-          textarea.focus();
-        }, 0);
-      }
-    }, [message]),
+    autocompleteInsert,
   );
 
   const handleSend = () => {
@@ -287,6 +292,10 @@ export default function SendSmsForm({ senderNames: rawNames = ["EasySlip"] }: { 
                   onChange={(e) => setMessage(e.target.value)}
                   onInput={autocomplete.handleInput}
                   onKeyDown={autocomplete.handleKeyDown}
+                  onSelect={(e) => {
+                    const t = e.currentTarget;
+                    lastCursorPos.current = { start: t.selectionStart, end: t.selectionEnd };
+                  }}
                   onBlur={() => setTimeout(autocomplete.closeSuggestions, 150)}
                   className="bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] rounded-xl resize-none focus:border-[rgba(var(--accent-rgb),0.6)] focus:ring-[rgba(0,255,167,0.15)]"
                   rows={5}
@@ -299,8 +308,8 @@ export default function SendSmsForm({ senderNames: rawNames = ["EasySlip"] }: { 
                   variables={autocomplete.filteredVars}
                   selectedIndex={autocomplete.selectedIndex}
                   onSelect={(v) => {
+                    autocompleteInsert(v);
                     autocomplete.closeSuggestions();
-                    insertVariable(v);
                   }}
                   onHover={autocomplete.setSelectedIndex}
                 />

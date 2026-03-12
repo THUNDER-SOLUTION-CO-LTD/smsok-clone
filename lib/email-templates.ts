@@ -126,16 +126,16 @@ export function welcomeEmail(name: string) {
   const html = emailLayout(`
     ${heading(`สวัสดี ${name}!`)}
     ${paragraph("ยินดีต้อนรับสู่ SMSOK — แพลตฟอร์ม SMS Marketing ที่ง่ายและทรงพลัง")}
-    ${paragraph("คุณได้รับ <strong style=\"color:" + BRAND.primary + ";\">15 เครดิตฟรี</strong> เพื่อเริ่มต้นใช้งาน ส่ง SMS ถึงลูกค้าของคุณได้เลยวันนี้!")}
+    ${paragraph("คุณได้รับ <strong style=\"color:" + BRAND.primary + ";\">15 SMS ฟรี</strong> เพื่อเริ่มต้นใช้งาน ส่ง SMS ถึงลูกค้าของคุณได้เลยวันนี้!")}
     ${statsTable([
-      ["เครดิตฟรี", "15 เครดิต"],
+      ["SMS ฟรี", "15 ข้อความ"],
       ["ราคาต่อ SMS", "เริ่มต้น 0.35 บาท"],
     ])}
     ${ctaButton("ไปยังแดชบอร์ด", `${DASHBOARD_URL}/dashboard`)}
     ${paragraph("หากมีคำถามใด ๆ ตอบกลับอีเมลนี้ได้เลย ทีมงานพร้อมช่วยเหลือคุณ")}
   `);
 
-  const text = `สวัสดี ${name}!\n\nยินดีต้อนรับสู่ SMSOK — คุณได้รับ 15 เครดิตฟรีเพื่อเริ่มต้นใช้งาน\n\nไปยังแดชบอร์ด: ${DASHBOARD_URL}/dashboard`;
+  const text = `สวัสดี ${name}!\n\nยินดีต้อนรับสู่ SMSOK — คุณได้รับ 15 SMS ฟรีเพื่อเริ่มต้นใช้งาน\n\nไปยังแดชบอร์ด: ${DASHBOARD_URL}/dashboard`;
 
   return { subject, html, text };
 }
@@ -210,13 +210,13 @@ export function invoiceEmail(
       ["เลขที่ใบเสร็จ", `#${data.invoiceNumber}`],
       ["วันที่", data.date],
       ["จำนวนเงิน", `${data.amount.toLocaleString()} บาท`],
-      ["เครดิตที่ได้รับ", `${data.credits.toLocaleString()} เครดิต`],
+      ["ข้อความที่ได้รับ", `${data.credits.toLocaleString()} SMS`],
     ])}
     ${downloadBtn}
     ${paragraph("หากมีข้อสงสัยเกี่ยวกับใบเสร็จ สามารถตอบกลับอีเมลนี้ได้เลย")}
   `);
 
-  const text = `สวัสดี ${name}\n\nใบเสร็จ #${data.invoiceNumber}\nวันที่: ${data.date}\nจำนวนเงิน: ${data.amount.toLocaleString()} บาท\nเครดิต: ${data.credits.toLocaleString()} เครดิต${data.pdfUrl ? `\n\nดาวน์โหลด: ${data.pdfUrl}` : ""}`;
+  const text = `สวัสดี ${name}\n\nใบเสร็จ #${data.invoiceNumber}\nวันที่: ${data.date}\nจำนวนเงิน: ${data.amount.toLocaleString()} บาท\nข้อความ: ${data.credits.toLocaleString()} SMS${data.pdfUrl ? `\n\nดาวน์โหลด: ${data.pdfUrl}` : ""}`;
 
   return { subject, html, text };
 }
@@ -229,20 +229,20 @@ export function creditLowEmail(
   name: string,
   data: { currentCredits: number; threshold: number }
 ) {
-  const subject = "\u26A0\uFE0F เครดิต SMSOK เหลือน้อย";
+  const subject = "\u26A0\uFE0F SMS SMSOK เหลือน้อย";
 
   const html = emailLayout(`
-    ${heading("เครดิตเหลือน้อย")}
-    ${paragraph(`สวัสดี ${name}, เครดิตของคุณเหลือต่ำกว่าที่กำหนดไว้แล้ว`)}
+    ${heading("ข้อความเหลือน้อย")}
+    ${paragraph(`สวัสดี ${name}, โควต้าข้อความของคุณเหลือต่ำกว่าที่กำหนดไว้แล้ว`)}
     ${statsTable([
-      ["เครดิตคงเหลือ", `${data.currentCredits.toLocaleString()} เครดิต`],
-      ["เกณฑ์แจ้งเตือน", `${data.threshold.toLocaleString()} เครดิต`],
+      ["ข้อความคงเหลือ", `${data.currentCredits.toLocaleString()} SMS`],
+      ["เกณฑ์แจ้งเตือน", `${data.threshold.toLocaleString()} SMS`],
     ])}
-    ${paragraph("เติมเครดิตตอนนี้เพื่อให้แคมเปญทำงานต่อได้โดยไม่สะดุด")}
-    ${ctaButton("เติมเครดิต", `${DASHBOARD_URL}/topup`)}
+    ${paragraph("ซื้อแพคเกจตอนนี้เพื่อให้แคมเปญทำงานต่อได้โดยไม่สะดุด")}
+    ${ctaButton("ซื้อแพคเกจ", `${DASHBOARD_URL}/packages`)}
   `);
 
-  const text = `สวัสดี ${name}\n\nเครดิตเหลือน้อย: ${data.currentCredits} เครดิต (เกณฑ์: ${data.threshold})\n\nเติมเครดิต: ${DASHBOARD_URL}/topup`;
+  const text = `สวัสดี ${name}\n\nข้อความเหลือน้อย: ${data.currentCredits} SMS (เกณฑ์: ${data.threshold})\n\nซื้อแพคเกจ: ${DASHBOARD_URL}/packages`;
 
   return { subject, html, text };
 }
@@ -331,13 +331,13 @@ export function weeklyReportEmail(
     <p style="margin:0 0 16px;font-size:13px;color:${BRAND.textMuted};">${data.period}</p>
     ${statsTable([
       ["SMS ที่ส่ง", data.smsSent.toLocaleString()],
-      ["เครดิตคงเหลือ", data.credits.toLocaleString()],
+      ["ข้อความคงเหลือ", data.credits.toLocaleString()],
       ["แคมเปญ", data.campaigns.toLocaleString()],
     ])}
     ${ctaButton("ดูแดชบอร์ด", `${DASHBOARD_URL}/dashboard`)}
   `);
 
-  const text = `สวัสดี ${name}\n\nรายงานประจำสัปดาห์ (${data.period})\nSMS ที่ส่ง: ${data.smsSent}\nเครดิตคงเหลือ: ${data.credits}\nแคมเปญ: ${data.campaigns}\n\nดูแดชบอร์ด: ${DASHBOARD_URL}/dashboard`;
+  const text = `สวัสดี ${name}\n\nรายงานประจำสัปดาห์ (${data.period})\nSMS ที่ส่ง: ${data.smsSent}\nข้อความคงเหลือ: ${data.credits}\nแคมเปญ: ${data.campaigns}\n\nดูแดชบอร์ด: ${DASHBOARD_URL}/dashboard`;
 
   return { subject, html, text };
 }

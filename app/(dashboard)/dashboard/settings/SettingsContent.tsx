@@ -209,7 +209,7 @@ function AccountSummary({
           {smsRemaining.toLocaleString()}
         </p>
         <Link
-          href="/dashboard/topup"
+          href="/dashboard/packages"
           className="text-[10px] text-[var(--accent)] hover:text-[var(--accent)]/80 transition-colors mt-1 inline-block"
         >
           ซื้อแพ็กเกจ →

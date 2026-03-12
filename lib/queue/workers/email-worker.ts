@@ -76,8 +76,8 @@ function renderTemplate(template: string, data: Record<string, unknown>): EmailC
     case "package_expiry":
       return {
         subject: "แพ็กเกจ SMS ของคุณใกล้หมดอายุ — SMSOK",
-        html: `<p>สวัสดี ${name},</p><p>แพ็กเกจ ${data.packageName} จะหมดอายุในวันที่ ${data.expiryDate} เครดิตคงเหลือ ${data.remaining} SMS กรุณาต่ออายุก่อนหมดอายุเพื่อไม่ให้เสียเครดิต</p>`,
-        text: `แพ็กเกจ ${data.packageName} จะหมดอายุ ${data.expiryDate} เครดิตคงเหลือ ${data.remaining} SMS`,
+        html: `<p>สวัสดี ${name},</p><p>แพ็กเกจ ${data.packageName} จะหมดอายุในวันที่ ${data.expiryDate} คงเหลือ ${data.remaining} SMS กรุณาต่ออายุก่อนหมดอายุเพื่อไม่ให้เสียข้อความ</p>`,
+        text: `แพ็กเกจ ${data.packageName} จะหมดอายุ ${data.expiryDate} คงเหลือ ${data.remaining} SMS`,
       }
 
     case "purchase_confirmation":

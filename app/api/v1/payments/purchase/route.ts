@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (!payment) {
-      throw new ApiError(404, "ไม่พบรายการเติมเครดิตที่ยืนยันสลิปแล้ว");
+      throw new ApiError(404, "ไม่พบรายการซื้อแพคเกจที่ยืนยันสลิปแล้ว");
     }
 
     return apiResponse({

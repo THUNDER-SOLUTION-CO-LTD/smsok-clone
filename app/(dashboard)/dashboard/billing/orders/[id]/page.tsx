@@ -594,7 +594,7 @@ function ItemizedTable({ order }: { order: Order }) {
 // ── Pricing Card (Right Column) ──
 
 function PricingCard({ order }: { order: Order }) {
-  const hasWht = order.has_wht && order.wht_amount > 0;
+  const hasWht = order.has_wht && order.wht_amount > 0 && order.customer_type === "COMPANY";
 
   return (
     <div
@@ -761,7 +761,7 @@ function DocumentsCard({ order }: { order: Order }) {
               style={{
                 background: "var(--bg-base)",
                 border: "1px solid var(--border-default)",
-                opacity: hasDoc ? 1 : 0.4,
+                opacity: hasDoc ? 1 : isPaid ? 0.7 : 0.4,
               }}
             >
               <div className="flex items-center gap-2.5">
@@ -797,8 +797,8 @@ function DocumentsCard({ order }: { order: Order }) {
                       {doc.number}
                     </p>
                   ) : (
-                    <p className="text-[11px]" style={{ color: "var(--text-muted)" }}>
-                      ยังไม่ออก
+                    <p className="text-[11px]" style={{ color: isPaid ? "var(--warning)" : "var(--text-muted)" }}>
+                      {isPaid ? "กำลังสร้างเอกสาร..." : "ยังไม่ออก"}
                     </p>
                   )}
                 </div>
@@ -860,28 +860,41 @@ function PaymentProofCard({
       </h3>
 
       {/* State A: No slip */}
-      {!hasSlip && isPending && (
-        <div className="text-center py-6">
-          <Receipt size={36} style={{ color: "var(--border-default)" }} className="mx-auto" />
-          <p
-            className="text-[13px] mt-3"
-            style={{ color: "var(--text-muted)" }}
-          >
-            ยังไม่ได้แนบสลิป
-          </p>
-          <Button
-            className="mt-4 h-10 px-5"
-            style={{
-              background: "var(--accent)",
-              color: "var(--bg-base)",
-            }}
-            onClick={onUpload}
-          >
-            <Upload size={16} className="mr-2" />
-            แนบสลิปโอนเงิน
-          </Button>
-        </div>
-      )}
+      {!hasSlip && isPending && (() => {
+        const isExpired = order.expires_at && new Date(order.expires_at).getTime() < Date.now();
+        return isExpired ? (
+          <div className="text-center py-6">
+            <AlertTriangle size={36} style={{ color: "var(--text-muted)" }} className="mx-auto" />
+            <p className="text-[13px] mt-3 font-medium" style={{ color: "var(--error)" }}>
+              คำสั่งซื้อหมดอายุ
+            </p>
+            <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
+              กรุณาสร้างคำสั่งซื้อใหม่
+            </p>
+          </div>
+        ) : (
+          <div className="text-center py-6">
+            <Receipt size={36} style={{ color: "var(--border-default)" }} className="mx-auto" />
+            <p
+              className="text-[13px] mt-3"
+              style={{ color: "var(--text-muted)" }}
+            >
+              ยังไม่ได้แนบสลิป
+            </p>
+            <Button
+              className="mt-4 h-10 px-5"
+              style={{
+                background: "var(--accent)",
+                color: "var(--bg-base)",
+              }}
+              onClick={onUpload}
+            >
+              <Upload size={16} className="mr-2" />
+              แนบสลิปโอนเงิน
+            </Button>
+          </div>
+        );
+      })()}
 
       {/* State B: Slip uploaded */}
       {hasSlip && (
@@ -997,7 +1010,7 @@ function SlipUploadDialog({
   const inputRef = useRef<HTMLInputElement>(null);
   const whtInputRef = useRef<HTMLInputElement>(null);
 
-  const hasWht = order.has_wht && order.wht_amount > 0;
+  const hasWht = order.has_wht && order.wht_amount > 0 && order.customer_type === "COMPANY";
   const MAX_SIZE = 5 * 1024 * 1024; // 5MB
 
   function handleSlipFile(f: File) {
@@ -1540,7 +1553,7 @@ export default function OrderDetailPage() {
     formData.append("slip", slip);
     if (whtCert) formData.append("wht_cert", whtCert);
 
-    const res = await fetch(`/api/v1/orders/${currentOrder.id}/upload`, {
+    const res = await fetch(`/api/v1/orders/${currentOrder.id}/verify-slip`, {
       method: "POST",
       credentials: "include",
       body: formData,
@@ -1550,7 +1563,7 @@ export default function OrderDetailPage() {
       const data = await res.json();
       setOrder((o) => (o ? { ...o, ...data } : o));
       toast.success("ส่งสลิปเรียบร้อย", {
-        description: "เรากำลังตรวจสอบ โดยปกติใช้เวลาไม่เกิน 30 นาที",
+        description: "ระบบกำลังตรวจสอบอัตโนมัติ",
       });
     } else {
       const errData = await res.json().catch(() => ({}));

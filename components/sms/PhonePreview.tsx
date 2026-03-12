@@ -22,8 +22,10 @@ function highlightVariablesInPreview(text: string) {
   const parts = text.split(/(\{\{[^}]+\}\})/g);
   return parts.map((part, i) => {
     if (/^\{\{.+\}\}$/.test(part)) {
-      const key = part.replace(/^\{\{|\}\}$/g, "").split("|")[0];
-      const resolved = SAMPLE_DATA[key] || key;
+      const inner = part.replace(/^\{\{|\}\}$/g, "");
+      const [key, ...rest] = inner.split("|");
+      const fallback = rest.join("|"); // preserve fallback if contains |
+      const resolved = SAMPLE_DATA[key] || fallback || key;
       return (
         <span
           key={i}

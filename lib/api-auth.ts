@@ -187,7 +187,7 @@ export function apiError(error: unknown) {
     let code: string = ERROR_CODES.INTERNAL;
     if (isThaiValidation) {
       if (msg.includes("ไม่พบ")) code = ERROR_CODES.NOT_FOUND;
-      else if (msg.includes("เครดิตไม่เพียงพอ") || msg.includes("SMS ไม่เพียงพอ")) code = ERROR_CODES.CREDITS;
+      else if (msg.includes("เครดิตไม่เพียงพอ") || msg.includes("SMS ไม่เพียงพอ") || msg.includes("ข้อความไม่เพียงพอ")) code = ERROR_CODES.CREDITS;
       else if (msg.includes("มากเกินไป") || msg.includes("บ่อยเกินไป")) code = ERROR_CODES.RATE_LIMIT;
       else code = ERROR_CODES.BUSINESS;
     }
