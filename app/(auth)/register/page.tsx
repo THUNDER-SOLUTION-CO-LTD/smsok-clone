@@ -31,6 +31,7 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 import { Send, ArrowLeft, ArrowRight, Eye, EyeOff, Loader2, Smartphone, Check } from "lucide-react";
+import { toast } from "sonner";
 import { clearLogoutMarker } from "@/components/AuthGuard";
 
 const formSchema = registerSchema.extend({
@@ -109,11 +110,14 @@ export default function RegisterPage() {
       setCountdown(OTP_EXPIRY);
       setResendCooldown(RESEND_COOLDOWN);
       setStep("otp");
+      toast.success("ส่ง OTP สำเร็จ");
       if (result.delivery === "debug") {
         setDebugCode(result.debugCode ?? null);
       }
     } catch (e) {
-      setFormError(safeErrorMessage(e) || "เกิดข้อผิดพลาด กรุณาลองใหม่");
+      const msg = safeErrorMessage(e) || "เกิดข้อผิดพลาด กรุณาลองใหม่";
+      setFormError(msg);
+      toast.error(msg);
     }
   }
 
@@ -155,10 +159,13 @@ export default function RegisterPage() {
         consentThirdParty: true,
         consentMarketing: v.consentMarketing,
       });
+      toast.success("สมัครสมาชิกสำเร็จ");
       clearLogoutMarker();
       router.push("/dashboard");
     } catch (e) {
-      setOtpError(safeErrorMessage(e) || "เกิดข้อผิดพลาด กรุณาลองใหม่");
+      const msg = safeErrorMessage(e) || "เกิดข้อผิดพลาด กรุณาลองใหม่";
+      setOtpError(msg);
+      toast.error(msg);
     } finally {
       setOtpPending(false);
     }

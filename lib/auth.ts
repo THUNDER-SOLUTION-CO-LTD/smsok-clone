@@ -70,6 +70,10 @@ type RefreshResult = SessionContext & {
   refreshed: true;
 };
 
+type SessionLookupOptions = SessionIssueOptions & {
+  allowExpiredAccess?: boolean;
+};
+
 function sessionKey(userId: string, sessionId: string) {
   return `user:${userId}:session:${sessionId}`;
 }
@@ -337,6 +341,22 @@ function writeSessionCookies(accessToken: string, refreshToken: string) {
   });
 }
 
+async function writeAccessCookie(accessToken: string) {
+  try {
+    const store = await cookies();
+    store.set(ACCESS_COOKIE_NAME, accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: ACCESS_TOKEN_TTL_SECONDS,
+      path: "/",
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function hashPassword(password: string) {
   return bcrypt.hash(password, 12);
 }
@@ -401,36 +421,10 @@ async function validateAccessPayload(payload: SessionTokenPayload): Promise<Sess
   };
 }
 
-async function readCurrentAccessContext(options?: { allowExpired?: boolean }) {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(ACCESS_COOKIE_NAME)?.value;
-  if (!token) return null;
-
-  const payload = verifySessionToken(token, "access", {
-    ignoreExpiration: options?.allowExpired ?? false,
-  });
-  if (!payload) return null;
-
-  return validateAccessPayload(payload);
-}
-
-export async function getSession() {
-  const session = await readCurrentAccessContext();
-  return session?.user ?? null;
-}
-
-export async function getSessionContext(options?: { allowExpiredAccess?: boolean }) {
-  return readCurrentAccessContext({ allowExpired: options?.allowExpiredAccess });
-}
-
-async function refreshFromRefreshToken(options: SessionIssueOptions = {}): Promise<RefreshResult | null> {
-  const cookieStore = await cookies();
-  const refreshToken = cookieStore.get(REFRESH_COOKIE_NAME)?.value;
-  if (!refreshToken) return null;
-
-  const payload = verifySessionToken(refreshToken, "refresh");
-  if (!payload) return null;
-
+async function validateRefreshPayload(
+  payload: SessionTokenPayload,
+  refreshToken: string,
+): Promise<SessionContext | null> {
   const [record, user] = await Promise.all([
     readSessionRecord(payload.uid, payload.sid),
     loadSessionUser(payload.uid),
@@ -449,18 +443,155 @@ async function refreshFromRefreshToken(options: SessionIssueOptions = {}): Promi
     return null;
   }
 
-  const accessPayload = buildTokenPayload(user, payload.sid, "access");
-  const nextRefreshPayload = buildTokenPayload(user, payload.sid, "refresh");
+  return {
+    user: {
+      ...user,
+      sessionId: payload.sid,
+    },
+    payload,
+    session: record,
+  };
+}
+
+async function readCurrentAccessContext(options?: { allowExpired?: boolean }) {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(ACCESS_COOKIE_NAME)?.value;
+  if (!token) return null;
+
+  const payload = verifySessionToken(token, "access", {
+    ignoreExpiration: options?.allowExpired ?? false,
+  });
+  if (!payload) return null;
+
+  return validateAccessPayload(payload);
+}
+
+async function readCurrentRefreshContext() {
+  const cookieStore = await cookies();
+  const refreshToken = cookieStore.get(REFRESH_COOKIE_NAME)?.value;
+  if (!refreshToken) return null;
+
+  const payload = verifySessionToken(refreshToken, "refresh");
+  if (!payload) return null;
+
+  return validateRefreshPayload(payload, refreshToken);
+}
+
+async function renewAccessFromRefresh(
+  options: SessionIssueOptions = {},
+): Promise<SessionContext | null> {
+  const context = await readCurrentRefreshContext();
+  if (!context) return null;
+
+  const accessPayload = buildTokenPayload(
+    {
+      id: context.user.id,
+      name: context.user.name,
+      email: context.user.email,
+      role: context.user.role,
+      organizationId: context.user.organizationId,
+      securityVersion: context.user.securityVersion,
+    },
+    context.user.sessionId,
+    "access",
+  );
+
+  const accessToken = signSessionToken(accessPayload);
+  const wroteAccessCookie = await writeAccessCookie(accessToken);
+  if (!wroteAccessCookie) {
+    return {
+      ...context,
+      payload: accessPayload,
+    };
+  }
+
+  const nextRecord: SessionRecord = {
+    ...context.session,
+    lastActiveAt: new Date().toISOString(),
+  };
+
+  if (options.headers) {
+    nextRecord.ip = getClientIp(options.headers);
+    nextRecord.userAgent = options.headers.get("user-agent") ?? context.session.userAgent;
+    const device = parseUserAgent(options.headers.get("user-agent"));
+    nextRecord.deviceName = device.deviceName;
+    nextRecord.deviceType = device.deviceType;
+    nextRecord.browser = device.browser;
+    nextRecord.os = device.os;
+  }
+
+  await updateSessionRecord(nextRecord).catch(() => {});
+
+  return {
+    user: context.user,
+    payload: accessPayload,
+    session: nextRecord,
+  };
+}
+
+export async function getSession(options: SessionLookupOptions = {}) {
+  const session = await getSessionContext(options);
+  return session?.user ?? null;
+}
+
+export async function getSessionContext(options: SessionLookupOptions = {}) {
+  const accessContext = await readCurrentAccessContext({
+    allowExpired: options.allowExpiredAccess,
+  });
+  if (accessContext) {
+    return accessContext;
+  }
+
+  return renewAccessFromRefresh(options);
+}
+
+async function refreshFromRefreshToken(options: SessionIssueOptions = {}): Promise<RefreshResult | null> {
+  const cookieStore = await cookies();
+  const refreshToken = cookieStore.get(REFRESH_COOKIE_NAME)?.value;
+  if (!refreshToken) return null;
+
+  const payload = verifySessionToken(refreshToken, "refresh");
+  if (!payload) return null;
+
+  const context = await validateRefreshPayload(payload, refreshToken);
+  if (!context) {
+    return null;
+  }
+
+  const accessPayload = buildTokenPayload(
+    {
+      id: context.user.id,
+      name: context.user.name,
+      email: context.user.email,
+      role: context.user.role,
+      organizationId: context.user.organizationId,
+      securityVersion: context.user.securityVersion,
+    },
+    payload.sid,
+    "access",
+  );
+  const nextRefreshPayload = buildTokenPayload(
+    {
+      id: context.user.id,
+      name: context.user.name,
+      email: context.user.email,
+      role: context.user.role,
+      organizationId: context.user.organizationId,
+      securityVersion: context.user.securityVersion,
+    },
+    payload.sid,
+    "refresh",
+  );
   const accessToken = signSessionToken(accessPayload);
   const nextRefreshToken = signSessionToken(nextRefreshPayload);
   const nextRecord: SessionRecord = {
-    ...record,
+    ...context.session,
     refreshTokenHash: hashToken(nextRefreshToken),
-    ip: options.headers ? getClientIp(options.headers) : record.ip,
-    userAgent: options.headers?.get("user-agent") ?? record.userAgent,
-    securityVersion: user.securityVersion,
-    organizationId: user.organizationId,
-    role: user.role,
+    ip: options.headers ? getClientIp(options.headers) : context.session.ip,
+    userAgent: options.headers?.get("user-agent") ?? context.session.userAgent,
+    securityVersion: context.user.securityVersion,
+    organizationId: context.user.organizationId,
+    role: context.user.role,
     lastActiveAt: new Date().toISOString(),
   };
 
@@ -478,7 +609,7 @@ async function refreshFromRefreshToken(options: SessionIssueOptions = {}): Promi
   return {
     refreshed: true,
     user: {
-      ...user,
+      ...context.user,
       sessionId: payload.sid,
     },
     payload: accessPayload,

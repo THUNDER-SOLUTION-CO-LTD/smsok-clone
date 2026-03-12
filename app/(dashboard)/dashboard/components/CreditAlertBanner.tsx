@@ -23,7 +23,7 @@ const alertConfig = {
     color: "var(--info)",
     text: (remaining: number, total: number) =>
       `SMS เหลือ 50% — คงเหลือ ${remaining.toLocaleString()} จาก ${total.toLocaleString()} ข้อความ`,
-    subtitle: "แนะนำเติมเครดิตล่วงหน้า",
+    subtitle: "แนะนำซื้อแพ็กเกจล่วงหน้า",
     pulse: false,
   },
   "20%": {
@@ -34,7 +34,7 @@ const alertConfig = {
     color: "var(--warning)",
     text: (remaining: number, total: number) =>
       `SMS เหลือน้อย — คงเหลือ ${remaining.toLocaleString()} จาก ${total.toLocaleString()} ข้อความ`,
-    subtitle: "เติมเครดิตเพื่อไม่ให้บริการหยุดชะงัก",
+    subtitle: "ซื้อแพ็กเกจเพิ่มเพื่อไม่ให้บริการหยุดชะงัก",
     pulse: false,
   },
   "5%": {
@@ -45,7 +45,7 @@ const alertConfig = {
     color: "var(--error)",
     text: (remaining: number, total: number) =>
       `SMS ใกล้หมด! — คงเหลือ ${remaining.toLocaleString()} จาก ${total.toLocaleString()} ข้อความ`,
-    subtitle: "เติมเครดิตทันทีเพื่อไม่ให้ส่ง SMS ไม่ได้",
+    subtitle: "ซื้อแพ็กเกจทันทีเพื่อไม่ให้ส่ง SMS ไม่ได้",
     pulse: true,
   },
 } as const
@@ -116,7 +116,7 @@ export default function CreditAlertBanner() {
           )}
           style={{ color: config.color }}
         >
-          เติมเครดิต &rarr;
+          ซื้อแพ็กเกจ &rarr;
         </Link>
 
         <button

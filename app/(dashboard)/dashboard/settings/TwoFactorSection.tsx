@@ -61,8 +61,8 @@ function formatDate(iso: string): string {
 function getProgressColor(remaining: number, total: number): string {
   const pct = total > 0 ? (remaining / total) * 100 : 0;
   if (pct > 50) return "var(--accent)";
-  if (pct > 20) return "var(--warning, #F59E0B)";
-  return "var(--error, #EF4444)";
+  if (pct > 20) return "var(--warning)";
+  return "var(--error)";
 }
 
 /* ── BackupCodesDisplay ── */
@@ -80,7 +80,7 @@ function BackupCodesDisplay({
       <div
         className="rounded-xl p-5 mb-4"
         style={{
-          background: "var(--bg-inset, #081015)",
+          background: "var(--bg-inset, var(--bg-base))",
           border: "1px solid var(--border-default)",
         }}
       >
@@ -128,17 +128,17 @@ function BackupCodesDisplay({
       <div
         className="rounded-lg p-4"
         style={{
-          background: "rgba(245,158,11,0.08)",
-          border: "1px solid rgba(245,158,11,0.15)",
+          background: "rgba(var(--warning-rgb),0.08)",
+          border: "1px solid rgba(var(--warning-rgb),0.15)",
         }}
       >
         <div className="flex items-start gap-2.5">
           <AlertTriangle
             size={16}
             className="shrink-0 mt-0.5"
-            style={{ color: "#F59E0B" }}
+            style={{ color: "var(--warning)" }}
           />
-          <div className="text-[13px]" style={{ color: "#F59E0B" }}>
+          <div className="text-[13px]" style={{ color: "var(--warning)" }}>
             <p className="font-medium mb-1">สำคัญ:</p>
             <ul className="space-y-0.5 list-disc list-inside">
               <li>Backup codes ใช้ได้ครั้งเดียวต่อ 1 code</li>
@@ -307,8 +307,7 @@ export default function TwoFactorSection() {
     setRegenerating(true);
     setRegenError("");
     try {
-      // Verify TOTP first, then re-setup to get new codes
-      const verifyRes = await fetch("/api/v1/settings/2fa/verify", {
+      const verifyRes = await fetch("/api/v1/settings/2fa/regenerate-codes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code: regenCode }),
@@ -317,11 +316,11 @@ export default function TwoFactorSection() {
         const err = await verifyRes.json().catch(() => ({}));
         throw new Error(err.error || "รหัสไม่ถูกต้อง");
       }
-      // NOTE: True backup code regeneration needs a dedicated API endpoint.
-      // For now, show a message that this feature requires backend support.
-      toast.info("ฟีเจอร์สร้าง Backup Codes ใหม่กำลังพัฒนา");
-      setRegenOpen(false);
+      const json = await verifyRes.json();
+      setRegenCodes(json.recoveryCodes ?? []);
+      setRegenSaved(false);
       setRegenCode("");
+      toast.success("สร้าง Backup Codes ใหม่แล้ว");
     } catch (err) {
       setRegenError(err instanceof Error ? err.message : "เกิดข้อผิดพลาด");
       setRegenCode("");
@@ -378,11 +377,11 @@ export default function TwoFactorSection() {
           <div className="flex items-center gap-3">
             <div
               className="w-8 h-8 rounded-lg"
-              style={{ background: "var(--bg-elevated, #1a2332)" }}
+              style={{ background: "var(--bg-elevated)" }}
             />
             <div
               className="h-4 w-48 rounded"
-              style={{ background: "var(--bg-elevated, #1a2332)" }}
+              style={{ background: "var(--bg-elevated)" }}
             />
           </div>
           <div
@@ -413,15 +412,15 @@ export default function TwoFactorSection() {
               className="w-8 h-8 rounded-lg flex items-center justify-center"
               style={{
                 background: isEnabled
-                  ? "rgba(16,185,129,0.1)"
+                  ? "rgba(var(--success-rgb),0.1)"
                   : "rgba(var(--accent-rgb),0.1)",
-                border: `1px solid ${isEnabled ? "rgba(16,185,129,0.15)" : "rgba(var(--accent-rgb),0.15)"}`,
+                border: `1px solid ${isEnabled ? "rgba(var(--success-rgb),0.15)" : "rgba(var(--accent-rgb),0.15)"}`,
               }}
             >
               <Shield
                 size={16}
                 style={{
-                  color: isEnabled ? "#10B981" : "var(--accent)",
+                  color: isEnabled ? "var(--success)" : "var(--accent)",
                 }}
               />
             </div>
@@ -439,7 +438,7 @@ export default function TwoFactorSection() {
         <div
           className="rounded-xl p-6"
           style={{
-            background: "var(--bg-inset, #081015)",
+            background: "var(--bg-inset, var(--bg-base))",
             border: "1px solid var(--border-default)",
           }}
         >
@@ -450,14 +449,14 @@ export default function TwoFactorSection() {
                 <div
                   className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
                   style={{
-                    background: "rgba(16,185,129,0.1)",
-                    border: "1px solid rgba(16,185,129,0.15)",
+                    background: "rgba(var(--success-rgb),0.1)",
+                    border: "1px solid rgba(var(--success-rgb),0.15)",
                   }}
                 >
-                  <Shield size={24} style={{ color: "#10B981" }} />
+                  <Shield size={24} style={{ color: "var(--success)" }} />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold" style={{ color: "#10B981" }}>
+                  <p className="text-sm font-semibold" style={{ color: "var(--success)" }}>
                     สถานะ: เปิดอยู่
                   </p>
                   <p className="text-[13px] mt-0.5" style={{ color: "var(--text-muted)" }}>
@@ -493,7 +492,7 @@ export default function TwoFactorSection() {
                   </span>
                 </div>
                 {remaining === 0 && (
-                  <p className="text-xs" style={{ color: "var(--error, #EF4444)" }}>
+                  <p className="text-xs" style={{ color: "var(--error)" }}>
                     Backup codes หมด — กรุณาสร้างใหม่
                   </p>
                 )}
@@ -539,14 +538,14 @@ export default function TwoFactorSection() {
                 <div
                   className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
                   style={{
-                    background: "rgba(239,68,68,0.08)",
-                    border: "1px solid rgba(239,68,68,0.12)",
+                    background: "rgba(var(--error-rgb),0.08)",
+                    border: "1px solid rgba(var(--error-rgb),0.12)",
                   }}
                 >
-                  <Shield size={24} style={{ color: "#EF4444" }} />
+                  <Shield size={24} style={{ color: "var(--error)" }} />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold" style={{ color: "#EF4444" }}>
+                  <p className="text-sm font-semibold" style={{ color: "var(--error)" }}>
                     สถานะ: ปิดอยู่
                   </p>
                   <p className="text-[13px] mt-0.5" style={{ color: "var(--text-muted)" }}>
@@ -611,7 +610,7 @@ export default function TwoFactorSection() {
         setEnableOpen(open);
       }}>
         <DialogContent
-          className="sm:max-w-[560px] bg-[var(--bg-elevated,#0f1724)] border-[var(--border-default)] text-[var(--text-primary)]"
+          className="sm:max-w-[560px] bg-[var(--bg-elevated)] border-[var(--border-default)] text-[var(--text-primary)]"
           showCloseButton={enableStep !== 3}
         >
           <DialogHeader>
@@ -673,7 +672,7 @@ export default function TwoFactorSection() {
                 <div
                   className="flex items-center gap-2 rounded-lg px-4 py-3"
                   style={{
-                    background: "var(--bg-inset, #081015)",
+                    background: "var(--bg-inset, var(--bg-base))",
                     border: "1px solid var(--border-default)",
                   }}
                 >
@@ -765,7 +764,7 @@ export default function TwoFactorSection() {
                       <InputOTPSlot
                         key={i}
                         index={i}
-                        className="w-12 h-14 bg-[var(--bg-inset,#081015)] border-[var(--border-default)] text-[var(--text-primary)] text-2xl font-bold font-mono rounded-lg data-[active=true]:border-[var(--accent)] data-[active=true]:ring-[rgba(0,255,167,0.12)]"
+                        className="w-12 h-14 bg-[var(--bg-inset)] border-[var(--border-default)] text-[var(--text-primary)] text-2xl font-bold font-mono rounded-lg data-[active=true]:border-[var(--accent)] data-[active=true]:ring-[rgba(0,255,167,0.12)]"
                         aria-label={`รหัสยืนยัน หลักที่ ${i + 1}`}
                       />
                     ))}
@@ -776,7 +775,7 @@ export default function TwoFactorSection() {
                       <InputOTPSlot
                         key={i}
                         index={i}
-                        className="w-12 h-14 bg-[var(--bg-inset,#081015)] border-[var(--border-default)] text-[var(--text-primary)] text-2xl font-bold font-mono rounded-lg data-[active=true]:border-[var(--accent)] data-[active=true]:ring-[rgba(0,255,167,0.12)]"
+                        className="w-12 h-14 bg-[var(--bg-inset)] border-[var(--border-default)] text-[var(--text-primary)] text-2xl font-bold font-mono rounded-lg data-[active=true]:border-[var(--accent)] data-[active=true]:ring-[rgba(0,255,167,0.12)]"
                         aria-label={`รหัสยืนยัน หลักที่ ${i + 1}`}
                       />
                     ))}
@@ -792,9 +791,9 @@ export default function TwoFactorSection() {
                 <div
                   className="text-center text-[13px] p-3 rounded-lg"
                   style={{
-                    color: "var(--error, #EF4444)",
-                    background: "rgba(239,68,68,0.06)",
-                    border: "1px solid rgba(239,68,68,0.12)",
+                    color: "var(--error)",
+                    background: "rgba(var(--error-rgb),0.06)",
+                    border: "1px solid rgba(var(--error-rgb),0.12)",
                   }}
                 >
                   {verifyError}
@@ -841,12 +840,12 @@ export default function TwoFactorSection() {
               <div
                 className="flex items-center gap-2 p-3 rounded-lg"
                 style={{
-                  background: "rgba(16,185,129,0.08)",
-                  border: "1px solid rgba(16,185,129,0.15)",
+                  background: "rgba(var(--success-rgb),0.08)",
+                  border: "1px solid rgba(var(--success-rgb),0.15)",
                 }}
               >
-                <Check size={16} style={{ color: "#10B981" }} />
-                <span className="text-sm font-medium" style={{ color: "#10B981" }}>
+                <Check size={16} style={{ color: "var(--success)" }} />
+                <span className="text-sm font-medium" style={{ color: "var(--success)" }}>
                   เปิดใช้ 2FA สำเร็จ!
                 </span>
               </div>
@@ -896,7 +895,7 @@ export default function TwoFactorSection() {
           Disable 2FA Dialog
           ═══════════════════════════════════════════════════════ */}
       <Dialog open={disableOpen} onOpenChange={setDisableOpen}>
-        <DialogContent className="sm:max-w-[480px] bg-[var(--bg-elevated,#0f1724)] border-[var(--border-default)] text-[var(--text-primary)]">
+        <DialogContent className="sm:max-w-[480px] bg-[var(--bg-elevated)] border-[var(--border-default)] text-[var(--text-primary)]">
           <DialogHeader>
             <DialogTitle className="text-base font-semibold text-[var(--text-primary)]">
               ปิดการยืนยันตัวตนสองขั้นตอน
@@ -908,17 +907,17 @@ export default function TwoFactorSection() {
             <div
               className="rounded-lg p-4"
               style={{
-                background: "rgba(245,158,11,0.08)",
-                border: "1px solid rgba(245,158,11,0.15)",
+                background: "rgba(var(--warning-rgb),0.08)",
+                border: "1px solid rgba(var(--warning-rgb),0.15)",
               }}
             >
               <div className="flex items-start gap-2.5">
                 <AlertTriangle
                   size={16}
                   className="shrink-0 mt-0.5"
-                  style={{ color: "#F59E0B" }}
+                  style={{ color: "var(--warning)" }}
                 />
-                <div className="text-[13px]" style={{ color: "#F59E0B" }}>
+                <div className="text-[13px]" style={{ color: "var(--warning)" }}>
                   <p>การปิด 2FA จะลดความปลอดภัยของบัญชี</p>
                   <p className="mt-0.5">บางฟีเจอร์อาจถูกจำกัดการเข้าถึง</p>
                 </div>
@@ -941,13 +940,13 @@ export default function TwoFactorSection() {
                   setDisableError("");
                 }}
                 placeholder="กรอกรหัสผ่านเพื่อยืนยัน"
-                className="h-11 bg-[var(--bg-inset,#081015)] border-[var(--border-default)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+                className="h-11 bg-[var(--bg-inset)] border-[var(--border-default)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
                 autoFocus
               />
             </div>
 
             {disableError && (
-              <p className="text-[13px]" style={{ color: "var(--error, #EF4444)" }}>
+              <p className="text-[13px]" style={{ color: "var(--error)" }}>
                 {disableError}
               </p>
             )}
@@ -988,7 +987,7 @@ export default function TwoFactorSection() {
         if (!open && regenCodes) return; // Don't close while showing new codes
         setRegenOpen(open);
       }}>
-        <DialogContent className="sm:max-w-[560px] bg-[var(--bg-elevated,#0f1724)] border-[var(--border-default)] text-[var(--text-primary)]">
+        <DialogContent className="sm:max-w-[560px] bg-[var(--bg-elevated)] border-[var(--border-default)] text-[var(--text-primary)]">
           <DialogHeader>
             <DialogTitle className="text-base font-semibold text-[var(--text-primary)]">
               สร้าง Backup Codes ใหม่
@@ -1039,13 +1038,13 @@ export default function TwoFactorSection() {
                 <div
                   className="rounded-lg p-4"
                   style={{
-                    background: "rgba(245,158,11,0.08)",
-                    border: "1px solid rgba(245,158,11,0.15)",
+                    background: "rgba(var(--warning-rgb),0.08)",
+                    border: "1px solid rgba(var(--warning-rgb),0.15)",
                   }}
                 >
                   <div className="flex items-start gap-2.5">
-                    <AlertTriangle size={16} className="shrink-0 mt-0.5" style={{ color: "#F59E0B" }} />
-                    <span className="text-[13px]" style={{ color: "#F59E0B" }}>
+                    <AlertTriangle size={16} className="shrink-0 mt-0.5" style={{ color: "var(--warning)" }} />
+                    <span className="text-[13px]" style={{ color: "var(--warning)" }}>
                       Codes เก่าจะหมดอายุทันที
                     </span>
                   </div>
@@ -1074,7 +1073,7 @@ export default function TwoFactorSection() {
                           <InputOTPSlot
                             key={i}
                             index={i}
-                            className="w-12 h-14 bg-[var(--bg-inset,#081015)] border-[var(--border-default)] text-[var(--text-primary)] text-2xl font-bold font-mono rounded-lg data-[active=true]:border-[var(--accent)] data-[active=true]:ring-[rgba(0,255,167,0.12)]"
+                            className="w-12 h-14 bg-[var(--bg-inset)] border-[var(--border-default)] text-[var(--text-primary)] text-2xl font-bold font-mono rounded-lg data-[active=true]:border-[var(--accent)] data-[active=true]:ring-[rgba(0,255,167,0.12)]"
                           />
                         ))}
                       </InputOTPGroup>
@@ -1084,7 +1083,7 @@ export default function TwoFactorSection() {
                           <InputOTPSlot
                             key={i}
                             index={i}
-                            className="w-12 h-14 bg-[var(--bg-inset,#081015)] border-[var(--border-default)] text-[var(--text-primary)] text-2xl font-bold font-mono rounded-lg data-[active=true]:border-[var(--accent)] data-[active=true]:ring-[rgba(0,255,167,0.12)]"
+                            className="w-12 h-14 bg-[var(--bg-inset)] border-[var(--border-default)] text-[var(--text-primary)] text-2xl font-bold font-mono rounded-lg data-[active=true]:border-[var(--accent)] data-[active=true]:ring-[rgba(0,255,167,0.12)]"
                           />
                         ))}
                       </InputOTPGroup>
@@ -1093,7 +1092,7 @@ export default function TwoFactorSection() {
                 </div>
 
                 {regenError && (
-                  <p className="text-center text-[13px]" style={{ color: "var(--error, #EF4444)" }}>
+                  <p className="text-center text-[13px]" style={{ color: "var(--error)" }}>
                     {regenError}
                   </p>
                 )}

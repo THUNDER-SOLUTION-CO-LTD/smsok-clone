@@ -14,6 +14,8 @@ import {
   AlertTriangle,
   Loader2,
   Edit2,
+  Activity,
+  Zap,
 } from "lucide-react";
 import EmptyState from "@/components/EmptyState";
 import { createApiKey, toggleApiKey, deleteApiKey, updateApiKeyName } from "@/lib/actions/api-keys";
@@ -48,6 +50,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import PageLayout, { PageHeader, StatsRow, StatCard, TableWrapper } from "@/components/blocks/PageLayout";
 
 type ApiKey = {
   id: string;
@@ -84,14 +87,6 @@ function maskKey(key: string): string {
   return `${key.substring(0, 8)}...${key.substring(key.length - 4)}`;
 }
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("th-TH", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
-
 function relativeTime(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diff / 60000);
@@ -101,7 +96,11 @@ function relativeTime(iso: string): string {
   if (hours < 24) return `${hours} ชม.ที่แล้ว`;
   const days = Math.floor(hours / 24);
   if (days < 30) return `${days} วันที่แล้ว`;
-  return formatDate(iso);
+  return new Date(iso).toLocaleDateString("th-TH", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 export default function ApiKeysContent({
@@ -118,6 +117,8 @@ export default function ApiKeysContent({
     "sms:send",
     "contacts:read",
   ]);
+  const [rateLimit, setRateLimit] = useState("60");
+  const [ipWhitelist, setIpWhitelist] = useState("");
   const [creating, setCreating] = useState(false);
 
   // Secret display
@@ -164,6 +165,8 @@ export default function ApiKeysContent({
       setIdCopied(false);
       setShowCreate(false);
       setKeyName("");
+      setRateLimit("60");
+      setIpWhitelist("");
       setSelectedPerms(["sms:send", "contacts:read"]);
       toast.success("สร้าง API Key สำเร็จ");
     } catch (e) {
@@ -243,60 +246,58 @@ export default function ApiKeysContent({
     );
   }
 
+  const activeCount = apiKeys.filter((k) => k.isActive).length;
+
   return (
-    <div className="p-6 md:p-8 max-w-5xl animate-fade-in-up">
-      {/* ── Page Header ── */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-3">
-          <div
-            className="w-10 h-10 rounded-lg flex items-center justify-center"
-            style={{
-              background: "rgba(var(--accent-rgb),0.1)",
-              border: "1px solid rgba(var(--accent-rgb),0.15)",
-            }}
+    <PageLayout>
+      <PageHeader
+        title="API Keys"
+        description="จัดการ API keys สำหรับเชื่อมต่อระบบภายนอก"
+        actions={
+          <Button
+            onClick={() => setShowCreate(true)}
+            className="gap-1.5 font-semibold bg-[var(--accent)] hover:bg-[var(--accent)]/80 text-[var(--text-on-accent)]"
           >
-            <Key className="w-5 h-5 text-[var(--accent)]" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-[var(--text-primary)]">
-              API Keys
-            </h1>
-            <p className="text-sm text-[var(--text-muted)]">
-              จัดการ API keys สำหรับเชื่อมต่อระบบภายนอก
-            </p>
-          </div>
-        </div>
-        <Button
-          onClick={() => setShowCreate(true)}
-          className="gap-1.5 font-semibold"
-          style={{
-            background: "var(--accent)",
-            color: "var(--text-on-accent, var(--bg-base))",
-          }}
-        >
-          <Plus className="w-4 h-4" /> สร้างคีย์ใหม่
-        </Button>
-      </div>
+            <Plus className="w-4 h-4" /> <span className="hidden sm:inline">สร้างคีย์ใหม่</span>
+          </Button>
+        }
+      />
+
+      {/* ── Rate Limit Overview ── */}
+      <StatsRow columns={3}>
+        <StatCard
+          icon={<Key className="w-5 h-5 text-[var(--accent)]" />}
+          iconColor="var(--accent-rgb)"
+          value={`${activeCount}/${apiKeys.length}`}
+          label="Keys ที่ใช้งาน"
+          subtitle={`สร้างได้สูงสุด 5 keys (${apiKeys.length}/5)`}
+        />
+        <StatCard
+          icon={<Activity className="w-5 h-5 text-[var(--info)]" />}
+          iconColor="var(--info-rgb)"
+          value="60"
+          label="Rate Limit (req/min)"
+          subtitle="แพลนปัจจุบัน: Free"
+        />
+        <StatCard
+          icon={<Zap className="w-5 h-5 text-[var(--warning)]" />}
+          iconColor="var(--warning-rgb)"
+          value="0"
+          label="API Calls เดือนนี้"
+          subtitle="ไม่มีข้อมูล"
+        />
+      </StatsRow>
 
       {/* ── One-time Secret Display ── */}
       {newSecret && (
-        <div
-          className="rounded-lg p-6 mb-6 space-y-4"
-          style={{
-            background: "var(--bg-surface)",
-            border: "1px solid rgba(16,185,129,0.2)",
-          }}
-        >
+        <div className="rounded-lg p-6 mb-5 space-y-4 bg-[var(--bg-surface)] border border-[rgba(var(--success-rgb),0.2)]">
           <div className="flex items-start gap-3">
-            <ShieldCheck
-              className="w-5 h-5 mt-0.5 shrink-0"
-              style={{ color: "#10B981" }}
-            />
+            <ShieldCheck className="w-5 h-5 mt-0.5 shrink-0 text-[var(--success)]" />
             <div>
-              <p className="text-sm font-semibold" style={{ color: "#10B981" }}>
+              <p className="text-sm font-semibold text-[var(--success)]">
                 API Key สร้างเรียบร้อยแล้ว
               </p>
-              <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
+              <p className="text-xs mt-1 text-[var(--text-muted)]">
                 คัดลอก Secret Key ตอนนี้เลย — จะไม่แสดงอีกหลังจากปิด
               </p>
             </div>
@@ -304,21 +305,11 @@ export default function ApiKeysContent({
 
           {/* Key ID */}
           <div>
-            <label
-              className="text-[10px] uppercase tracking-wider font-medium block mb-1.5"
-              style={{ color: "var(--text-muted)" }}
-            >
+            <label className="text-[10px] uppercase tracking-wider font-medium block mb-1.5 text-[var(--text-muted)]">
               Key ID
             </label>
             <div className="flex items-center gap-2">
-              <code
-                className="flex-1 rounded-lg px-4 py-2.5 text-xs font-mono break-all"
-                style={{
-                  background: "var(--bg-base)",
-                  border: "1px solid var(--border-default)",
-                  color: "var(--text-secondary)",
-                }}
-              >
+              <code className="flex-1 rounded-lg px-4 py-2.5 text-xs font-mono break-all bg-[var(--bg-base)] border border-[var(--border-default)] text-[var(--text-secondary)]">
                 {newSecret.id}
               </code>
               <Button
@@ -328,13 +319,9 @@ export default function ApiKeysContent({
                 className="gap-1 text-xs shrink-0"
               >
                 {idCopied ? (
-                  <>
-                    <Check className="w-3 h-3" /> คัดลอกแล้ว
-                  </>
+                  <><Check className="w-3 h-3" /> คัดลอกแล้ว</>
                 ) : (
-                  <>
-                    <Copy className="w-3 h-3" /> คัดลอก
-                  </>
+                  <><Copy className="w-3 h-3" /> คัดลอก</>
                 )}
               </Button>
             </div>
@@ -342,21 +329,11 @@ export default function ApiKeysContent({
 
           {/* Secret Key */}
           <div>
-            <label
-              className="text-[10px] uppercase tracking-wider font-medium block mb-1.5"
-              style={{ color: "var(--text-muted)" }}
-            >
+            <label className="text-[10px] uppercase tracking-wider font-medium block mb-1.5 text-[var(--text-muted)]">
               Secret Key
             </label>
             <div className="flex items-center gap-2">
-              <code
-                className="flex-1 rounded-lg px-4 py-2.5 text-sm font-mono break-all"
-                style={{
-                  background: "var(--bg-base)",
-                  border: "1px solid var(--border-default)",
-                  color: "var(--accent)",
-                }}
-              >
+              <code className="flex-1 rounded-lg px-4 py-2.5 text-sm font-mono break-all bg-[var(--bg-base)] border border-[var(--border-default)] text-[var(--accent)]">
                 {newSecret.key}
               </code>
               <Button
@@ -366,32 +343,18 @@ export default function ApiKeysContent({
                 className="gap-1 text-xs shrink-0"
               >
                 {secretCopied ? (
-                  <>
-                    <Check className="w-3 h-3" /> คัดลอกแล้ว
-                  </>
+                  <><Check className="w-3 h-3" /> คัดลอกแล้ว</>
                 ) : (
-                  <>
-                    <Copy className="w-3 h-3" /> คัดลอก
-                  </>
+                  <><Copy className="w-3 h-3" /> คัดลอก</>
                 )}
               </Button>
             </div>
           </div>
 
           {/* Warning */}
-          <div
-            className="rounded-lg p-3 flex items-start gap-2.5"
-            style={{
-              background: "rgba(245,158,11,0.08)",
-              border: "1px solid rgba(245,158,11,0.15)",
-            }}
-          >
-            <AlertTriangle
-              size={14}
-              className="shrink-0 mt-0.5"
-              style={{ color: "#F59E0B" }}
-            />
-            <span className="text-xs" style={{ color: "#F59E0B" }}>
+          <div className="rounded-lg p-3 flex items-start gap-2.5 bg-[rgba(var(--warning-rgb),0.08)] border border-[rgba(var(--warning-rgb),0.15)]">
+            <AlertTriangle size={14} className="shrink-0 mt-0.5 text-[var(--warning)]" />
+            <span className="text-xs text-[var(--warning)]">
               Secret Key จะไม่แสดงอีกหลังจากปิด — คัดลอกเก็บไว้ที่ปลอดภัย
             </span>
           </div>
@@ -403,10 +366,7 @@ export default function ApiKeysContent({
                 checked={secretConfirmed}
                 onCheckedChange={(v) => setSecretConfirmed(!!v)}
               />
-              <span
-                className="text-xs"
-                style={{ color: "var(--text-primary)" }}
-              >
+              <span className="text-xs text-[var(--text-primary)]">
                 ฉันคัดลอก Secret Key แล้ว
               </span>
             </label>
@@ -424,13 +384,7 @@ export default function ApiKeysContent({
       )}
 
       {/* ── API Keys Table ── */}
-      <div
-        className="rounded-lg overflow-hidden mb-6"
-        style={{
-          background: "var(--bg-surface)",
-          border: "1px solid var(--border-default)",
-        }}
-      >
+      <TableWrapper>
         {apiKeys.length > 0 ? (
           <Table>
             <TableHeader>
@@ -505,19 +459,12 @@ export default function ApiKeysContent({
                   {/* Key prefix */}
                   <TableCell>
                     <div className="flex items-center gap-1.5">
-                      <code
-                        className="text-xs font-mono px-2 py-1 rounded"
-                        style={{
-                          background: "var(--bg-base)",
-                          color: "var(--accent)",
-                        }}
-                      >
+                      <code className="text-xs font-mono px-2 py-1 rounded bg-[var(--bg-base)] text-[var(--accent)]">
                         {maskKey(k.key)}
                       </code>
                       <button
                         type="button"
-                        className="p-1 rounded cursor-pointer hover:bg-[rgba(255,255,255,0.05)] transition-colors"
-                        style={{ color: "var(--text-muted)" }}
+                        className="p-1 rounded cursor-pointer hover:bg-white/[0.05] transition-colors text-[var(--text-muted)]"
                         onClick={() => copyText(k.key, "prefix")}
                         aria-label="คัดลอก key prefix"
                       >
@@ -564,8 +511,8 @@ export default function ApiKeysContent({
                       variant={k.isActive ? "default" : "destructive"}
                       className={
                         k.isActive
-                          ? "bg-[rgba(16,185,129,0.1)] text-[#10B981] border border-[rgba(16,185,129,0.15)] hover:bg-[rgba(16,185,129,0.15)]"
-                          : "bg-[rgba(239,68,68,0.1)] text-[var(--error)] border border-[rgba(239,68,68,0.15)]"
+                          ? "bg-[rgba(var(--success-rgb),0.1)] text-[var(--success)] border border-[rgba(var(--success-rgb),0.15)] hover:bg-[rgba(var(--success-rgb),0.15)]"
+                          : "bg-[rgba(var(--error-rgb),0.1)] text-[var(--error)] border border-[rgba(var(--error-rgb),0.15)]"
                       }
                     >
                       {k.isActive ? "ใช้งาน" : "ปิดใช้งาน"}
@@ -584,27 +531,17 @@ export default function ApiKeysContent({
                     <div className="flex items-center justify-end gap-1">
                       <button
                         type="button"
-                        className="p-1.5 rounded-md cursor-pointer hover:bg-[rgba(255,255,255,0.05)] transition-colors"
-                        style={{
-                          color: k.isActive
-                            ? "var(--text-muted)"
-                            : "var(--accent)",
-                        }}
+                        className={`p-1.5 rounded-md cursor-pointer hover:bg-white/[0.05] transition-colors ${
+                          k.isActive ? "text-[var(--text-muted)]" : "text-[var(--accent)]"
+                        }`}
                         onClick={() => handleToggle(k.id)}
-                        aria-label={
-                          k.isActive ? "ปิดใช้งาน" : "เปิดใช้งาน"
-                        }
+                        aria-label={k.isActive ? "ปิดใช้งาน" : "เปิดใช้งาน"}
                       >
-                        {k.isActive ? (
-                          <PowerOff size={14} />
-                        ) : (
-                          <Power size={14} />
-                        )}
+                        {k.isActive ? <PowerOff size={14} /> : <Power size={14} />}
                       </button>
                       <button
                         type="button"
-                        className="p-1.5 rounded-md cursor-pointer hover:bg-[rgba(239,68,68,0.06)] transition-colors"
-                        style={{ color: "var(--error, #EF4444)" }}
+                        className="p-1.5 rounded-md cursor-pointer hover:bg-[rgba(var(--error-rgb),0.06)] transition-colors text-[var(--error)]"
                         onClick={() => setDeleteTarget(k)}
                         aria-label={`ลบ API Key ${k.name}`}
                       >
@@ -629,24 +566,12 @@ export default function ApiKeysContent({
             />
           </div>
         )}
-      </div>
+      </TableWrapper>
 
-      {/* ── API Docs + Usage ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <div
-          className="rounded-lg p-5 flex items-center gap-4"
-          style={{
-            background: "var(--bg-surface)",
-            border: "1px solid var(--border-default)",
-          }}
-        >
-          <div
-            className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
-            style={{
-              background: "rgba(var(--accent-rgb),0.1)",
-              border: "1px solid rgba(var(--accent-rgb),0.15)",
-            }}
-          >
+      {/* ── API Docs + Usage Example ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-5">
+        <div className="rounded-lg p-5 flex items-center gap-4 bg-[var(--bg-surface)] border border-[var(--border-default)]">
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 bg-[rgba(var(--accent-rgb),0.1)] border border-[rgba(var(--accent-rgb),0.15)]">
             <BookOpen className="w-5 h-5 text-[var(--accent)]" />
           </div>
           <div className="flex-1 min-w-0">
@@ -664,27 +589,14 @@ export default function ApiKeysContent({
           </a>
         </div>
 
-        {/* Usage example */}
-        <div
-          className="rounded-lg p-5"
-          style={{
-            background: "var(--bg-surface)",
-            border: "1px solid var(--border-default)",
-          }}
-        >
+        <div className="rounded-lg p-5 bg-[var(--bg-surface)] border border-[var(--border-default)]">
           <p className="text-xs font-medium mb-3 text-[var(--text-muted)]">
             ตัวอย่างการใช้งาน
           </p>
-          <div
-            className="rounded-lg p-3 overflow-x-auto"
-            style={{
-              background: "var(--bg-base)",
-              border: "1px solid var(--border-default)",
-            }}
-          >
+          <div className="rounded-lg p-3 overflow-x-auto bg-[var(--bg-base)] border border-[var(--border-default)]">
             <code className="text-[11px] text-[var(--accent)] font-mono whitespace-pre block">
               {`curl -X POST /api/v1/sms/send \\
-  -H "Authorization: Bearer sk_live_..." \\
+  -H "X-API-Key: sk_live_..." \\
   -H "Content-Type: application/json" \\
   -d '{"to":"0812345678","message":"Hello!"}'`}
             </code>
@@ -692,33 +604,24 @@ export default function ApiKeysContent({
         </div>
       </div>
 
-      {/* ── Key Limit Info ── */}
-      <p className="text-xs text-[var(--text-muted)]">
-        สร้างได้สูงสุด 5 keys ({apiKeys.length}/5)
-      </p>
-
       {/* ═══════════════════════════════════════════════════════
           Create Key Dialog
           ═══════════════════════════════════════════════════════ */}
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent className="sm:max-w-[480px] bg-[var(--bg-elevated,#0f1724)] border-[var(--border-default)] text-[var(--text-primary)]">
+        <DialogContent className="sm:max-w-[480px] bg-[var(--bg-elevated,#0f1724)] border-[var(--border-default)] text-[var(--text-primary)] max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base font-semibold text-[var(--text-primary)]">
-              <Key className="w-4 h-4 text-[var(--accent)]" /> สร้าง API Key
-              ใหม่
+              <Key className="w-4 h-4 text-[var(--accent)]" /> สร้าง API Key ใหม่
             </DialogTitle>
             <DialogDescription className="text-[13px] text-[var(--text-muted)]">
-              กำหนดชื่อและสิทธิ์การใช้งานสำหรับ API Key
+              กำหนดชื่อ สิทธิ์ และการตั้งค่าสำหรับ API Key
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-5 mt-2">
             {/* Name */}
             <div>
-              <label
-                className="text-[10px] uppercase tracking-wider font-medium block mb-1.5"
-                style={{ color: "var(--text-muted)" }}
-              >
+              <label className="text-[10px] uppercase tracking-wider font-medium block mb-1.5 text-[var(--text-muted)]">
                 ชื่อ Key
               </label>
               <Input
@@ -726,24 +629,21 @@ export default function ApiKeysContent({
                 value={keyName}
                 onChange={(e) => setKeyName(e.target.value)}
                 maxLength={50}
-                className="h-11 bg-[var(--bg-inset,#081015)] border-[var(--border-default)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+                className="h-11 bg-[var(--bg-inset,#061019)] border-[var(--border-default)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
                 autoFocus
               />
             </div>
 
             {/* Permissions */}
             <div>
-              <label
-                className="text-[10px] uppercase tracking-wider font-medium block mb-2"
-                style={{ color: "var(--text-muted)" }}
-              >
+              <label className="text-[10px] uppercase tracking-wider font-medium block mb-2 text-[var(--text-muted)]">
                 สิทธิ์การใช้งาน
               </label>
-              <div className="space-y-1">
+              <div className="space-y-1 max-h-[240px] overflow-y-auto">
                 {PERMISSIONS.map((perm) => (
                   <label
                     key={perm.id}
-                    className="flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition-colors hover:bg-[rgba(255,255,255,0.03)]"
+                    className="flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition-colors hover:bg-white/[0.03]"
                   >
                     <Checkbox
                       checked={selectedPerms.includes(perm.id)}
@@ -761,6 +661,40 @@ export default function ApiKeysContent({
                 ))}
               </div>
             </div>
+
+            {/* Rate Limit */}
+            <div>
+              <label className="text-[10px] uppercase tracking-wider font-medium block mb-1.5 text-[var(--text-muted)]">
+                Rate Limit (requests/minute)
+              </label>
+              <Input
+                type="number"
+                value={rateLimit}
+                onChange={(e) => setRateLimit(e.target.value)}
+                min={1}
+                max={1000}
+                className="h-11 bg-[var(--bg-inset,#061019)] border-[var(--border-default)] text-[var(--text-primary)]"
+              />
+              <p className="text-[11px] text-[var(--text-muted)] mt-1">
+                ค่าเริ่มต้น 60 req/min (แพลน Free)
+              </p>
+            </div>
+
+            {/* IP Whitelist */}
+            <div>
+              <label className="text-[10px] uppercase tracking-wider font-medium block mb-1.5 text-[var(--text-muted)]">
+                IP Whitelist (ไม่บังคับ)
+              </label>
+              <Input
+                placeholder="เช่น 203.0.113.1, 198.51.100.0"
+                value={ipWhitelist}
+                onChange={(e) => setIpWhitelist(e.target.value)}
+                className="h-11 bg-[var(--bg-inset,#061019)] border-[var(--border-default)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+              />
+              <p className="text-[11px] text-[var(--text-muted)] mt-1">
+                ใส่ IP คั่นด้วยคอมมา — ว่างไว้ = อนุญาตทุก IP
+              </p>
+            </div>
           </div>
 
           {/* Actions */}
@@ -777,11 +711,7 @@ export default function ApiKeysContent({
               size="sm"
               onClick={handleCreate}
               disabled={!keyName.trim() || creating}
-              className="gap-1.5 text-xs font-semibold"
-              style={{
-                background: "var(--accent)",
-                color: "var(--text-on-accent, var(--bg-base))",
-              }}
+              className="gap-1.5 text-xs font-semibold bg-[var(--accent)] hover:bg-[var(--accent)]/80 text-[var(--text-on-accent)]"
             >
               {creating ? (
                 <>
@@ -823,6 +753,6 @@ export default function ApiKeysContent({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </PageLayout>
   );
 }

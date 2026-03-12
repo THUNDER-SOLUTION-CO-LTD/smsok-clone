@@ -23,7 +23,7 @@ export default function SenderDropdown({
   if (!hasMultiple) {
     return (
       <div>
-        <div className="input-glass flex items-center gap-2 text-sm text-white pointer-events-none">
+        <div className="flex items-center gap-2 text-sm text-white pointer-events-none px-3 py-2.5 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-default)]">
           <span className="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0" />
           EasySlip
           <span className="text-[11px] text-[var(--text-muted)] ml-auto">ค่าเริ่มต้น</span>

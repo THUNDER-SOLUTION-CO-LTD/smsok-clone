@@ -1,12 +1,13 @@
 import { NextRequest } from "next/server";
-import { authenticateRequest, apiResponse, apiError } from "@/lib/api-auth";
+import { apiResponse, apiError } from "@/lib/api-auth";
+import { authenticateAdmin } from "@/lib/admin-auth";
 import { getConsentLogs } from "@/lib/actions/consent";
 import type { ConsentType, ConsentAction } from "@prisma/client";
 
 // GET /api/v1/consent/logs — admin: list consent logs
 export async function GET(req: NextRequest) {
   try {
-    await authenticateRequest(req);
+    await authenticateAdmin(req);
 
     const params = req.nextUrl.searchParams;
     const result = await getConsentLogs({

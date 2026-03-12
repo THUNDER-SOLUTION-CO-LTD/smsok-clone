@@ -4,12 +4,14 @@ import { prisma as db } from "../db";
 import { revalidatePath } from "next/cache";
 import { requestSenderNameSchema, approveSenderNameSchema } from "../validations";
 import { validateSenderName } from "../sender-name-validation";
+import { resolveActionUserId } from "../action-user";
 
 // ==========================================
 // Request new sender name
 // ==========================================
 
 export async function requestSenderName(userId: string, data: unknown) {
+  userId = await resolveActionUserId(userId);
   const input = requestSenderNameSchema.parse(data);
 
   // Validate against กสทช. rules
@@ -43,6 +45,7 @@ export async function requestSenderName(userId: string, data: unknown) {
 // ==========================================
 
 export async function getSenderNames(userId: string) {
+  userId = await resolveActionUserId(userId);
   return db.senderName.findMany({
     where: { userId },
     orderBy: { createdAt: "desc" },
@@ -54,6 +57,7 @@ export async function getSenderNames(userId: string) {
 // ==========================================
 
 export async function getApprovedSenderNames(userId: string) {
+  userId = await resolveActionUserId(userId);
   return db.senderName.findMany({
     where: { userId, status: "APPROVED" },
     select: { name: true },

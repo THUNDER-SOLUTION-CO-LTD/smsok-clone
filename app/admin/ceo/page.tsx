@@ -152,7 +152,7 @@ export default function CeoDashboardPage() {
             onClick={() => setDateRange(pill.value)}
             className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer border ${
               dateRange === pill.value
-                ? "bg-[rgba(0,226,181,0.08)] border-[rgba(0,226,181,0.3)] text-[var(--accent)]"
+                ? "bg-[rgba(var(--accent-rgb),0.08)] border-[rgba(var(--accent-rgb),0.3)] text-[var(--accent)]"
                 : "border-[var(--border-default)] text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
             }`}
           >
@@ -167,7 +167,7 @@ export default function CeoDashboardPage() {
         <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg p-4">
           <div
             className="w-9 h-9 rounded-md flex items-center justify-center mb-3"
-            style={{ background: "rgba(0,226,181,0.08)" }}
+            style={{ background: "rgba(var(--accent-rgb),0.08)" }}
           >
             <TrendingUp className="w-4 h-4 text-[var(--accent)]" />
           </div>

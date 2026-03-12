@@ -15,7 +15,5 @@ export default async function TopupPage() {
     smsRemaining = 0;
   }
 
-  return (
-    <TopupContent user={user} packages={[]} smsRemaining={smsRemaining} />
-  );
+  return <TopupContent user={user} smsRemaining={smsRemaining} />;
 }

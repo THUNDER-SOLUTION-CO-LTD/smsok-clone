@@ -23,7 +23,8 @@ async function dismissCookieConsent(page: Page) {
 // Login helper (for tests that need explicit login, e.g. auth tests)
 // Returns the post-login URL path (e.g. "/dashboard" or "/2fa?token=...")
 async function loginAs(page: Page, email: string, password: string): Promise<string> {
-  await page.goto("/login", { waitUntil: "networkidle", timeout: 30000 });
+  await page.goto("/login", { waitUntil: "domcontentloaded", timeout: 30000 });
+  await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
   await dismissCookieConsent(page);
 
   const emailInput = page.locator('input[type="email"]');
@@ -40,7 +41,17 @@ async function loginAs(page: Page, email: string, password: string): Promise<str
   await page.waitForFunction(
     () => !(document.querySelector('button[type="submit"]') as HTMLButtonElement)?.disabled,
     { timeout: 10000 }
-  );
+  ).catch(async () => {
+    // Retry with type() to trigger React onChange events
+    await emailInput.clear();
+    await emailInput.type(email);
+    await passwordInput.clear();
+    await passwordInput.type(password);
+    await page.waitForFunction(
+      () => !(document.querySelector('button[type="submit"]') as HTMLButtonElement)?.disabled,
+      { timeout: 5000 }
+    );
+  });
   await submitBtn.click();
 
   // Wait for navigation to dashboard OR 2FA challenge
@@ -53,7 +64,8 @@ async function loginAs(page: Page, email: string, password: string): Promise<str
 export const test = base.extend<{ authedPage: Page }>({
   authedPage: async ({ page }, use) => {
     // storageState already applied — just verify we're auth'd by going to dashboard
-    await page.goto("/dashboard", { waitUntil: "networkidle", timeout: 30000 });
+    await page.goto("/dashboard", { waitUntil: "domcontentloaded", timeout: 30000 });
+    await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
     // If redirected to login, storageState expired — skip test
     if (page.url().includes("/login")) {
       throw new Error("Auth storageState expired. Re-run: npx playwright test --project=chromium");
@@ -66,7 +78,8 @@ export { expect, loginAs, dismissCookieConsent };
 
 // Helper: assert page loads without error
 export async function expectPageLoads(page: Page, path: string) {
-  const response = await page.goto(path, { waitUntil: "networkidle", timeout: 30000 });
+  const response = await page.goto(path, { waitUntil: "domcontentloaded", timeout: 30000 });
+  await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
   expect(response?.status()).toBe(200);
   await page.locator("body").waitFor({ state: "visible" });
   const body = await page.textContent("body");

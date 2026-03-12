@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { prisma as db } from "../db";
 import { createCampaignSchema, paginationSchema, normalizePhone } from "../validations";
 import { sendSmsBatch } from "../sms-gateway";
@@ -11,14 +12,28 @@ import {
   ensureSufficientQuota,
 } from "../package/quota";
 import { assertSendingHours } from "../sending-hours";
+import { resolveActionUserId } from "../action-user";
+
+const campaignFilterSchema = paginationSchema.extend({
+  status: z.string().trim().min(1).max(30).optional(),
+});
 
 export async function getCampaigns(userId: string, filters?: unknown) {
-  const pagination = filters ? paginationSchema.parse(filters) : { page: 1, limit: 20 };
+  userId = await resolveActionUserId(userId);
+  const pagination = filters
+    ? campaignFilterSchema.parse(filters)
+    : { page: 1, limit: 20, status: undefined };
   const skip = (pagination.page - 1) * pagination.limit;
+  const where = {
+    userId,
+    ...(pagination.status
+      ? { status: { equals: pagination.status, mode: "insensitive" as const } }
+      : {}),
+  };
 
   const [campaigns, total] = await db.$transaction([
     db.campaign.findMany({
-      where: { userId },
+      where,
       include: {
         contactGroup: { select: { id: true, name: true } },
         template: { select: { id: true, name: true } },
@@ -27,7 +42,7 @@ export async function getCampaigns(userId: string, filters?: unknown) {
       skip,
       take: pagination.limit,
     }),
-    db.campaign.count({ where: { userId } }),
+    db.campaign.count({ where }),
   ]);
 
   return {
@@ -42,6 +57,7 @@ export async function getCampaigns(userId: string, filters?: unknown) {
 }
 
 export async function createCampaign(userId: string, data: unknown) {
+  userId = await resolveActionUserId(userId);
   const payload = data && typeof data === "object" ? (data as Record<string, unknown>) : {};
   const input = createCampaignSchema.parse({
     ...payload,
@@ -102,6 +118,7 @@ export async function createCampaign(userId: string, data: unknown) {
 }
 
 export async function executeCampaign(userId: string, campaignId: string, orgId?: string) {
+  userId = await resolveActionUserId(userId);
   // PDPA: Block marketing campaigns outside org-configured hours
   await assertSendingHours(orgId);
 
@@ -272,6 +289,7 @@ export async function executeCampaign(userId: string, campaignId: string, orgId?
 }
 
 export async function getCampaignProgress(userId: string, campaignId: string) {
+  userId = await resolveActionUserId(userId);
   const campaign = await db.campaign.findFirst({
     where: { id: campaignId, userId },
     select: {

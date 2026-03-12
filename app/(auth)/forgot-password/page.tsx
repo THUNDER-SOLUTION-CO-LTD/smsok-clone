@@ -21,6 +21,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Send, ArrowLeft, ArrowRight, Lock, CheckCircle, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 const forgotPasswordSchema = z.object({
   phone: z.string().regex(/^0[0-9]\d{8}$/, "เบอร์โทรไม่ถูกต้อง (ตัวอย่าง: 0891234567)"),
@@ -47,8 +48,11 @@ export default function ForgotPasswordPage() {
       await forgotPassword(data.phone);
       setSubmittedPhone(data.phone);
       setSuccess(true);
+      toast.success("ส่งลิงก์รีเซ็ตรหัสผ่านแล้ว");
     } catch (e) {
-      setErrorMsg(safeErrorMessage(e));
+      const msg = safeErrorMessage(e);
+      setErrorMsg(msg);
+      toast.error(msg);
     }
   }
 

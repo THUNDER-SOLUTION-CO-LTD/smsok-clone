@@ -10,12 +10,14 @@ import {
 } from "../validations";
 import { getSession, hashPassword, verifyPassword } from "../auth";
 import { revokeAllUserSessions } from "../auth";
+import { resolveActionUserId } from "../action-user";
 
 // ==========================================
 // Update profile (name only; phone is immutable after signup)
 // ==========================================
 
 export async function updateProfile(userId: string, data: unknown) {
+  userId = await resolveActionUserId(userId);
   const input = updateProfileSchema.parse(data);
 
   const updated = await db.user.update({
@@ -36,6 +38,7 @@ export async function updateProfile(userId: string, data: unknown) {
 // ==========================================
 
 export async function changePassword(userId: string, data: unknown, _currentSessionTokenHash?: string) {
+  userId = await resolveActionUserId(userId);
   const input = changePasswordSchema.parse(data);
 
   const user = await db.user.findUniqueOrThrow({
@@ -103,6 +106,7 @@ export async function changePasswordForSession(data: unknown) {
 // ==========================================
 
 export async function getProfile(userId: string) {
+  userId = await resolveActionUserId(userId);
   return db.user.findUniqueOrThrow({
     where: { id: userId },
     select: {
@@ -121,6 +125,7 @@ export async function getProfile(userId: string) {
 // ==========================================
 
 export async function getWorkspaceSettings(userId: string) {
+  userId = await resolveActionUserId(userId);
   const settings = await db.workspaceSettings.findUnique({
     where: { userId },
   });
@@ -133,6 +138,7 @@ export async function getWorkspaceSettings(userId: string) {
 }
 
 export async function updateWorkspaceSettings(userId: string, data: unknown) {
+  userId = await resolveActionUserId(userId);
   const input = updateWorkspaceSchema.parse(data);
 
   const settings = await db.workspaceSettings.upsert({
@@ -159,6 +165,7 @@ export async function updateWorkspaceSettings(userId: string, data: unknown) {
 // ==========================================
 
 export async function getNotificationPrefs(userId: string) {
+  userId = await resolveActionUserId(userId);
   const prefs = await db.notificationPrefs.findUnique({
     where: { userId },
     select: {
@@ -186,6 +193,7 @@ export async function getNotificationPrefs(userId: string) {
 }
 
 export async function updateNotificationPrefs(userId: string, data: unknown) {
+  userId = await resolveActionUserId(userId);
   const input = updateNotificationPrefsSchema.parse(data);
 
   const prefs = await db.notificationPrefs.upsert({

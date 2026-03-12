@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Download,
   Trash2,
@@ -12,6 +12,7 @@ import {
   AlertTriangle,
   Search,
   MoreHorizontal,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -102,51 +103,6 @@ const STATUS_OPTIONS = [
   { value: "near_deadline", label: "ใกล้หมดเวลา" },
 ];
 
-/* ─── Mock Data ─── */
-
-const MOCK_REQUESTS: DataRequest[] = [
-  {
-    id: "1",
-    code: "DSR-001",
-    requester: "081-xxx-xxxx",
-    type: "delete",
-    requestDate: "1 มี.ค.",
-    deadline: "31 มี.ค.",
-    status: "pending",
-    daysLeft: 20,
-  },
-  {
-    id: "2",
-    code: "DSR-002",
-    requester: "089-xxx-xxxx",
-    type: "access",
-    requestDate: "5 มี.ค.",
-    deadline: "4 เม.ย.",
-    status: "completed",
-    daysLeft: 24,
-  },
-  {
-    id: "3",
-    code: "DSR-003",
-    requester: "092-xxx-xxxx",
-    type: "portability",
-    requestDate: "8 มี.ค.",
-    deadline: "7 เม.ย.",
-    status: "near_deadline",
-    daysLeft: 5,
-  },
-  {
-    id: "4",
-    code: "DSR-004",
-    requester: "095-xxx-xxxx",
-    type: "object",
-    requestDate: "10 มี.ค.",
-    deadline: "9 เม.ย.",
-    status: "in_progress",
-    daysLeft: 29,
-  },
-];
-
 const PAGE_SIZE = 10;
 
 /* ─── Main Component ─── */
@@ -156,19 +112,41 @@ export default function DataRequestsPage() {
   const [typeFilter, setTypeFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [page, setPage] = useState(1);
+  const [requests, setRequests] = useState<DataRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const totalCount = MOCK_REQUESTS.length;
-  const pendingCount = MOCK_REQUESTS.filter(
+  const fetchRequests = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/v1/pdpa/data-requests");
+      if (!res.ok) throw new Error(`Error ${res.status}: ${res.statusText}`);
+      const data = await res.json();
+      setRequests(Array.isArray(data) ? data : data.data ?? []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "เกิดข้อผิดพลาดในการโหลดข้อมูล");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchRequests();
+  }, [fetchRequests]);
+
+  const totalCount = requests.length;
+  const pendingCount = requests.filter(
     (r) => r.status === "pending"
   ).length;
-  const completedCount = MOCK_REQUESTS.filter(
+  const completedCount = requests.filter(
     (r) => r.status === "completed"
   ).length;
-  const nearDeadlineCount = MOCK_REQUESTS.filter(
+  const nearDeadlineCount = requests.filter(
     (r) => r.status === "near_deadline"
   ).length;
 
-  const filtered = MOCK_REQUESTS.filter((r) => {
+  const filtered = requests.filter((r) => {
     if (typeFilter && r.type !== typeFilter) return false;
     if (statusFilter && r.status !== statusFilter) return false;
     if (searchQuery && !r.code.includes(searchQuery) && !r.requester.includes(searchQuery))
@@ -178,6 +156,40 @@ export default function DataRequestsPage() {
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  if (loading) {
+    return (
+      <PageLayout>
+        <PageHeader
+          title="คำขอสิทธิ์ข้อมูล"
+          count={0}
+          description="จัดการคำขอตาม PDPA ภายใน 30 วัน"
+        />
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-[var(--text-muted)]" />
+        </div>
+      </PageLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <PageLayout>
+        <PageHeader
+          title="คำขอสิทธิ์ข้อมูล"
+          count={0}
+          description="จัดการคำขอตาม PDPA ภายใน 30 วัน"
+        />
+        <div className="flex flex-col items-center justify-center py-20 gap-4">
+          <AlertTriangle className="w-10 h-10 text-[var(--error)]" />
+          <p className="text-sm text-[var(--text-secondary)]">{error}</p>
+          <Button variant="outline" onClick={fetchRequests}>
+            ลองใหม่
+          </Button>
+        </div>
+      </PageLayout>
+    );
+  }
 
   return (
     <PageLayout>
@@ -269,8 +281,8 @@ export default function DataRequestsPage() {
         {paged.length === 0 ? (
           <EmptyState
             icon={<ClipboardList className="w-10 h-10" />}
-            title="ไม่พบคำขอ"
-            subtitle="ลองเปลี่ยนตัวกรอง"
+            title={requests.length === 0 ? "ยังไม่มีคำร้องขอข้อมูล" : "ไม่พบคำขอ"}
+            subtitle={requests.length === 0 ? "เมื่อมีคำร้องขอสิทธิ์ข้อมูลจะแสดงที่นี่" : "ลองเปลี่ยนตัวกรอง"}
           />
         ) : (
           paged.map((req, i) => {

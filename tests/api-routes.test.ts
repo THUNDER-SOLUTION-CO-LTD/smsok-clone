@@ -5,7 +5,7 @@ import { resolve } from "path";
 const ROOT = resolve(__dirname, "..");
 const sendRoute = readFileSync(resolve(ROOT, "app/api/v1/sms/send/route.ts"), "utf-8");
 const batchRoute = readFileSync(resolve(ROOT, "app/api/v1/sms/batch/route.ts"), "utf-8");
-const balanceRoute = readFileSync(resolve(ROOT, "app/api/v1/balance/route.ts"), "utf-8");
+const balanceRoute = readFileSync(resolve(ROOT, "app/api/v1/credits/balance/route.ts"), "utf-8");
 const sendersRoute = readFileSync(resolve(ROOT, "app/api/v1/senders/route.ts"), "utf-8");
 const otpSendRoute = readFileSync(resolve(ROOT, "app/api/v1/otp/send/route.ts"), "utf-8");
 const otpVerifyRoute = readFileSync(resolve(ROOT, "app/api/v1/otp/verify/route.ts"), "utf-8");
@@ -22,7 +22,7 @@ describe("API Route: POST /api/v1/sms/send", () => {
   });
 
   it("authenticates with API key", () => {
-    expect(sendRoute).toContain("authenticateApiKey");
+    expect(sendRoute).toContain("authenticateRequest");
   });
 
   it("calls sendSms action", () => {
@@ -30,11 +30,11 @@ describe("API Route: POST /api/v1/sms/send", () => {
   });
 
   it("maps body.sender to senderName", () => {
-    expect(sendRoute).toContain('body.sender || "EasySlip"');
+    expect(sendRoute).toContain("senderName: input.sender");
   });
 
   it("maps body.to to recipient", () => {
-    expect(sendRoute).toContain("recipient: body.to");
+    expect(sendRoute).toContain("recipient: input.to");
   });
 
   it("returns 201 on success", () => {
@@ -42,10 +42,10 @@ describe("API Route: POST /api/v1/sms/send", () => {
   });
 
   it("response includes id, status, credits_used, credits_remaining", () => {
-    expect(sendRoute).toContain("id: message.id");
-    expect(sendRoute).toContain("status: message.status");
-    expect(sendRoute).toContain("credits_used: message.creditCost");
-    expect(sendRoute).toContain("credits_remaining");
+    expect(sendRoute).toContain("id: msg.id");
+    expect(sendRoute).toContain("status: msg.status");
+    expect(sendRoute).toContain("sms_used: msg.creditCost");
+    expect(sendRoute).toContain("sms_remaining");
   });
 
   it("handles errors with apiError", () => {
@@ -63,7 +63,7 @@ describe("API Route: POST /api/v1/sms/batch", () => {
   });
 
   it("authenticates with API key", () => {
-    expect(batchRoute).toContain("authenticateApiKey");
+    expect(batchRoute).toContain("authenticateRequest");
   });
 
   it("calls sendBatchSms action", () => {
@@ -71,31 +71,31 @@ describe("API Route: POST /api/v1/sms/batch", () => {
   });
 
   it("maps body.to to recipients array", () => {
-    expect(batchRoute).toContain("recipients: body.to");
+    expect(batchRoute).toContain("recipients: input.to");
   });
 
   it("returns total_messages and credits", () => {
     expect(batchRoute).toContain("total_messages");
-    expect(batchRoute).toContain("credits_used");
-    expect(batchRoute).toContain("credits_remaining");
+    expect(batchRoute).toContain("sms_used");
+    expect(batchRoute).toContain("sms_remaining");
   });
 });
 
 // ==========================================
-// GET /api/v1/balance
+// GET /api/v1/credits/balance
 // ==========================================
 
-describe("API Route: GET /api/v1/balance", () => {
+describe("API Route: GET /api/v1/credits/balance", () => {
   it("exports GET handler", () => {
     expect(balanceRoute).toContain("async function GET");
   });
 
-  it("authenticates with API key", () => {
-    expect(balanceRoute).toContain("authenticateApiKey");
+  it("authenticates with session", () => {
+    expect(balanceRoute).toContain("getSession");
   });
 
-  it("returns credits", () => {
-    expect(balanceRoute).toContain("credits: user.credits");
+  it("proxies to shared credits balance endpoint", () => {
+    expect(balanceRoute).toContain('new URL("/api/credits/balance", req.url)');
   });
 });
 
@@ -109,15 +109,16 @@ describe("API Route: GET /api/v1/senders", () => {
   });
 
   it("authenticates with API key", () => {
-    expect(sendersRoute).toContain("authenticateApiKey");
+    expect(sendersRoute).toContain("authenticateRequest");
   });
 
-  it("calls getApprovedSenderNames", () => {
-    expect(sendersRoute).toContain("getApprovedSenderNames");
+  it("calls getSenderNames", () => {
+    expect(sendersRoute).toContain("getSenderNames");
   });
 
   it("returns sender names array", () => {
-    expect(sendersRoute).toContain("senders:");
+    expect(sendersRoute).toContain("senders,");
+    expect(sendersRoute).toContain("quota:");
   });
 });
 

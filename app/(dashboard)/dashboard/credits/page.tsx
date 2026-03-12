@@ -74,7 +74,7 @@ function formatEventDate(iso: string) {
 }
 
 const EVENT_TYPE_CONFIG: Record<CreditEventType, { icon: typeof ArrowUpRight; color: string; label: string }> = {
-  topup: { icon: ArrowUpRight, color: "var(--accent)", label: "เติม" },
+  topup: { icon: ArrowUpRight, color: "var(--accent)", label: "ซื้อ" },
   usage: { icon: ArrowDownRight, color: "var(--error)", label: "ใช้" },
   expired: { icon: Clock, color: "var(--text-muted)", label: "หมดอายุ" },
   refund: { icon: RotateCcw, color: "var(--info)", label: "คืน" },
@@ -286,7 +286,7 @@ function CreditHistoryTable({ events }: { events: CreditEvent[] }) {
                 background: tab === "topup" ? "var(--bg-surface)" : "transparent",
               }}
             >
-              การเติม
+              การซื้อ
             </TabsTrigger>
             <TabsTrigger
               value="usage"
@@ -296,7 +296,7 @@ function CreditHistoryTable({ events }: { events: CreditEvent[] }) {
                 background: tab === "usage" ? "var(--bg-surface)" : "transparent",
               }}
             >
-              การใช้
+              หมดอายุ
             </TabsTrigger>
           </TabsList>
 
@@ -308,7 +308,7 @@ function CreditHistoryTable({ events }: { events: CreditEvent[] }) {
       <div className="overflow-x-auto mt-2">
         {/* Header */}
         <div
-          className="grid grid-cols-[120px_1fr_100px_100px] max-md:grid-cols-[100px_1fr_80px_80px] gap-x-4 px-5 py-2.5 text-[11px] font-semibold uppercase tracking-wider"
+          className="grid grid-cols-[120px_1fr_100px_100px] max-md:grid-cols-[80px_1fr_70px_70px] gap-x-3 max-md:gap-x-2 px-5 max-md:px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wider"
           style={{ color: "var(--text-muted)", borderBottom: "1px solid var(--border-default)" }}
         >
           <span>วันที่</span>
@@ -332,7 +332,7 @@ function CreditHistoryTable({ events }: { events: CreditEvent[] }) {
             return (
               <div
                 key={event.id}
-                className="grid grid-cols-[120px_1fr_100px_100px] max-md:grid-cols-[100px_1fr_80px_80px] gap-x-4 items-center px-5 py-3 hover:bg-[rgba(255,255,255,0.015)] transition-colors"
+                className="grid grid-cols-[120px_1fr_100px_100px] max-md:grid-cols-[80px_1fr_70px_70px] gap-x-3 max-md:gap-x-2 items-center px-5 max-md:px-3 py-3 hover:bg-[rgba(255,255,255,0.015)] transition-colors"
                 style={{ borderBottom: "1px solid var(--border-default)" }}
               >
                 {/* Date */}
@@ -400,77 +400,85 @@ export default function CreditsPage() {
   const [packages, setPackages] = useState<ActivePackage[]>([]);
   const [events, setEvents] = useState<CreditEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
+    setError(null);
     try {
       const res = await fetch("/api/v1/credits");
-      if (res.ok) {
-        const raw = await res.json();
-        const data = raw.data ?? raw; // apiResponse wraps in { data }
-
-        // Map API shape → frontend shape
-        if (data.balance) {
-          const b = data.balance;
-          const now = new Date();
-          setSummary({
-            remaining: b.remainingCredits ?? 0,
-            total: b.totalCredits ?? 0,
-            usedThisMonth: b.usedCredits ?? 0,
-            earliestExpiry: null,
-            earliestExpiryDays: null,
-          });
-
-          // Map history → packages (active ones) + events (all)
-          const history = data.history ?? [];
-          const activePkgs: ActivePackage[] = history
-            .filter((h: { status: string }) => h.status === "ACTIVE")
-            .map((h: { id: string; tierCode: string; packageName: string; smsRemaining: number; smsTotal: number; expiresAt: string }, i: number) => {
-              const exp = new Date(h.expiresAt);
-              const daysLeft = Math.max(0, Math.ceil((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
-              return {
-                id: h.id,
-                tier: h.tierCode ?? "",
-                name: h.packageName ?? "",
-                remaining: h.smsRemaining ?? 0,
-                total: h.smsTotal ?? 0,
-                expiresAt: exp.toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" }),
-                daysLeft,
-                isFifo: i === 0,
-              };
-            });
-          setPackages(activePkgs);
-
-          // Update earliest expiry from packages
-          if (activePkgs.length > 0) {
-            setSummary(prev => prev ? {
-              ...prev,
-              earliestExpiry: activePkgs[0].expiresAt,
-              earliestExpiryDays: activePkgs[0].daysLeft,
-            } : prev);
-          }
-
-          // Map history → credit events
-          const evts: CreditEvent[] = history.map((h: { id: string; purchasedAt: string; packageName: string; status: string; smsUsed: number; smsTotal: number; smsRemaining: number }) => ({
-            id: h.id,
-            date: h.purchasedAt,
-            description: h.status === "ACTIVE" ? `เติมเครดิต ${h.packageName}` : `หมดอายุ ${h.packageName}`,
-            type: (h.status === "ACTIVE" ? "topup" : "expired") as CreditEventType,
-            amount: h.status === "ACTIVE" ? h.smsTotal : -(h.smsTotal - h.smsRemaining),
-            balance: h.smsRemaining,
-            reference: h.packageName,
-          }));
-          setEvents(evts);
-          return;
-        }
+      if (!res.ok) {
+        throw new Error("ไม่สามารถโหลดข้อมูลได้");
       }
-    } catch {
-      // API not ready
-    }
 
-    // Fallback to mock data
-    setSummary(MOCK_SUMMARY);
-    setPackages(MOCK_PACKAGES);
-    setEvents(MOCK_EVENTS);
+      const raw = await res.json();
+      const data = raw.data ?? raw;
+
+      if (!data.balance) {
+        // No balance data — show empty state (legitimate zero credits)
+        setSummary({ remaining: 0, total: 0, usedThisMonth: 0, earliestExpiry: null, earliestExpiryDays: null });
+        setPackages([]);
+        setEvents([]);
+        return;
+      }
+
+      const b = data.balance;
+      const now = new Date();
+
+      // Map history → packages (active ones)
+      const history = data.history ?? [];
+      const activePkgs: ActivePackage[] = history
+        .filter((h: { status: string }) => h.status === "ACTIVE")
+        .map((h: { id: string; tierCode: string; packageName: string; smsRemaining: number; smsTotal: number; expiresAt: string }) => {
+          const exp = new Date(h.expiresAt);
+          const daysLeft = Math.max(0, Math.ceil((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+          return {
+            id: h.id,
+            tier: h.tierCode ?? "",
+            name: h.packageName ?? "",
+            remaining: h.smsRemaining ?? 0,
+            total: h.smsTotal ?? 0,
+            expiresAt: exp.toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric" }),
+            rawExpiresAt: h.expiresAt,
+            daysLeft,
+            isFifo: false,
+          };
+        })
+        // CRITICAL 2 FIX: Sort by expiresAt ASC for correct FIFO ordering
+        .sort((a: ActivePackage & { rawExpiresAt: string }, b: ActivePackage & { rawExpiresAt: string }) =>
+          new Date(a.rawExpiresAt).getTime() - new Date(b.rawExpiresAt).getTime()
+        )
+        .map((pkg: ActivePackage, i: number) => ({ ...pkg, isFifo: i === 0 }));
+
+      setPackages(activePkgs);
+
+      // Set summary with earliest expiry from sorted packages
+      const earliest = activePkgs.length > 0 ? activePkgs[0] : null;
+      setSummary({
+        remaining: b.remainingCredits ?? 0,
+        total: b.totalCredits ?? 0,
+        usedThisMonth: b.usedCredits ?? 0,
+        earliestExpiry: earliest?.expiresAt ?? null,
+        earliestExpiryDays: earliest?.daysLeft ?? null,
+      });
+
+      // CRITICAL 3 FIX: Map history to purchase/expiry events only
+      // Backend only provides purchase history, not send/refund/bonus events
+      const evts: CreditEvent[] = history.map((h: { id: string; purchasedAt: string; packageName: string; status: string; smsTotal: number; smsRemaining: number }) => ({
+        id: h.id,
+        date: h.purchasedAt,
+        description: h.status === "ACTIVE" ? `ซื้อแพ็กเกจ ${h.packageName}` : `หมดอายุ ${h.packageName}`,
+        type: (h.status === "ACTIVE" ? "topup" : "expired") as CreditEventType,
+        amount: h.status === "ACTIVE" ? h.smsTotal : -(h.smsTotal - h.smsRemaining),
+        balance: h.smsRemaining,
+        reference: h.packageName,
+      }));
+      setEvents(evts);
+    } catch {
+      setError("ไม่สามารถโหลดข้อมูลได้ กรุณาลองใหม่");
+      setSummary(null);
+      setPackages([]);
+      setEvents([]);
+    }
   }, []);
 
   useEffect(() => {
@@ -480,10 +488,35 @@ export default function CreditsPage() {
   if (loading) {
     return (
       <PageLayout>
-        <PageHeader title="SMS Credits" />
+        <PageHeader title="โควต้าข้อความ" />
         <div className="flex items-center justify-center h-40">
           <Loader2 className="w-6 h-6 animate-spin" style={{ color: "var(--text-muted)" }} />
         </div>
+      </PageLayout>
+    );
+  }
+
+  // Error state — API failed, never show fake data
+  if (error) {
+    return (
+      <PageLayout>
+        <PageHeader
+          title="โควต้าข้อความ"
+          description="จำนวนข้อความคงเหลือและประวัติการซื้อแพ็กเกจ"
+        />
+        <EmptyState
+          icon={Coins}
+          iconColor="var(--error)"
+          iconBg="rgba(var(--error-rgb),0.06)"
+          iconBorder="rgba(var(--error-rgb),0.1)"
+          title="โหลดข้อมูลไม่สำเร็จ"
+          description={error}
+          ctaLabel="ลองใหม่"
+          ctaAction={() => {
+            setLoading(true);
+            fetchData().finally(() => setLoading(false));
+          }}
+        />
       </PageLayout>
     );
   }
@@ -493,16 +526,16 @@ export default function CreditsPage() {
     return (
       <PageLayout>
         <PageHeader
-          title="SMS Credits"
-          description="ยอดเครดิต SMS คงเหลือและประวัติการใช้งาน"
+          title="โควต้าข้อความ"
+          description="จำนวนข้อความคงเหลือและประวัติการซื้อแพ็กเกจ"
         />
         <EmptyState
           icon={Coins}
           iconColor="var(--text-muted)"
           iconBg="rgba(var(--text-muted-rgb,148,159,168),0.06)"
           iconBorder="rgba(var(--text-muted-rgb,148,159,168),0.1)"
-          title="ยังไม่มีเครดิต SMS"
-          description="ซื้อแพ็กเกจเพื่อเริ่มส่ง SMS"
+          title="ยังไม่มีข้อความ SMS"
+          description="ซื้อแพ็กเกจเพื่อเริ่มส่งข้อความ"
           ctaLabel="ซื้อแพ็กเกจ →"
           ctaAction={() => router.push("/dashboard/packages")}
         />
@@ -513,8 +546,8 @@ export default function CreditsPage() {
   return (
     <PageLayout>
       <PageHeader
-        title="SMS Credits"
-        description="ยอดเครดิต SMS คงเหลือและประวัติการใช้งาน"
+        title="โควต้าข้อความ"
+        description="จำนวนข้อความคงเหลือและประวัติการซื้อแพ็กเกจ"
         actions={
           <Button
             size="lg"
@@ -525,7 +558,7 @@ export default function CreditsPage() {
               color: "var(--bg-base)",
             }}
           >
-            + เติมเครดิต
+            + ซื้อแพ็กเกจ
           </Button>
         }
       />
@@ -536,7 +569,8 @@ export default function CreditsPage() {
       {/* Active Packages (FIFO) */}
       <ActivePackagesList packages={packages} />
 
-      {/* Usage History */}
+      {/* Purchase History (backend only provides purchase/expiry events) */}
+      {/* TODO: Add send/refund/bonus history when backend provides full event endpoint */}
       <CreditHistoryTable events={events} />
     </PageLayout>
   );

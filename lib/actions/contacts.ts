@@ -9,6 +9,7 @@ import {
   addContactsToGroupSchema,
   idSchema,
 } from "../validations";
+import { resolveActionUserId } from "../action-user";
 
 const contactInclude = {
   groups: { include: { group: true } },
@@ -20,6 +21,7 @@ const contactInclude = {
 // ==========================================
 
 export async function getContactById(userId: string, contactId: string) {
+  userId = await resolveActionUserId(userId);
   idSchema.parse({ id: contactId });
 
   const contact = await db.contact.findFirst({
@@ -45,6 +47,7 @@ export async function updateContactConsent(
   contactId: string,
   data: { smsConsent: boolean; optOutReason?: string }
 ) {
+  userId = await resolveActionUserId(userId);
   idSchema.parse({ id: contactId });
 
   const contact = await db.contact.findFirst({
@@ -74,6 +77,7 @@ export async function updateContactConsent(
 // ==========================================
 
 export async function getContacts(userId: string, filters?: unknown) {
+  userId = await resolveActionUserId(userId);
   const input = filters ? contactFilterSchema.parse(filters) : { page: 1, limit: 50, tagId: undefined };
   const skip = (input.page - 1) * input.limit;
   const where = {
@@ -116,6 +120,7 @@ export async function searchContactsBasic(
   search: string,
   limit = 50,
 ) {
+  userId = await resolveActionUserId(userId);
   return db.contact.findMany({
     where: {
       userId,
@@ -139,12 +144,32 @@ export async function searchContactsBasic(
 // ==========================================
 
 export async function createContact(userId: string, data: unknown) {
+  userId = await resolveActionUserId(userId);
   const input = createContactSchema.parse(data);
 
   const existing = await db.contact.findUnique({
     where: { userId_phone: { userId, phone: input.phone } },
   });
   if (existing) throw new Error("เบอร์โทรนี้มีอยู่แล้ว");
+
+  const consentData =
+    input.smsConsent === undefined
+      ? {}
+      : input.smsConsent
+        ? {
+            smsConsent: true,
+            consentStatus: "OPTED_IN" as const,
+            consentAt: new Date(),
+            optOutAt: null,
+            optOutReason: null,
+          }
+        : {
+            smsConsent: false,
+            consentStatus: "OPTED_OUT" as const,
+            consentAt: null,
+            optOutAt: new Date(),
+            optOutReason: null,
+          };
 
   const contact = await db.contact.create({
     data: {
@@ -153,6 +178,7 @@ export async function createContact(userId: string, data: unknown) {
       phone: input.phone,
       email: input.email || null,
       tags: input.tags || null,
+      ...consentData,
     },
   });
 
@@ -165,6 +191,7 @@ export async function createContact(userId: string, data: unknown) {
 // ==========================================
 
 export async function updateContact(userId: string, contactId: string, data: unknown) {
+  userId = await resolveActionUserId(userId);
   idSchema.parse({ id: contactId });
   const input = updateContactSchema.parse(data);
 
@@ -199,6 +226,7 @@ export async function updateContact(userId: string, contactId: string, data: unk
 // ==========================================
 
 export async function deleteContact(userId: string, contactId: string) {
+  userId = await resolveActionUserId(userId);
   idSchema.parse({ id: contactId });
 
   const contact = await db.contact.findFirst({
@@ -219,6 +247,7 @@ export async function importContacts(
   userId: string,
   contacts: { name: string; phone: string; email?: string; tags?: string }[]
 ) {
+  userId = await resolveActionUserId(userId);
   if (!Array.isArray(contacts) || contacts.length === 0) throw new Error("ไม่มีรายชื่อที่จะนำเข้า");
   if (contacts.length > 200) throw new Error("นำเข้าได้สูงสุด 200 รายชื่อต่อครั้ง");
 
@@ -281,6 +310,7 @@ export async function importContacts(
 // ==========================================
 
 export async function exportContacts(userId: string) {
+  userId = await resolveActionUserId(userId);
   const contacts = await db.contact.findMany({
     where: { userId },
     include: {
@@ -311,6 +341,7 @@ export async function addContactsToGroup(
   groupId: string,
   contactIds: string[]
 ) {
+  userId = await resolveActionUserId(userId);
   addContactsToGroupSchema.parse({ groupId, contactIds });
 
   // Verify group ownership
@@ -342,6 +373,7 @@ export async function addContactsToGroup(
 // ==========================================
 
 export async function bulkDeleteContacts(userId: string, contactIds: string[]) {
+  userId = await resolveActionUserId(userId);
   if (contactIds.length === 0) throw new Error("กรุณาเลือกรายชื่อ");
 
   const contacts = await db.contact.findMany({
@@ -369,6 +401,7 @@ export async function bulkUpdateTags(
   tag: string,
   action: "add" | "remove",
 ) {
+  userId = await resolveActionUserId(userId);
   if (contactIds.length === 0) throw new Error("กรุณาเลือกรายชื่อ");
   if (!tag.trim()) throw new Error("กรุณาระบุแท็ก");
 
@@ -411,6 +444,7 @@ export async function bulkUpdateTags(
 // ==========================================
 
 export async function getContactsByGroup(userId: string, groupId: string) {
+  userId = await resolveActionUserId(userId);
   idSchema.parse({ id: groupId });
 
   const group = await db.contactGroup.findFirst({
@@ -431,6 +465,7 @@ export async function getContactsByGroup(userId: string, groupId: string) {
 // ==========================================
 
 export async function getContactGroups(userId: string) {
+  userId = await resolveActionUserId(userId);
   const groups = await db.contactGroup.findMany({
     where: { userId },
     include: { _count: { select: { members: true } } },
@@ -449,6 +484,7 @@ export async function getContactGroups(userId: string) {
 // ==========================================
 
 export async function getGroupsForContact(userId: string, contactId: string) {
+  userId = await resolveActionUserId(userId);
   idSchema.parse({ id: contactId });
 
   // Verify contact ownership
@@ -474,6 +510,7 @@ export async function getGroupsForContact(userId: string, contactId: string) {
 // ==========================================
 
 export async function getGroupsWithMemberships(userId: string, contactIds: string[]) {
+  userId = await resolveActionUserId(userId);
   if (contactIds.length > 100) {
     throw new Error("contactIds ต้องไม่เกิน 100 รายการ")
   }
@@ -534,6 +571,7 @@ export async function getGroupsWithMemberships(userId: string, contactIds: strin
 // ==========================================
 
 export async function createContactGroup(userId: string, name: string) {
+  userId = await resolveActionUserId(userId);
   if (!name || name.trim().length === 0) throw new Error("กรุณากรอกชื่อกลุ่ม");
 
   return db.contactGroup.create({

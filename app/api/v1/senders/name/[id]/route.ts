@@ -1,6 +1,5 @@
 import { NextRequest } from "next/server";
-import { ApiError, apiResponse, apiError } from "@/lib/api-auth";
-import { getSession } from "@/lib/auth";
+import { ApiError, apiResponse, apiError, authenticateRequest } from "@/lib/api-auth";
 import { prisma as db } from "@/lib/db";
 
 // GET /api/v1/senders/name/[id] — detail + docs + history
@@ -9,8 +8,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = await getSession();
-    if (!session?.id) throw new ApiError(401, "Unauthorized");
+    const user = await authenticateRequest(req);
 
     const { id } = await params;
 
@@ -47,7 +45,7 @@ export async function GET(
     });
 
     if (!senderName) throw new ApiError(404, "ไม่พบ sender name");
-    if (senderName.userId !== session.id) throw new ApiError(403, "ไม่มีสิทธิ์เข้าถึง");
+    if (senderName.userId !== user.id) throw new ApiError(403, "ไม่มีสิทธิ์เข้าถึง");
 
     return apiResponse({
       senderName: {

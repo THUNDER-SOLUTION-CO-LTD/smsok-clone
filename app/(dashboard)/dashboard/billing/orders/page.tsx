@@ -15,7 +15,7 @@ import {
   ChevronRight,
   ShoppingBag,
   ArrowRight,
-  Wallet,
+  ShoppingCart,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,31 +36,11 @@ import {
   type Order,
   type OrderStatus,
   type OrderStats,
-  ORDER_STATUS_CONFIG,
 } from "@/types/order";
+import { OrderStatusBadge } from "@/components/order/OrderStatusBadge";
 import { formatBaht } from "@/types/purchase";
 
-// ── Status Badge ──
-
-function OrderStatusBadge({ status }: { status: OrderStatus }) {
-  const config = ORDER_STATUS_CONFIG[status];
-  return (
-    <span
-      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap"
-      style={{ color: config.color, backgroundColor: config.bgColor }}
-    >
-      <span
-        className="h-1.5 w-1.5 rounded-full"
-        style={{
-          backgroundColor: config.dot,
-          animation:
-            status === "PENDING_REVIEW" ? "pulse 2s infinite" : undefined,
-        }}
-      />
-      {config.label}
-    </span>
-  );
-}
+// OrderStatusBadge imported from @/components/order/OrderStatusBadge
 
 // ── Stat Card ──
 
@@ -161,6 +141,8 @@ export default function OrderManagementPage() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [searchQuery, setSearchQuery] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
@@ -171,6 +153,8 @@ export default function OrderManagementPage() {
       const params = new URLSearchParams();
       if (statusFilter !== "ALL") params.set("status", statusFilter);
       if (searchQuery) params.set("search", searchQuery);
+      if (dateFrom) params.set("from", dateFrom);
+      if (dateTo) params.set("to", dateTo);
       params.set("page", String(page));
       params.set("limit", "20");
 
@@ -203,7 +187,7 @@ export default function OrderManagementPage() {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, searchQuery, page]);
+  }, [statusFilter, searchQuery, dateFrom, dateTo, page]);
 
   useEffect(() => {
     fetchOrders();
@@ -211,21 +195,35 @@ export default function OrderManagementPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [statusFilter, searchQuery]);
+  }, [statusFilter, searchQuery, dateFrom, dateTo]);
 
-  // Clone (reorder)
-  async function handleReorder(orderId: string) {
-    try {
-      // Navigate to checkout with the same tier — backend would handle clone
-      const order = orders.find((o) => o.id === orderId);
-      if (order) {
-        router.push(
-          `/dashboard/billing/checkout?tier=${order.package_tier_id}`
-        );
-      }
-    } catch {
-      toast.error("ไม่สามารถสั่งใหม่ได้");
+  // Clone (reorder) — pass full order context (tax snapshot + package) to checkout
+  function handleReorder(orderId: string) {
+    const order = orders.find((o) => o.id === orderId);
+    if (!order) return;
+    const params = new URLSearchParams({
+      tier: order.package_tier_id,
+      reorder: "1",
+      taxName: order.tax_name,
+      taxId: order.tax_id,
+      taxAddress: order.tax_address,
+      customerType: order.customer_type,
+      branchType: order.tax_branch_type,
+      saveTaxProfile: "0",
+    });
+    if (order.tax_branch_number) params.set("branchNumber", order.tax_branch_number);
+    if (order.has_wht) params.set("hasWht", "1");
+    router.push(`/dashboard/billing/checkout?${params.toString()}`);
+  }
+
+  function openOrderDocument(url?: string, fallbackUrl?: string) {
+    const target = url || fallbackUrl;
+    if (!target) {
+      toast.error("ยังไม่มีเอกสารสำหรับคำสั่งซื้อนี้");
+      return;
     }
+
+    window.open(target, "_blank", "noopener,noreferrer");
   }
 
   // Action button per status
@@ -256,10 +254,32 @@ export default function OrderManagementPage() {
             variant="ghost"
             size="icon"
             className="h-8 w-8"
-            title="รอเปิดใช้งาน — ดาวน์โหลดเอกสาร"
-            disabled
+            title={
+              order.invoice_url || order.invoice_number
+                ? "เปิดใบกำกับภาษี"
+                : "ดูรายละเอียดคำสั่งซื้อ"
+            }
+            onClick={(e) => {
+              e.stopPropagation();
+              if (order.invoice_url || order.invoice_number) {
+                openOrderDocument(
+                  order.invoice_url,
+                  `/api/v1/orders/${order.id}/invoice`,
+                );
+                return;
+              }
+              router.push(`/dashboard/billing/orders/${order.id}`);
+            }}
           >
-            <FileText size={14} style={{ color: "var(--text-muted)" }} />
+            <FileText
+              size={14}
+              style={{
+                color:
+                  order.invoice_url || order.invoice_number
+                    ? "var(--accent)"
+                    : "var(--text-muted)",
+              }}
+            />
           </Button>
         );
       case "EXPIRED":
@@ -366,7 +386,7 @@ export default function OrderManagementPage() {
           color="var(--success)"
         />
         <StatCard
-          icon={Wallet}
+          icon={ShoppingCart}
           label="ยอดรวม"
           value={`฿${formatBaht(stats.total_spent)}`}
           color="var(--info)"
@@ -374,8 +394,8 @@ export default function OrderManagementPage() {
       </div>
 
       {/* Filter Bar */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-6">
-        <div className="relative flex-1 max-w-xs">
+      <div className="flex flex-col sm:flex-row flex-wrap gap-3 mb-6">
+        <div className="relative flex-1 max-w-xs min-w-[200px]">
           <Search
             size={14}
             className="absolute left-3 top-1/2 -translate-y-1/2"
@@ -394,6 +414,23 @@ export default function OrderManagementPage() {
             onChange={(v) => setStatusFilter(v)}
             options={STATUS_OPTIONS}
             placeholder="สถานะ"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <Input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="w-full sm:w-[140px] text-xs"
+            title="จากวันที่"
+          />
+          <span className="text-xs" style={{ color: "var(--text-muted)" }}>—</span>
+          <Input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="w-full sm:w-[140px] text-xs"
+            title="ถึงวันที่"
           />
         </div>
       </div>

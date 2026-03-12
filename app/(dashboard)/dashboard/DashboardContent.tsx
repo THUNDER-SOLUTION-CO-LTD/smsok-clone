@@ -22,13 +22,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import SenderDropdown from "@/components/ui/SenderDropdown";
 import {
   Table,
   TableBody,
@@ -214,12 +208,12 @@ export default function DashboardContent({ user, stats, senderNames = ["EasySlip
     setSending(true);
     setSendResult(null);
     try {
-      const result = await sendSms(user.id, { senderName, recipient: phone, message });
+      const result = await sendSms({ senderName, recipient: phone, message });
 
       // Check for structured insufficient credits error (returned, not thrown)
       if (result && typeof result === "object" && "error" in result && (result as { error: string }).error === "INSUFFICIENT_CREDITS") {
         const err = result as { creditsRemaining: number; creditsRequired: number };
-        const detail = `เครดิตไม่พอ — เหลือ ${err.creditsRemaining} ต้องการ ${err.creditsRequired}`;
+        const detail = `ข้อความไม่พอ — เหลือ ${err.creditsRemaining} SMS ต้องการ ${err.creditsRequired} SMS`;
         setSendResult(detail);
         toast.error(detail);
         return;
@@ -332,18 +326,7 @@ export default function DashboardContent({ user, stats, senderNames = ["EasySlip
             <div className="space-y-4">
               <div>
                 <label className="block text-xs text-[var(--text-muted)] mb-1.5 font-medium">ชื่อผู้ส่ง</label>
-                <Select value={senderName} onValueChange={(v) => v && setSenderName(v)}>
-                  <SelectTrigger className="h-11 bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] rounded-xl focus:border-[rgba(var(--accent-rgb),0.6)] focus:ring-[rgba(0,255,167,0.15)]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[var(--bg-surface)] border-[var(--border-default)] rounded-xl">
-                    {senderNames.map((name) => (
-                      <SelectItem key={name} value={name} className="hover:bg-[var(--bg-base)] text-[var(--text-primary)]">
-                        {name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SenderDropdown value={senderName} onChange={setSenderName} senderNames={senderNames} />
               </div>
               <div>
                 <label className="block text-xs text-[var(--text-muted)] mb-1.5 font-medium">เบอร์ปลายทาง</label>
@@ -391,7 +374,7 @@ export default function DashboardContent({ user, stats, senderNames = ["EasySlip
         </Card>
 
         {/* Recent Messages — Nansen Table — 3 cols */}
-        <Card className="lg:col-span-3 bg-[var(--bg-surface)] border-[var(--border-default)] rounded-lg overflow-hidden">
+        <Card className="lg:col-span-3 bg-[var(--bg-surface)] border-[var(--border-default)] rounded-lg overflow-hidden overflow-x-auto">
           <div className="flex items-center justify-between px-5 pt-5 pb-4">
             <h3 className="text-base font-semibold text-[var(--text-primary)]">ข้อความล่าสุด</h3>
             <Link href="/dashboard/messages" className="text-xs text-[var(--accent)] hover:underline transition-colors">
@@ -452,25 +435,6 @@ export default function DashboardContent({ user, stats, senderNames = ["EasySlip
         </Card>
       </div>
 
-      {/* ── System Status ── */}
-      <Card className="bg-[var(--bg-surface)] border-[var(--border-default)] rounded-lg">
-        <CardContent className="p-4 px-5">
-          <div className="flex flex-wrap items-center gap-6">
-            <span className="text-sm font-semibold text-[var(--text-primary)] mr-2">System Status</span>
-            {[
-              { label: "SMS Gateway" },
-              { label: "OTP Service" },
-              { label: "API Server" },
-              { label: "Database" },
-            ].map((s) => (
-              <div key={s.label} className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-[var(--success)]" />
-                <span className="text-[13px] text-[var(--text-secondary)]">{s.label}</span>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

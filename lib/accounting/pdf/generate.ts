@@ -25,7 +25,7 @@ const SELLER_INFO = {
   taxId: process.env.COMPANY_TAX_ID || "0105566000000",
   branch: process.env.COMPANY_BRANCH || "สำนักงานใหญ่",
   address: process.env.COMPANY_ADDRESS || "123 อาคาร ABC ชั้น 10 ถ.สุขุมวิท แขวงคลองเตย เขตคลองเตย กรุงเทพฯ 10110",
-  phone: process.env.COMPANY_PHONE || "02-xxx-xxxx",
+  phone: process.env.COMPANY_PHONE || "LINE: @smsok",
   email: process.env.COMPANY_EMAIL || "billing@smsok.com",
 };
 

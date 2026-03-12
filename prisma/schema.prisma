@@ -524,6 +524,7 @@ model OtpRequest {
   purpose   String   @default("verify")
   attempts  Int      @default(0)
   verified  Boolean  @default(false)
+  verifiedAt DateTime? @map("verified_at")
   expiresAt DateTime @map("expires_at")
   createdAt DateTime @default(now()) @map("created_at")
   refCode   String   @unique @map("ref_code")
@@ -992,12 +993,15 @@ model CustomerTaxInfo {
 }
 
 model DocumentSequence {
-  id         String       @id @default(cuid())
-  type       DocumentType
-  year       Int
-  lastNumber Int          @default(0) @map("last_number")
+  id         String        @id @default(cuid())
+  type       DocumentType?
+  year       Int?
+  prefix     String?       @db.VarChar(5)
+  yearMonth  String?       @map("year_month") @db.VarChar(4)
+  lastNumber Int           @default(0) @map("last_number")
 
   @@unique([type, year])
+  @@unique([prefix, yearMonth])
   @@map("document_sequences")
 }
 
@@ -1022,7 +1026,7 @@ model Order {
   hasWht           Boolean            @default(false) @map("has_wht")
   whtAmount        Decimal            @map("wht_amount") @db.Decimal(12, 2)
   payAmount        Decimal            @map("pay_amount") @db.Decimal(12, 2)
-  status           OrderStatus        @default(PENDING)
+  status           OrderStatus        @default(DRAFT)
   expiresAt        DateTime           @map("expires_at")
   quotationNumber  String?            @unique @map("quotation_number")
   quotationUrl     String?            @map("quotation_url")
@@ -1044,6 +1048,8 @@ model Order {
   reviewedBy       String?            @map("reviewed_by")
   reviewedAt       DateTime?          @map("reviewed_at")
   paidAt           DateTime?          @map("paid_at")
+  cancelledAt      DateTime?          @map("cancelled_at")
+  cancellationReason String?          @map("cancellation_reason") @db.Text
   completedAt      DateTime?          @map("completed_at")
   createdBy        String             @map("created_by")
   createdAt        DateTime           @default(now()) @map("created_at")
@@ -1053,6 +1059,8 @@ model Order {
   packageTier      PackageTier        @relation(fields: [packageTierId], references: [id])
   taxProfile       TaxProfile?        @relation(fields: [taxProfileId], references: [id])
   history          OrderHistory[]
+  documents        OrderDocument[]
+  slips            OrderSlip[]
 
   @@index([userId, createdAt])
   @@index([organizationId, createdAt])
@@ -1060,6 +1068,50 @@ model Order {
   @@index([packageTierId])
   @@index([expiresAt])
   @@map("orders")
+}
+
+model OrderDocument {
+  id                  String             @id @default(cuid())
+  orderId             String             @map("order_id")
+  type                OrderDocumentType
+  documentNumber      String             @unique @map("document_number")
+  issuedAt            DateTime           @default(now()) @map("issued_at")
+  voidedAt            DateTime?          @map("voided_at")
+  voidReason          String?            @map("void_reason") @db.Text
+  replacesDocumentId  String?            @map("replaces_document_id")
+  pdfUrl              String?            @map("pdf_url")
+  deletedAt           DateTime?          @map("deleted_at")
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @updatedAt @map("updated_at")
+  order               Order              @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  replacesDocument    OrderDocument?     @relation("OrderDocumentReplacement", fields: [replacesDocumentId], references: [id])
+  replacementDocs     OrderDocument[]    @relation("OrderDocumentReplacement")
+
+  @@index([orderId, issuedAt])
+  @@index([type, issuedAt])
+  @@index([deletedAt])
+  @@map("order_documents")
+}
+
+model OrderSlip {
+  id          String    @id @default(cuid())
+  orderId     String    @map("order_id")
+  fileUrl     String    @map("file_url") @db.Text
+  fileKey     String    @map("file_key")
+  fileSize    Int?      @map("file_size")
+  fileType    String?   @map("file_type")
+  uploadedAt  DateTime  @default(now()) @map("uploaded_at")
+  verifiedAt  DateTime? @map("verified_at")
+  verifiedBy  String?   @map("verified_by")
+  deletedAt   DateTime? @map("deleted_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  order       Order     @relation(fields: [orderId], references: [id], onDelete: Restrict)
+
+  @@index([orderId, uploadedAt])
+  @@index([verifiedBy])
+  @@index([deletedAt])
+  @@map("order_slips")
 }
 
 model OrderHistory {
@@ -1840,15 +1892,19 @@ enum OrderBranchType {
 }
 
 enum OrderStatus {
-  PENDING
-  SLIP_UPLOADED
-  VERIFIED
-  PENDING_REVIEW
-  APPROVED
-  COMPLETED
-  EXPIRED
-  CANCELLED
-  REJECTED
+  DRAFT           @map("draft")
+  PENDING_PAYMENT @map("pending_payment")
+  VERIFYING       @map("verifying")
+  PAID            @map("paid")
+  EXPIRED         @map("expired")
+  CANCELLED       @map("cancelled")
+}
+
+enum OrderDocumentType {
+  INVOICE     @map("invoice")
+  TAX_INVOICE @map("tax_invoice")
+  RECEIPT     @map("receipt")
+  CREDIT_NOTE @map("credit_note")
 }
 
 enum DocStatus {

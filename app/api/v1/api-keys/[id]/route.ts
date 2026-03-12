@@ -1,16 +1,19 @@
 import { NextRequest } from "next/server";
-import { apiResponse, apiError, ApiError } from "@/lib/api-auth";
-import { authenticatePublicApiKey } from "@/lib/api-key-auth";
-import { toggleApiKey, deleteApiKey, updateApiKeyName } from "@/lib/actions/api-keys";
+import { apiResponse, apiError, ApiError, authenticateRequest } from "@/lib/api-auth";
+import {
+  deleteApiKeyForUser,
+  toggleApiKeyForUser,
+  updateApiKeyNameForUser,
+} from "@/lib/api-keys/service";
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await authenticatePublicApiKey(req);
+    const user = await authenticateRequest(req);
     const { id } = await params;
-    const result = await toggleApiKey(user.id, id);
+    const result = await toggleApiKeyForUser(user.id, id);
     return apiResponse(result);
   } catch (error) {
     return apiError(error);
@@ -23,7 +26,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await authenticatePublicApiKey(req);
+    const user = await authenticateRequest(req);
     const { id } = await params;
     let body: unknown;
     try {
@@ -31,7 +34,7 @@ export async function PUT(
     } catch {
       throw new ApiError(400, "กรุณาส่งข้อมูล JSON");
     }
-    const result = await updateApiKeyName(user.id, id, body);
+    const result = await updateApiKeyNameForUser(user.id, id, body);
     return apiResponse(result);
   } catch (error) {
     return apiError(error);
@@ -43,9 +46,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await authenticatePublicApiKey(req);
+    const user = await authenticateRequest(req);
     const { id } = await params;
-    await deleteApiKey(user.id, id);
+    await deleteApiKeyForUser(user.id, id);
     return apiResponse({ success: true });
   } catch (error) {
     return apiError(error);

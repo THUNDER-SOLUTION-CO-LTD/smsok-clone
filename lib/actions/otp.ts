@@ -263,7 +263,7 @@ export async function verifyOtp_(
   ) {
     await prisma.otpRequest.update({
       where: { id: otp.id },
-      data: { verified: true },
+      data: { verified: true, verifiedAt: new Date() },
     });
     return { valid: true, verified: true, ref: otp.refCode, phone: otp.phone, purpose: otp.purpose };
   }
@@ -285,7 +285,7 @@ export async function verifyOtp_(
 
   await prisma.otpRequest.update({
     where: { id: otp.id },
-    data: { verified: true },
+    data: { verified: true, verifiedAt: new Date() },
   });
 
   return {
@@ -409,7 +409,10 @@ export async function verifyOtpForRegister(ref: string, code: string) {
     process.env.NODE_ENV !== "production" &&
     timingSafeMatch(input.code, bypassCode)
   ) {
-    await prisma.otpRequest.update({ where: { id: otp.id }, data: { verified: true } });
+    await prisma.otpRequest.update({
+      where: { id: otp.id },
+      data: { verified: true, verifiedAt: new Date() },
+    });
     return { valid: true, phone: otp.phone };
   }
 
@@ -425,6 +428,9 @@ export async function verifyOtpForRegister(ref: string, code: string) {
     throw new Error(`OTP ไม่ถูกต้อง (เหลือ ${remaining} ครั้ง)`);
   }
 
-  await prisma.otpRequest.update({ where: { id: otp.id }, data: { verified: true } });
+  await prisma.otpRequest.update({
+    where: { id: otp.id },
+    data: { verified: true, verifiedAt: new Date() },
+  });
   return { valid: true, phone: otp.phone };
 }

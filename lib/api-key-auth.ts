@@ -1,5 +1,7 @@
 import { NextRequest } from "next/server";
 import { ApiError, authenticateApiKey } from "./api-auth";
+import { ApiKeyPermission, hasApiKeyPermission } from "./api-key-permissions";
+import { ERROR_CODES } from "./api-log";
 
 export function extractPublicApiKey(req: NextRequest): string | null {
   const authHeader = req.headers.get("authorization");
@@ -13,6 +15,15 @@ export function extractPublicApiKey(req: NextRequest): string | null {
 
 export async function authenticatePublicApiKey(req: NextRequest) {
   return authenticateApiKey(req);
+}
+
+export function checkApiKeyPermission(
+  grantedPermissions: readonly string[] | null | undefined,
+  requiredPermission: ApiKeyPermission,
+) {
+  if (!hasApiKeyPermission(grantedPermissions, requiredPermission)) {
+    throw new ApiError(403, "Insufficient API key permissions", ERROR_CODES.FORBIDDEN);
+  }
 }
 
 export async function requireAdminPublicApiKey(req: NextRequest) {

@@ -3,6 +3,7 @@
 import * as XLSX from "xlsx";
 import { prisma } from "@/lib/db";
 import { normalizePhone } from "@/lib/validations";
+import { resolveActionUserId } from "@/lib/action-user";
 
 export type ColumnMapping = {
   name: string;      // column header → name
@@ -41,7 +42,15 @@ export async function parseExcelFile(buffer: ArrayBuffer) {
     return mapped;
   });
 
-  return { headers, preview, totalRows: data.length };
+  const allRows = data.map((row) => {
+    const mapped: Record<string, string> = {};
+    for (const h of headers) {
+      mapped[h] = String(row[h] ?? "");
+    }
+    return mapped;
+  });
+
+  return { headers, preview, allRows, totalRows: data.length };
 }
 
 /**
@@ -53,6 +62,7 @@ export async function importContactsFromExcel(
   mapping: ColumnMapping,
   options: { updateExisting?: boolean } = {}
 ): Promise<ImportResult> {
+  userId = await resolveActionUserId(userId);
   const workbook = XLSX.read(buffer, { type: "array" });
   const sheetName = workbook.SheetNames[0];
   if (!sheetName) throw new Error("ไม่พบ sheet ในไฟล์");

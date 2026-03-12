@@ -642,7 +642,7 @@ export default function CampaignsClient({
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5">
               {[
-                { label: "ผู้รับทั้งหมด", value: selectedCampaign.totalRecipients, color: "white" },
+                { label: "ผู้รับทั้งหมด", value: selectedCampaign.totalRecipients, color: "var(--text-primary)" },
                 { label: "ส่งแล้ว", value: selectedCampaign.sentCount, color: "var(--accent-secondary)" },
                 { label: "สำเร็จ", value: selectedCampaign.deliveredCount, color: "var(--accent)" },
                 { label: "ล้มเหลว", value: selectedCampaign.failedCount, color: "var(--error)" },
@@ -755,7 +755,7 @@ export default function CampaignsClient({
                 {paginatedCampaigns.map((campaign, idx) => (
                   <tr
                     key={campaign.id}
-                    className={`border-b border-[var(--table-border)] hover:bg-black transition-colors duration-150 cursor-pointer ${
+                    className={`border-b border-[var(--table-border)] hover:bg-[var(--bg-elevated)] transition-colors duration-150 cursor-pointer ${
                       idx % 2 === 1 ? "bg-[var(--table-alt-row)]" : ""
                     }`}
                     onClick={() => {

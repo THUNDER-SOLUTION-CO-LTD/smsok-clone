@@ -1,0 +1,243 @@
+import {
+  type OrderDocumentType,
+  type PrismaClient,
+} from "@prisma/client";
+import { prisma as db } from "@/lib/db";
+import { generateOrderDocumentNumber } from "@/lib/orders/numbering";
+
+type TxClient = Parameters<Parameters<typeof db.$transaction>[0]>[0];
+type DbClient = PrismaClient | TxClient;
+
+export const orderSummarySelect = {
+  id: true,
+  orderNumber: true,
+  packageTierId: true,
+  packageName: true,
+  smsCount: true,
+  customerType: true,
+  taxName: true,
+  taxId: true,
+  taxAddress: true,
+  taxBranchType: true,
+  taxBranchNumber: true,
+  netAmount: true,
+  vatAmount: true,
+  totalAmount: true,
+  hasWht: true,
+  whtAmount: true,
+  payAmount: true,
+  status: true,
+  expiresAt: true,
+  quotationNumber: true,
+  quotationUrl: true,
+  invoiceNumber: true,
+  invoiceUrl: true,
+  slipUrl: true,
+  whtCertUrl: true,
+  easyslipVerified: true,
+  rejectReason: true,
+  adminNote: true,
+  paidAt: true,
+  cancelledAt: true,
+  cancellationReason: true,
+  createdAt: true,
+} as const;
+
+export const orderDetailSelect = {
+  ...orderSummarySelect,
+  documents: {
+    where: { deletedAt: null },
+    orderBy: { issuedAt: "asc" },
+    select: {
+      id: true,
+      type: true,
+      documentNumber: true,
+      issuedAt: true,
+      voidedAt: true,
+      voidReason: true,
+      replacesDocumentId: true,
+      pdfUrl: true,
+      deletedAt: true,
+    },
+  },
+  slips: {
+    where: { deletedAt: null },
+    orderBy: { uploadedAt: "asc" },
+    select: {
+      id: true,
+      fileUrl: true,
+      fileKey: true,
+      fileSize: true,
+      fileType: true,
+      uploadedAt: true,
+      verifiedAt: true,
+      verifiedBy: true,
+      deletedAt: true,
+    },
+  },
+  history: {
+    orderBy: { createdAt: "asc" },
+    select: {
+      id: true,
+      fromStatus: true,
+      toStatus: true,
+      changedBy: true,
+      note: true,
+      createdAt: true,
+    },
+  },
+} as const;
+
+export const orderPdfSelect = {
+  id: true,
+  orderNumber: true,
+  customerType: true,
+  packageName: true,
+  smsCount: true,
+  taxName: true,
+  taxId: true,
+  taxAddress: true,
+  taxBranchType: true,
+  taxBranchNumber: true,
+  netAmount: true,
+  vatAmount: true,
+  totalAmount: true,
+  hasWht: true,
+  whtAmount: true,
+  payAmount: true,
+  quotationNumber: true,
+  invoiceNumber: true,
+  expiresAt: true,
+  paidAt: true,
+  createdAt: true,
+  user: {
+    select: {
+      email: true,
+      phone: true,
+    },
+  },
+} as const;
+
+const ORDER_DOCUMENT_KIND: Record<
+  OrderDocumentType,
+  "invoice" | "tax-invoice" | "receipt" | "credit-note"
+> = {
+  INVOICE: "invoice",
+  TAX_INVOICE: "tax-invoice",
+  RECEIPT: "receipt",
+  CREDIT_NOTE: "credit-note",
+};
+
+export function buildSlipDataUrl(file: File, mimeType: string, buffer: Buffer) {
+  return `data:${mimeType};base64,${buffer.toString("base64")}`;
+}
+
+export function buildSlipFileKey(orderId: string, file: File, now = new Date()) {
+  const extFromType = file.type.split("/")[1]?.toLowerCase() || "";
+  const extFromName = file.name.split(".").pop()?.toLowerCase() || "";
+  const ext = extFromType || extFromName || "bin";
+  return `slips/${orderId}/${now.getTime()}.${ext}`;
+}
+
+export function documentTypeToApiPath(type: OrderDocumentType) {
+  switch (type) {
+    case "INVOICE":
+      return "invoice";
+    case "TAX_INVOICE":
+      return "tax_invoice";
+    case "RECEIPT":
+      return "receipt";
+    case "CREDIT_NOTE":
+      return "credit_note";
+  }
+}
+
+export async function activateOrderPurchase(
+  client: DbClient,
+  order: {
+    id: string;
+    userId: string;
+    organizationId: string | null;
+    packageTierId: string;
+    smsCount: number;
+  },
+) {
+  const existing = await client.packagePurchase.findFirst({
+    where: { transactionId: order.id },
+    select: { id: true },
+  });
+
+  if (existing) return existing;
+
+  return client.packagePurchase.create({
+    data: {
+      userId: order.userId,
+      organizationId: order.organizationId,
+      tierId: order.packageTierId,
+      smsTotal: order.smsCount,
+      expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+      isActive: true,
+      transactionId: order.id,
+    },
+    select: { id: true },
+  });
+}
+
+export async function ensureOrderDocument(
+  client: DbClient,
+  order: {
+    id: string;
+    invoiceNumber?: string | null;
+    creditNoteNumber?: string | null;
+  },
+  type: OrderDocumentType,
+) {
+  const existing = await client.orderDocument.findFirst({
+    where: {
+      orderId: order.id,
+      type,
+      deletedAt: null,
+    },
+    orderBy: { issuedAt: "desc" },
+  });
+
+  if (existing) return existing;
+
+  const documentNumber = await generateOrderDocumentNumber(ORDER_DOCUMENT_KIND[type], client);
+  const created = await client.orderDocument.create({
+    data: {
+      orderId: order.id,
+      type,
+      documentNumber,
+      pdfUrl: "",
+    },
+  });
+
+  const pdfUrl = `/api/orders/${order.id}/documents/${created.id}/pdf`;
+  const updated = await client.orderDocument.update({
+    where: { id: created.id },
+    data: { pdfUrl },
+  });
+
+  if (type === "TAX_INVOICE" && !order.invoiceNumber) {
+    await client.order.update({
+      where: { id: order.id },
+      data: {
+        invoiceNumber: updated.documentNumber,
+        invoiceUrl: updated.pdfUrl,
+      },
+    });
+  }
+
+  if (type === "CREDIT_NOTE" && !order.creditNoteNumber) {
+    await client.order.update({
+      where: { id: order.id },
+      data: {
+        creditNoteNumber: updated.documentNumber,
+        creditNoteUrl: updated.pdfUrl,
+      },
+    });
+  }
+
+  return updated;
+}

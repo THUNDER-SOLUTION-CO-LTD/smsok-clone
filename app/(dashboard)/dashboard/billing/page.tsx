@@ -20,7 +20,7 @@ import {
 import CustomSelect from "@/components/ui/CustomSelect";
 
 import {
-  Wallet,
+  ShoppingBag,
   FileText,
   Clock,
   Download,
@@ -406,7 +406,7 @@ export default function BillingPage() {
     setPage(1);
   }, [statusFilter, dateFrom, dateTo]);
 
-  /* Stats derived from current page — TODO: use dedicated /api/payments/stats endpoint for accurate totals */
+  /* Stats derived from current page */
   const stats = useMemo(() => {
     const now = new Date();
     const yearStart = new Date(now.getFullYear(), 0, 1);
@@ -457,7 +457,7 @@ export default function BillingPage() {
           className="inline-flex items-center justify-center rounded-lg px-4 h-10 text-sm font-medium bg-[var(--accent)] text-[var(--bg-base)] hover:bg-[var(--accent)]/90 transition-all w-fit"
         >
           <Plus className="h-4 w-4 mr-1.5" />
-          เติมเครดิต
+          ซื้อแพ็กเกจ
         </Link>
       </div>
 
@@ -473,7 +473,7 @@ export default function BillingPage() {
           {/* ── Stats Row ── */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <StatCard
-              icon={Wallet}
+              icon={ShoppingBag}
               label="ยอดชำระปีนี้"
               value={formatBaht(stats.totalPaid)}
               color="var(--accent)"

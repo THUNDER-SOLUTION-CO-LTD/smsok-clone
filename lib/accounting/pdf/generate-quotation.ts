@@ -20,7 +20,7 @@ const SELLER_INFO = {
   name: process.env.COMPANY_NAME || "บริษัท เอสเอ็มเอสโอเค จำกัด",
   taxId: process.env.COMPANY_TAX_ID || "0105566000000",
   address: process.env.COMPANY_ADDRESS || "123 อาคาร ABC ชั้น 10 ถ.สุขุมวิท แขวงคลองเตย เขตคลองเตย กรุงเทพฯ 10110",
-  phone: process.env.COMPANY_PHONE || "02-xxx-xxxx",
+  phone: process.env.COMPANY_PHONE || "LINE: @smsok",
 };
 
 export async function generateQuotationPdf(quotationId: string): Promise<Buffer> {

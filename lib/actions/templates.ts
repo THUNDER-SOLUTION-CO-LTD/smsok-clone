@@ -3,6 +3,7 @@
 import { prisma as db } from "../db";
 import { revalidatePath } from "next/cache";
 import { templateSchema } from "../validations";
+import { resolveActionUserId } from "../action-user";
 
 /** Extract {{varName}} from template content */
 function extractVariables(content: string): string[] {
@@ -24,6 +25,7 @@ function calculateSegments(content: string): number {
 // ==========================================
 
 export async function getTemplates(userId: string) {
+  userId = await resolveActionUserId(userId);
   return db.messageTemplate.findMany({
     where: { userId, deletedAt: null },
     orderBy: { updatedAt: "desc" },
@@ -35,6 +37,7 @@ export async function getTemplates(userId: string) {
 // ==========================================
 
 export async function createTemplate(userId: string, data: unknown) {
+  userId = await resolveActionUserId(userId);
   const input = templateSchema.parse(data);
 
   const count = await db.messageTemplate.count({ where: { userId, deletedAt: null } });
@@ -66,6 +69,7 @@ export async function createTemplate(userId: string, data: unknown) {
 // ==========================================
 
 export async function updateTemplate(userId: string, templateId: string, data: unknown) {
+  userId = await resolveActionUserId(userId);
   const input = templateSchema.partial().parse(data);
 
   const existing = await db.messageTemplate.findFirst({
@@ -100,6 +104,7 @@ export async function updateTemplate(userId: string, templateId: string, data: u
 // ==========================================
 
 export async function deleteTemplate(userId: string, templateId: string) {
+  userId = await resolveActionUserId(userId);
   const existing = await db.messageTemplate.findFirst({
     where: { id: templateId, userId, deletedAt: null },
   });

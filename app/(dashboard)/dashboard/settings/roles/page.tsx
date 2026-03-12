@@ -62,7 +62,7 @@ const ROLE_COLOR_MAP: Record<string, { bg: string; color: string }> = {
 };
 
 const DEFAULT_ICON = "\u{1F3A8}";
-const DEFAULT_COLOR = { bg: "rgba(0,226,181,0.08)", color: "var(--accent)" };
+const DEFAULT_COLOR = { bg: "rgba(var(--accent-rgb),0.08)", color: "var(--accent)" };
 
 function getRoleIcon(name: string) {
   return ROLE_ICON_MAP[name] ?? DEFAULT_ICON;
@@ -139,8 +139,8 @@ export default function RolesPage() {
       setDialogOpen(false);
       resetCreateForm();
       fetchRoles();
-    } catch (err) {
-      console.error("Create role failed:", err);
+    } catch {
+      // silently fail — UI should show error state
     } finally {
       setCreating(false);
     }
@@ -252,12 +252,14 @@ export default function RolesPage() {
         description="จัดการบทบาทและลำดับชั้นของสิทธิ์"
         actions={
           <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetCreateForm(); }}>
-            <DialogTrigger>
-              <Button size="sm" className="gap-1.5">
-                <Plus className="w-4 h-4" />
-                สร้าง Role
-              </Button>
-            </DialogTrigger>
+            <DialogTrigger
+              render={
+                <Button size="sm" className="gap-1.5">
+                  <Plus className="w-4 h-4" />
+                  สร้าง Role
+                </Button>
+              }
+            />
             <DialogContent className="sm:max-w-[440px]">
               <DialogHeader>
                 <DialogTitle>สร้าง Role ใหม่</DialogTitle>
@@ -341,7 +343,7 @@ export default function RolesPage() {
               onClick={() => setActiveTab(tab.key)}
               className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-colors cursor-pointer ${
                 isActive
-                  ? "bg-[rgba(0,226,181,0.08)] text-[var(--accent)] border border-[rgba(0,226,181,0.2)]"
+                  ? "bg-[rgba(var(--accent-rgb),0.08)] text-[var(--accent)] border border-[rgba(var(--accent-rgb),0.2)]"
                   : "text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.04] border border-transparent"
               }`}
             >
@@ -492,7 +494,7 @@ function RoleRow({ role, onClick }: { role: Role; onClick: () => void }) {
 
           {/* Custom badge */}
           {!role.isSystemRole && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-[rgba(0,226,181,0.08)] text-[var(--accent)]">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-[rgba(var(--accent-rgb),0.08)] text-[var(--accent)]">
               Custom
             </span>
           )}

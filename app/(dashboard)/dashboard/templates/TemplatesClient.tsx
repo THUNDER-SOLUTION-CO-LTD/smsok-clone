@@ -15,6 +15,13 @@ import type { TemplateItem } from "@/lib/types/api-responses";
 import { safeErrorMessage } from "@/lib/error-messages";
 import { useToast } from "@/app/components/ui/Toast";
 import { smsCounterText } from "@/lib/form-utils";
+import { SmsCharCounter, UnicodeWarning } from "@/components/sms/SmsCharCounter";
+import { PhonePreview } from "@/components/sms/PhonePreview";
+import {
+  VariableInsertButtons,
+  useVariableAutocomplete,
+  VariableSuggestionDropdown,
+} from "@/components/sms/VariableInsert";
 
 // shadcn
 import { Button } from "@/components/ui/button";
@@ -627,45 +634,26 @@ export default function TemplatesClient({
                       />
                     </FormControl>
                     {field.value && (
-                      <p className="text-[11px] text-[var(--text-muted)] text-right">
-                        {smsCounterText(field.value)}
-                      </p>
+                      <div className="mt-1.5">
+                        <SmsCharCounter message={field.value} />
+                      </div>
                     )}
+                    <UnicodeWarning message={field.value} />
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
               {/* Variable helper buttons */}
-              <div>
-                <label className="block text-xs text-[var(--text-muted)] mb-2">
-                  แทรกตัวแปร
-                </label>
-                <div className="flex items-center gap-2 flex-wrap">
-                  {VARIABLES.map(({ label, value }) => (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => insertVariable(value)}
-                      className="px-3 py-1.5 rounded-lg text-[11px] font-mono bg-[rgba(var(--accent-rgb),0.06)] text-[var(--accent)] hover:bg-[rgba(var(--accent-rgb),0.12)] border border-[rgba(var(--accent-rgb),0.1)] transition-all flex items-center gap-1.5"
-                    >
-                      <Plus className="w-2.5 h-2.5" />
-                      {label}{" "}
-                      <span className="opacity-60">{value}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <VariableInsertButtons onInsert={insertVariable} />
 
-              {/* Preview */}
+              {/* Phone Preview */}
               {contentValue.trim() && (
                 <div>
                   <label className="block text-xs text-[var(--text-muted)] mb-2">
-                    ตัวอย่าง
+                    ตัวอย่าง (Phone Preview)
                   </label>
-                  <div className="p-3 rounded-lg bg-[var(--bg-base)] border border-[var(--border-default)] text-[13px] text-[var(--text-secondary)] leading-relaxed whitespace-pre-wrap">
-                    {highlightVariables(contentValue)}
-                  </div>
+                  <PhonePreview message={contentValue} senderName="EasySlip" />
                 </div>
               )}
 

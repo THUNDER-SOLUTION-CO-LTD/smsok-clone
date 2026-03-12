@@ -52,7 +52,7 @@ const SELLER_INFO = {
   address:
     process.env.COMPANY_ADDRESS ||
     "123 อาคาร ABC ชั้น 10 ถ.สุขุมวิท แขวงคลองเตย เขตคลองเตย กรุงเทพฯ 10110",
-  phone: process.env.COMPANY_PHONE || "02-xxx-xxxx",
+  phone: process.env.COMPANY_PHONE || "LINE: @smsok",
   email: process.env.COMPANY_EMAIL || "billing@smsok.com",
 };
 

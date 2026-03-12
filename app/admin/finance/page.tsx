@@ -200,7 +200,7 @@ const REFUNDS = [
     date: "8 มี.ค.",
     customer: "MyShop",
     amount: 175,
-    reason: "เติมผิดจำนวน",
+    reason: "ซื้อผิดจำนวน",
     status: "completed",
   },
 ];
@@ -331,7 +331,7 @@ export default function FinancePage() {
             onClick={() => setDateRange(range.value)}
             className={`px-3.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer border ${
               dateRange === range.value
-                ? "bg-[rgba(0,226,181,0.08)] border-[rgba(0,226,181,0.3)] text-[var(--accent)]"
+                ? "bg-[rgba(var(--accent-rgb),0.08)] border-[rgba(var(--accent-rgb),0.3)] text-[var(--accent)]"
                 : "border-[var(--border-default)] text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
             }`}
           >
@@ -371,7 +371,7 @@ export default function FinancePage() {
         </div>
 
         <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg p-4">
-          <div className="w-9 h-9 rounded-md flex items-center justify-center mb-3" style={{ background: "rgba(0,226,181,0.08)" }}>
+          <div className="w-9 h-9 rounded-md flex items-center justify-center mb-3" style={{ background: "rgba(var(--accent-rgb),0.08)" }}>
             <CheckCircle className="w-4 h-4 text-[var(--accent)]" />
           </div>
           <div className="text-2xl font-bold text-[var(--success)] tabular-nums">97.3%</div>
@@ -542,7 +542,9 @@ export default function FinancePage() {
             <span>สถานะ</span>
             <span>Ref</span>
           </div>
-          {TRANSACTIONS.map((tx, i) => (
+          {TRANSACTIONS.length === 0 ? (
+            <EmptyState icon={<Banknote size={32} />} title="ไม่มีรายการ" subtitle="ยังไม่มี Transaction ในช่วงเวลาที่เลือก" />
+          ) : TRANSACTIONS.map((tx, i) => (
             <div
               key={tx.id}
               className={`grid grid-cols-[100px_1fr_100px_140px_100px_120px] gap-x-4 items-center px-5 py-3.5 border-b border-[var(--table-border)] ${
@@ -584,7 +586,9 @@ export default function FinancePage() {
             <span>อายุ</span>
             <span />
           </div>
-          {INVOICES.map((inv, i) => {
+          {INVOICES.length === 0 ? (
+            <EmptyState icon={<FileText size={32} />} title="ไม่มีใบแจ้งหนี้" subtitle="ยังไม่มี Invoice ในช่วงเวลาที่เลือก" />
+          ) : INVOICES.map((inv, i) => {
             const agingColor =
               inv.agingDays > 30
                 ? "var(--error)"
@@ -632,7 +636,9 @@ export default function FinancePage() {
             <span>สถานะ</span>
             <span />
           </div>
-          {REFUNDS.map((ref, i) => (
+          {REFUNDS.length === 0 ? (
+            <EmptyState icon={<RotateCcw size={32} />} title="ไม่มีรายการคืนเงิน" subtitle="ยังไม่มี Refund ในช่วงเวลาที่เลือก" />
+          ) : REFUNDS.map((ref, i) => (
             <div
               key={ref.id}
               className={`grid grid-cols-[100px_1fr_100px_1fr_100px_120px] gap-x-4 items-center px-5 py-3.5 border-b border-[var(--table-border)] ${
@@ -680,7 +686,9 @@ export default function FinancePage() {
             <span>Error</span>
             <span>Retry</span>
           </div>
-          {FAILED_PAYMENTS.map((fp, i) => (
+          {FAILED_PAYMENTS.length === 0 ? (
+            <EmptyState icon={<CreditCard size={32} />} title="ไม่มีรายการล้มเหลว" subtitle="ไม่มี Payment ที่ล้มเหลวในช่วงเวลาที่เลือก" />
+          ) : FAILED_PAYMENTS.map((fp, i) => (
             <div
               key={fp.id}
               className={`grid grid-cols-[100px_1fr_100px_100px_1fr_80px] gap-x-4 items-center px-5 py-3.5 border-b border-[var(--table-border)] ${
@@ -696,7 +704,7 @@ export default function FinancePage() {
               <span className="text-xs text-[var(--error)]">{fp.error}</span>
               <button
                 type="button"
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--accent)] hover:bg-[rgba(0,226,181,0.08)] transition-colors cursor-pointer"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--accent)] hover:bg-[rgba(var(--accent-rgb),0.08)] transition-colors cursor-pointer"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
               </button>
@@ -716,7 +724,9 @@ export default function FinancePage() {
             <span className="text-right">Net</span>
             <span>สถานะ</span>
           </div>
-          {TAX_SUMMARY.map((tax, i) => {
+          {TAX_SUMMARY.length === 0 ? (
+            <EmptyState icon={<FileSpreadsheet size={32} />} title="ไม่มีข้อมูลภาษี" subtitle="ยังไม่มีข้อมูลสรุปภาษีในช่วงเวลาที่เลือก" />
+          ) : TAX_SUMMARY.map((tax, i) => {
             const status = TAX_STATUS[tax.status] ?? TAX_STATUS.pending;
             return (
               <div

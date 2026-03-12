@@ -191,6 +191,7 @@ function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: 
 
 function QuickTestPanel() {
   const [phone, setPhone] = useState("");
+  const [phoneError, setPhoneError] = useState<string | null>(null);
   const [otpCode, setOtpCode] = useState("");
   const [refCode, setRefCode] = useState("");
   const [verifyInput, setVerifyInput] = useState("");
@@ -219,6 +220,24 @@ function QuickTestPanel() {
   }, []);
 
   const hasNoCredits = smsRemaining !== null && smsRemaining <= 0;
+  const isPhoneValid = /^0[689]\d{8}$/.test(phone);
+
+  function handlePhoneChange(value: string) {
+    // Auto-convert +66 prefix to 0
+    let cleaned = value.replace(/\D/g, "");
+    if (value.startsWith("+66")) {
+      cleaned = "0" + value.slice(3).replace(/\D/g, "");
+    } else if (cleaned.startsWith("66") && cleaned.length > 2) {
+      cleaned = "0" + cleaned.slice(2);
+    }
+    if (cleaned.length > 10) cleaned = cleaned.slice(0, 10);
+    setPhone(cleaned);
+    if (cleaned.length === 10 && !/^0[689]\d{8}$/.test(cleaned)) {
+      setPhoneError("เบอร์ไม่ถูกต้อง (ต้องขึ้นต้น 06/08/09)");
+    } else {
+      setPhoneError(null);
+    }
+  }
 
   useEffect(() => {
     if (countdown <= 0) return;
@@ -243,7 +262,7 @@ function QuickTestPanel() {
         // Check for structured insufficient credits error (returned, not thrown)
         if (data && typeof data === "object" && "error" in data && (data as { error: string }).error === "INSUFFICIENT_CREDITS") {
           const err = data as { creditsRemaining: number; creditsRequired: number };
-          const detail = `เครดิตไม่พอ — เหลือ ${err.creditsRemaining} ต้องการ ${err.creditsRequired}`;
+          const detail = `SMS ไม่พอ — เหลือ ${err.creditsRemaining} ต้องการ ${err.creditsRequired}`;
           setFeedback({ ok: false, msg: detail });
           setSmsRemaining(err.creditsRemaining);
           return;
@@ -288,6 +307,7 @@ function QuickTestPanel() {
   const handleReset = () => {
     setStep("idle");
     setPhone("");
+    setPhoneError(null);
     setOtpCode("");
     setRefCode("");
     setVerifyInput("");
@@ -307,29 +327,34 @@ function QuickTestPanel() {
         {hasNoCredits && (
           <div className="flex items-center gap-2 rounded-lg border border-[rgba(var(--warning-rgb),0.3)] bg-[rgba(var(--warning-rgb),0.1)] px-3 py-2 mb-3">
             <AlertTriangle className="w-4 h-4 text-[var(--warning)] shrink-0" />
-            <span className="text-xs text-[var(--warning)]">เครดิต SMS หมด — ไม่สามารถส่ง OTP ได้</span>
+            <span className="text-xs text-[var(--warning)]">SMS หมด — ไม่สามารถส่ง OTP ได้</span>
             <Link href="/dashboard/credits" className="ml-auto text-xs font-semibold text-[var(--accent)] hover:underline whitespace-nowrap">
-              เติมเครดิต &rarr;
+              ซื้อแพ็กเกจ &rarr;
             </Link>
           </div>
         )}
 
         {/* Phone input + send */}
         <div className="space-y-3">
-          <Input
-            type="tel"
-            inputMode="numeric"
-            maxLength={10}
-            onKeyDown={blockNonNumeric}
-            placeholder="0891234567"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            disabled={step === "sent"}
-            className="h-9 bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] rounded-xl"
-          />
+          <div>
+            <Input
+              type="tel"
+              inputMode="numeric"
+              maxLength={13}
+              onKeyDown={blockNonNumeric}
+              placeholder="0891234567"
+              value={phone}
+              onChange={(e) => handlePhoneChange(e.target.value)}
+              disabled={step === "sent"}
+              className={`h-9 bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] rounded-xl ${phoneError ? "border-[var(--error)]" : ""}`}
+            />
+            {phoneError && (
+              <p className="text-[11px] mt-1" style={{ color: "var(--error)" }}>{phoneError}</p>
+            )}
+          </div>
           <Button
             onClick={handleSend}
-            disabled={loading || isPending || !phone || countdown > 0 || hasNoCredits}
+            disabled={loading || isPending || !isPhoneValid || countdown > 0 || hasNoCredits}
             className="h-9 w-full bg-[var(--accent)] hover:opacity-90 text-[var(--bg-base)] rounded-xl font-semibold text-sm"
           >
             {loading ? (
@@ -466,7 +491,7 @@ function OverviewTab({
       delta: `↑ ${stats.sentDelta.replace("+", "")}`,
       icon: Send,
       color: "var(--accent)",
-      bg: "rgba(0,226,181,0.08)",
+      bg: "rgba(var(--accent-rgb),0.08)",
     },
     {
       label: "ยืนยันแล้ว",
@@ -600,7 +625,7 @@ function OverviewTab({
               {recentOtps.map((row) => (
                 <TableRow
                   key={row.id}
-                  className={`border-b border-[var(--border-default)] hover:bg-black ${row.id % 2 === 0 ? "bg-[var(--table-alt-row)]" : ""}`}
+                  className={`border-b border-[var(--border-default)] hover:bg-[var(--bg-elevated)] ${row.id % 2 === 0 ? "bg-[var(--table-alt-row)]" : ""}`}
                 >
                   <TableCell
                     className="text-xs text-[var(--text-primary)]"
@@ -736,7 +761,7 @@ function HistoryTab({ historyData }: { historyData: OtpHistoryItem[] }) {
             {paged.map((row) => (
               <TableRow
                 key={row.id}
-                className={`border-b border-[var(--border-default)] hover:bg-black ${row.id % 2 === 0 ? "bg-[var(--table-alt-row)]" : ""}`}
+                className={`border-b border-[var(--border-default)] hover:bg-[var(--bg-elevated)] ${row.id % 2 === 0 ? "bg-[var(--table-alt-row)]" : ""}`}
               >
                 <TableCell
                   className="text-xs text-[var(--text-primary)]"

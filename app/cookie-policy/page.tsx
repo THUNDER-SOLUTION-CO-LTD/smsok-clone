@@ -259,7 +259,7 @@ const sections = [
           items={[
             "เจ้าหน้าที่คุ้มครองข้อมูล (DPO): dpo@smsok.com",
             "ฝ่ายสนับสนุน: support@smsok.com",
-            "โทรศัพท์: 02-XXX-XXXX (จ.-ศ. 9:00-18:00)",
+            "LINE Official: @smsok (จ.-ศ. 9:00-18:00)",
           ]}
         />
       </>
@@ -271,7 +271,7 @@ const sections = [
           items={[
             "Data Protection Officer (DPO): dpo@smsok.com",
             "Support: support@smsok.com",
-            "Phone: 02-XXX-XXXX (Mon-Fri 9:00-18:00)",
+            "LINE Official: @smsok (Mon-Fri 9:00-18:00)",
           ]}
         />
       </>

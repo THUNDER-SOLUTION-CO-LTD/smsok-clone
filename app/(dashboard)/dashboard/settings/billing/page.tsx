@@ -103,30 +103,29 @@ export default function TaxProfilePage() {
       if (res.ok) {
         const json = await res.json();
         const tp = json?.data?.taxProfile ?? json?.taxProfile ?? json;
-        if (tp) {
-          if (tp.type === "COMPANY" || tp.companyName) {
+        if (tp && tp.companyName) {
+          // Discriminate individual vs company by branch marker
+          const isIndividual = tp.branch === "INDIVIDUAL";
+
+          if (isIndividual) {
+            setCustomerType("INDIVIDUAL");
+            setFullName(tp.companyName || "");
+            setIdCard(tp.taxId ? formatTaxId(tp.taxId) : "");
+          } else {
             setCustomerType("COMPANY");
-            setCompanyName(tp.company_name || tp.companyName || "");
-            setTaxId(tp.tax_id || tp.taxId ? formatTaxId(tp.tax_id || tp.taxId) : "");
+            setCompanyName(tp.companyName || "");
+            setTaxId(tp.taxId ? formatTaxId(tp.taxId) : "");
             const isHq =
               !tp.branch ||
               tp.branch === "สำนักงานใหญ่" ||
               tp.branch === "00000";
             setBranchType(isHq ? "HEAD" : "BRANCH");
-            if (!isHq) setBranchNumber(tp.branch_number || tp.branchCode || "");
+            if (!isHq) setBranchNumber(tp.branchCode || "");
             setVatRegistered(tp.vat_registered ?? false);
-            setContactPerson(tp.contact_person || "");
-            setContactPhone(tp.contact_phone || "");
-            setContactEmail(tp.contact_email || "");
+            setContactPerson(tp.contactPerson || "");
+            setContactPhone(tp.phone || "");
+            setContactEmail(tp.email || "");
             setWhtEnabled(tp.wht_enabled ?? false);
-          } else {
-            setCustomerType("INDIVIDUAL");
-            setFullName(tp.full_name || tp.fullName || "");
-            setIdCard(
-              tp.id_card_number || tp.idCardNumber
-                ? formatTaxId(tp.id_card_number || tp.idCardNumber)
-                : ""
-            );
           }
           setAddress(tp.address || "");
           setPhone(tp.phone || "");
@@ -175,20 +174,26 @@ export default function TaxProfilePage() {
 
     setSaving(true);
     try {
-      // Backend expects: { companyName, taxId, branch, branchCode, address, contactPerson?, phone?, email? }
+      // Backend schema: { companyName, taxId, branch, branchCode, address, contactPerson?, phone?, email? }
+      // Individual uses branch="INDIVIDUAL" as discriminator for round-trip
+      const isIndividual = customerType === "INDIVIDUAL";
       const payload: Record<string, unknown> = {
-        companyName: customerType === "COMPANY" ? companyName.trim() : fullName.trim(),
-        taxId: customerType === "COMPANY" ? unformatTaxId(taxId) : unformatTaxId(idCard),
-        branch: customerType === "COMPANY" && branchType === "BRANCH"
-          ? `สาขา ${branchNumber.padStart(5, "0")}`
-          : "สำนักงานใหญ่",
-        branchCode: customerType === "COMPANY" && branchType === "BRANCH"
-          ? branchNumber.padStart(5, "0")
-          : "00000",
+        companyName: isIndividual ? fullName.trim() : companyName.trim(),
+        taxId: isIndividual ? unformatTaxId(idCard) : unformatTaxId(taxId),
+        branch: isIndividual
+          ? "INDIVIDUAL"
+          : branchType === "BRANCH"
+            ? `สาขา ${branchNumber.padStart(5, "0")}`
+            : "สำนักงานใหญ่",
+        branchCode: isIndividual
+          ? "00000"
+          : branchType === "BRANCH"
+            ? branchNumber.padStart(5, "0")
+            : "00000",
         address: address.trim(),
-        contactPerson: customerType === "COMPANY" ? contactPerson.trim() : undefined,
-        phone: customerType === "COMPANY" ? contactPhone.trim() : phone.trim(),
-        email: customerType === "COMPANY" ? contactEmail.trim() : email.trim(),
+        contactPerson: isIndividual ? undefined : contactPerson.trim() || undefined,
+        phone: (isIndividual ? phone.trim() : contactPhone.trim()) || undefined,
+        email: (isIndividual ? email.trim() : contactEmail.trim()) || undefined,
       };
 
       const res = await fetch("/api/v1/settings/tax-profile", {

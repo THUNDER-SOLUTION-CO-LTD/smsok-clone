@@ -1,11 +1,11 @@
 #!/bin/bash
 # SMSOK Clone — Production Deploy Script
 # Usage: ./infra/deploy.sh [--first-run]
-# Server: 185.241.210.52
+# Server: 103.114.203.44
 # After first deploy, Watchtower handles auto-deploy from GHCR
 set -euo pipefail
 
-SERVER="185.241.210.52"
+SERVER="103.114.203.44"
 SERVER_USER="root"
 APP_DIR="/opt/smsok-clone"
 DOMAIN="smsok.9phum.me"
@@ -35,6 +35,12 @@ if [ "${1:-}" = "--first-run" ]; then
   scp .env.production.template "${SERVER_USER}@${SERVER}:${APP_DIR}/.env.production.template"
   scp infra/nginx.conf "${SERVER_USER}@${SERVER}:${APP_DIR}/infra/"
   scp infra/backup.sh "${SERVER_USER}@${SERVER}:${APP_DIR}/infra/"
+  scp infra/monitor.sh "${SERVER_USER}@${SERVER}:${APP_DIR}/infra/"
+  scp infra/uptime-check.sh "${SERVER_USER}@${SERVER}:${APP_DIR}/infra/"
+  scp infra/r2-setup.sh "${SERVER_USER}@${SERVER}:${APP_DIR}/infra/"
+  scp infra/ssl-setup.sh "${SERVER_USER}@${SERVER}:${APP_DIR}/infra/"
+  scp infra/logrotate.conf "${SERVER_USER}@${SERVER}:${APP_DIR}/infra/"
+  scp infra/error-alert.sh "${SERVER_USER}@${SERVER}:${APP_DIR}/infra/"
 
   echo ""
   echo "═══════════════════════════════════════════════"

@@ -9,7 +9,7 @@ export default async function ApiKeysPage() {
 
   let apiKeys: Awaited<ReturnType<typeof getApiKeys>> = [];
   try {
-    apiKeys = await getApiKeys(user.id);
+    apiKeys = await getApiKeys();
   } catch {
     apiKeys = [];
   }

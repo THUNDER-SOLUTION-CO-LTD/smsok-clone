@@ -21,12 +21,30 @@ import { assertSendingHours } from "../sending-hours";
 import { checkAndAutoTopup } from "./auto-topup";
 import { InsufficientCreditsError, toInsufficientCreditsResult } from "../quota-errors";
 import type { InsufficientCreditsResult } from "../quota-errors";
+import { resolveActionUserId } from "../action-user";
+
+// Security: resolve userId from session (client calls) or trust explicit userId (API route calls)
+async function requireSessionUserId(): Promise<string> {
+  return resolveActionUserId();
+}
 
 // ==========================================
 // Send single SMS
+// Dual-signature: client calls (data), API routes call (userId, data, channel, orgId)
 // ==========================================
 
-export async function sendSms(userId: string, data: unknown, channel: "WEB" | "API" = "WEB", orgId?: string) {
+export async function sendSms(dataOrUserId: unknown, maybeData?: unknown, channel: "WEB" | "API" = "WEB", orgId?: string) {
+  let userId: string;
+  let data: unknown;
+  if (typeof dataOrUserId === "string" && maybeData !== undefined) {
+    // API route call: explicit userId from authenticateRequest()
+    userId = await resolveActionUserId(dataOrUserId);
+    data = maybeData;
+  } else {
+    // Client call: get userId from session — NEVER trust client
+    userId = await requireSessionUserId();
+    data = dataOrUserId;
+  }
   const parsed = sendSmsSchema.safeParse(data);
   if (!parsed.success) {
     throw new Error(parsed.error.issues[0]?.message || "ข้อมูลไม่ถูกต้อง");
@@ -154,9 +172,19 @@ export async function sendSms(userId: string, data: unknown, channel: "WEB" | "A
 
 // ==========================================
 // Send batch SMS (creates multiple messages)
+// Dual-signature: client calls (data), API routes call (userId, data, channel, orgId)
 // ==========================================
 
-export async function sendBatchSms(userId: string, data: unknown, channel: "WEB" | "API" = "WEB", orgId?: string) {
+export async function sendBatchSms(dataOrUserId: unknown, maybeData?: unknown, channel: "WEB" | "API" = "WEB", orgId?: string) {
+  let userId: string;
+  let data: unknown;
+  if (typeof dataOrUserId === "string" && maybeData !== undefined) {
+    userId = await resolveActionUserId(dataOrUserId);
+    data = maybeData;
+  } else {
+    userId = await requireSessionUserId();
+    data = dataOrUserId;
+  }
   const parsed = sendBatchSmsSchema.safeParse(data);
   if (!parsed.success) {
     throw new Error(parsed.error.issues[0]?.message || "ข้อมูลไม่ถูกต้อง");
@@ -278,9 +306,19 @@ export async function sendBatchSms(userId: string, data: unknown, channel: "WEB"
 
 // ==========================================
 // Get message status
+// Dual-signature: (messageId) from client, (userId, messageId) from API
 // ==========================================
 
-export async function getMessageStatus(userId: string, messageId: string) {
+export async function getMessageStatus(userIdOrMessageId: string, maybeMessageId?: string) {
+  let userId: string;
+  let messageId: string;
+  if (maybeMessageId !== undefined) {
+    userId = await resolveActionUserId(userIdOrMessageId);
+    messageId = maybeMessageId;
+  } else {
+    userId = await requireSessionUserId();
+    messageId = userIdOrMessageId;
+  }
   const message = await db.message.findFirst({
     where: { id: messageId, userId },
     select: {
@@ -302,9 +340,19 @@ export async function getMessageStatus(userId: string, messageId: string) {
 
 // ==========================================
 // Get messages report
+// Dual-signature: (filters) from client, (userId, filters) from API
 // ==========================================
 
-export async function getMessages(userId: string, filters: unknown) {
+export async function getMessages(userIdOrFilters: string | unknown, maybeFilters?: unknown) {
+  let userId: string;
+  let filters: unknown;
+  if (typeof userIdOrFilters === "string" && maybeFilters !== undefined) {
+    userId = await resolveActionUserId(userIdOrFilters);
+    filters = maybeFilters;
+  } else {
+    userId = await requireSessionUserId();
+    filters = userIdOrFilters;
+  }
   const parsed = reportFilterSchema.safeParse(filters);
   if (!parsed.success) {
     throw new Error(parsed.error.issues[0]?.message || "ข้อมูลไม่ถูกต้อง");
@@ -374,32 +422,34 @@ export async function getMessages(userId: string, filters: unknown) {
 
 // ==========================================
 // Dashboard stats
+// Dual-signature: () from client, (userId) from API
 // ==========================================
 
-export async function getDashboardStats(userId: string) {
+export async function getDashboardStats(userId?: string) {
+  const resolvedUserId = await resolveActionUserId(userId);
   const now = new Date();
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
   const [user, todayStats, monthStats, recentMessages] = await db.$transaction([
     db.user.findUniqueOrThrow({
-      where: { id: userId },
+      where: { id: resolvedUserId },
       select: { name: true, email: true },
     }),
     db.message.groupBy({
       by: ["status"],
-      where: { userId, createdAt: { gte: startOfDay } },
+      where: { userId: resolvedUserId, createdAt: { gte: startOfDay } },
       orderBy: { status: "asc" },
       _count: { _all: true },
     }),
     db.message.groupBy({
       by: ["status"],
-      where: { userId, createdAt: { gte: startOfMonth } },
+      where: { userId: resolvedUserId, createdAt: { gte: startOfMonth } },
       orderBy: { status: "asc" },
       _count: { _all: true },
     }),
     db.message.findMany({
-      where: { userId },
+      where: { userId: resolvedUserId },
       orderBy: { createdAt: "desc" },
       take: 10,
       select: {
@@ -435,7 +485,7 @@ export async function getDashboardStats(userId: string) {
 
     const dayStats = await db.message.groupBy({
       by: ["status"],
-      where: { userId, createdAt: { gte: dayStart, lt: dayEnd } },
+      where: { userId: resolvedUserId, createdAt: { gte: dayStart, lt: dayEnd } },
       _count: { _all: true },
     });
 
@@ -455,7 +505,7 @@ export async function getDashboardStats(userId: string) {
   const yesterdayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const yesterdayStats = await db.message.groupBy({
     by: ["status"],
-    where: { userId, createdAt: { gte: yesterdayStart, lt: yesterdayEnd } },
+    where: { userId: resolvedUserId, createdAt: { gte: yesterdayStart, lt: yesterdayEnd } },
     _count: { _all: true },
   });
   const yesterday = sumCounts(yesterdayStats as unknown as StatRow[]);

@@ -253,14 +253,17 @@ test.describe("Order Billing — Security", () => {
 
   // TC-352: XSS in tax name field
   test("TC-352: XSS payload escaped in checkout form", async ({ authedPage: page }) => {
-    await page.goto("/dashboard/billing/checkout", { waitUntil: "networkidle" });
-    const inputs = page.locator("input");
+    // Checkout requires tier param, otherwise redirects
+    await page.goto("/dashboard/billing/checkout?tier=A", { waitUntil: "networkidle" });
+    const inputs = page.locator("input:visible");
     const count = await inputs.count();
     const xssPayload = '<script>alert("xss")</script>';
     for (let i = 0; i < Math.min(count, 3); i++) {
       const input = inputs.nth(i);
       if (await input.isVisible().catch(() => false)) {
-        await input.fill(xssPayload);
+        await input.fill(xssPayload).catch(() => {
+          // Some inputs may be readonly or number type
+        });
       }
     }
     // No script should be injected

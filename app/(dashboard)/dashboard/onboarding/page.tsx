@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +22,12 @@ import {
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type ContactImportMode = "csv" | "manual" | "skip";
-type SmsPackage = "500" | "1000" | "2500" | null;
+interface ApiPackage {
+  id: string;
+  sms: number;
+  price: number;
+  label?: string;
+}
 
 interface WizardState {
   senderName: string;
@@ -31,7 +36,9 @@ interface WizardState {
   testPhone: string;
   testMessage: string;
   testSent: boolean;
-  selectedPackage: SmsPackage;
+  testSending: boolean;
+  testError: string | null;
+  selectedPackage: string | null;
   campaignName: string;
 }
 
@@ -388,8 +395,29 @@ function Step3({
   state: WizardState;
   onChange: (s: Partial<WizardState>) => void;
 }) {
-  function handleSend() {
-    onChange({ testSent: true });
+  async function handleSend() {
+    onChange({ testSending: true, testError: null });
+    try {
+      const res = await fetch("/api/v1/sms/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: state.testPhone,
+          message: state.testMessage,
+          sender: state.senderName || undefined,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || `ส่งไม่สำเร็จ (${res.status})`);
+      }
+      onChange({ testSent: true, testSending: false });
+    } catch (err) {
+      onChange({
+        testSending: false,
+        testError: err instanceof Error ? err.message : "เกิดข้อผิดพลาด ลองใหม่อีกครั้ง",
+      });
+    }
   }
 
   return (
@@ -456,6 +484,20 @@ function Step3({
         </div>
       </div>
 
+      {state.testError && (
+        <div
+          className="rounded-xl p-4 flex items-center gap-3"
+          style={{
+            backgroundColor: "color-mix(in srgb, var(--error, #ef4444) 10%, transparent)",
+            border: "1px solid var(--error, #ef4444)",
+          }}
+        >
+          <p className="text-sm" style={{ color: "var(--error, #ef4444)" }}>
+            {state.testError}
+          </p>
+        </div>
+      )}
+
       {state.testSent ? (
         <div
           className="rounded-xl p-4 flex items-center gap-3"
@@ -477,7 +519,7 @@ function Step3({
       ) : (
         <Button
           className="w-full font-semibold"
-          disabled={state.testPhone.length < 9}
+          disabled={state.testPhone.length < 9 || state.testSending}
           onClick={handleSend}
           style={{
             backgroundColor: "var(--accent)",
@@ -485,7 +527,7 @@ function Step3({
           }}
         >
           <MessageSquare className="w-4 h-4 mr-2" />
-          ส่ง SMS ทดสอบ
+          {state.testSending ? "กำลังส่ง..." : "ส่ง SMS ทดสอบ"}
         </Button>
       )}
     </div>
@@ -493,12 +535,6 @@ function Step3({
 }
 
 // ─── Step 4 — ซื้อแพ็กเกจ ──────────────────────────────────────────────────────
-
-const PACKAGES = [
-  { id: "500" as const, sms: 500, price: 350, label: "" },
-  { id: "1000" as const, sms: 1000, price: 600, label: "ยอดนิยม" },
-  { id: "2500" as const, sms: 2500, price: 1200, label: "" },
-];
 
 function Step4({
   state,
@@ -509,6 +545,34 @@ function Step4({
   onChange: (s: Partial<WizardState>) => void;
   onSkip: () => void;
 }) {
+  const [packages, setPackages] = useState<ApiPackage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchPackages() {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch("/api/v1/packages");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (!cancelled) {
+          setPackages(Array.isArray(data) ? data : data.packages ?? []);
+        }
+      } catch {
+        if (!cancelled) {
+          setError("ไม่สามารถโหลดแพ็กเกจได้");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    fetchPackages();
+    return () => { cancelled = true; };
+  }, []);
+
   return (
     <div className="space-y-6">
       <div>
@@ -523,75 +587,96 @@ function Step4({
         </p>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
-        {PACKAGES.map((pkg) => {
-          const selected = state.selectedPackage === pkg.id;
-          const featured = pkg.label === "ยอดนิยม";
+      {loading ? (
+        <div className="text-center py-8">
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+            กำลังโหลดแพ็กเกจ...
+          </p>
+        </div>
+      ) : error || packages.length === 0 ? (
+        <div
+          className="rounded-xl p-6 text-center"
+          style={{
+            backgroundColor: "var(--bg-surface)",
+            border: "1px solid var(--border-default)",
+          }}
+        >
+          <Package className="w-8 h-8 mx-auto mb-3" style={{ color: "var(--text-muted)" }} />
+          <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+            ยังไม่มีแพ็กเกจ — ไปหน้าซื้อแพ็กเกจได้ภายหลัง
+          </p>
+        </div>
+      ) : (
+        <div className={`grid gap-3 ${packages.length >= 3 ? "grid-cols-3" : packages.length === 2 ? "grid-cols-2" : "grid-cols-1 max-w-xs mx-auto"}`}>
+          {packages.map((pkg) => {
+            const selected = state.selectedPackage === pkg.id;
+            const featured = pkg.label === "ยอดนิยม";
 
-          return (
-            <button
-              key={pkg.id}
-              type="button"
-              onClick={() => onChange({ selectedPackage: pkg.id })}
-              className="relative flex flex-col items-center gap-2 rounded-xl p-4 text-center transition-all cursor-pointer"
-              style={{
-                border: selected
-                  ? "2px solid var(--accent)"
-                  : featured
-                  ? "2px solid var(--accent)"
-                  : "2px solid var(--border-default)",
-                backgroundColor: selected
-                  ? "color-mix(in srgb, var(--accent) 10%, transparent)"
-                  : featured
-                  ? "color-mix(in srgb, var(--accent) 5%, transparent)"
-                  : "var(--bg-surface)",
-              }}
-            >
-              {featured && (
-                <span
-                  className="absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-bold px-2 py-0.5 rounded-full"
-                  style={{
-                    backgroundColor: "var(--accent)",
-                    color: "var(--text-on-accent)",
-                  }}
-                >
-                  ยอดนิยม
-                </span>
-              )}
-
-              <Package
-                className="w-6 h-6"
-                style={{ color: selected ? "var(--accent)" : "var(--text-muted)" }}
-              />
-              <div>
-                <p
-                  className="text-lg font-bold"
-                  style={{ color: "var(--text-primary)" }}
-                >
-                  {pkg.sms.toLocaleString()}
-                </p>
-                <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                  SMS
-                </p>
-              </div>
-              <p
-                className="text-sm font-semibold"
-                style={{ color: "var(--accent)" }}
+            return (
+              <button
+                key={pkg.id}
+                type="button"
+                onClick={() => onChange({ selectedPackage: pkg.id })}
+                className="relative flex flex-col items-center gap-2 rounded-xl p-4 text-center transition-all cursor-pointer"
+                style={{
+                  border: selected
+                    ? "2px solid var(--accent)"
+                    : featured
+                    ? "2px solid var(--accent)"
+                    : "2px solid var(--border-default)",
+                  backgroundColor: selected
+                    ? "color-mix(in srgb, var(--accent) 10%, transparent)"
+                    : featured
+                    ? "color-mix(in srgb, var(--accent) 5%, transparent)"
+                    : "var(--bg-surface)",
+                }}
               >
-                ฿{pkg.price.toLocaleString()}
-              </p>
-              {selected && (
-                <div
-                  className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center"
-                  style={{ backgroundColor: "var(--accent)" }}
-                >
-                  <Check className="w-3 h-3" style={{ color: "var(--text-on-accent)" }} />
+                {featured && (
+                  <span
+                    className="absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-bold px-2 py-0.5 rounded-full"
+                    style={{
+                      backgroundColor: "var(--accent)",
+                      color: "var(--text-on-accent)",
+                    }}
+                  >
+                    ยอดนิยม
+                  </span>
+                )}
+
+                <Package
+                  className="w-6 h-6"
+                  style={{ color: selected ? "var(--accent)" : "var(--text-muted)" }}
+                />
+                <div>
+                  <p
+                    className="text-lg font-bold"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    {pkg.sms.toLocaleString()}
+                  </p>
+                  <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                    SMS
+                  </p>
                 </div>
-              )}
-            </button>
-          );
-        })}
-      </div>
+                <p
+                  className="text-sm font-semibold"
+                  style={{ color: "var(--accent)" }}
+                >
+                  ฿{pkg.price.toLocaleString()}
+                </p>
+                {selected && (
+                  <div
+                    className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center"
+                    style={{ backgroundColor: "var(--accent)" }}
+                  >
+                    <Check className="w-3 h-3" style={{ color: "var(--text-on-accent)" }} />
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       <div className="text-center">
         <button
@@ -600,7 +685,7 @@ function Step4({
           className="text-sm underline underline-offset-2 transition-opacity hover:opacity-70"
           style={{ color: "var(--text-muted)" }}
         >
-          ข้ามไปก่อน — ใช้ 50 SMS ฟรี
+          ข้ามไปก่อน
         </button>
       </div>
     </div>
@@ -732,18 +817,6 @@ function CompletionCard({ onGoToDashboard }: { onGoToDashboard: () => void }) {
         </p>
       </div>
 
-      <div
-        className="rounded-xl p-4 inline-block"
-        style={{
-          backgroundColor: "color-mix(in srgb, var(--accent) 10%, transparent)",
-          border: "1px solid var(--accent)",
-        }}
-      >
-        <p className="text-sm font-bold" style={{ color: "var(--accent)" }}>
-          +50 SMS ฟรี ถูกเพิ่มเข้าบัญชีแล้ว
-        </p>
-      </div>
-
       <Button
         size="lg"
         className="w-full font-semibold"
@@ -770,8 +843,10 @@ export default function OnboardingPage() {
     contactMode: null,
     manualPhones: "",
     testPhone: "",
-    testMessage: "ทดสอบจาก SMSOK 🎉",
+    testMessage: "ทดสอบจาก SMSOK",
     testSent: false,
+    testSending: false,
+    testError: null,
     selectedPackage: null,
     campaignName: "",
   });

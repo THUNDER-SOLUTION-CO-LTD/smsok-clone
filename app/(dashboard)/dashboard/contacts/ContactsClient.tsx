@@ -89,6 +89,7 @@ import {
   FolderPlus,
   UserPlus,
   Minus,
+  ShieldOff,
 } from "lucide-react";
 
 // ==========================================
@@ -1060,7 +1061,18 @@ export default function ContactsClient({
                         </a>
                       </TableCell>
                       <TableCell className="py-3.5 text-[var(--text-muted)] font-mono text-xs">
-                        {contact.phone}
+                        <div className="flex items-center gap-1.5">
+                          {contact.phone}
+                          {!contact.smsConsent && (
+                            <span
+                              title="Opt-out: ไม่ยินยอมรับ SMS"
+                              className="inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[rgba(var(--error-rgb),0.08)] text-[var(--error)]"
+                            >
+                              <ShieldOff className="w-2.5 h-2.5" />
+                              Opt-out
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="py-3.5 hidden lg:table-cell">
                         <div className="flex gap-1 flex-wrap">
@@ -1352,9 +1364,17 @@ export default function ContactsClient({
                           </button>
                         </div>
                       </div>
-                      <p className="text-xs text-[var(--text-muted)] font-mono mt-0.5">
-                        {contact.phone}
-                      </p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <p className="text-xs text-[var(--text-muted)] font-mono">
+                          {contact.phone}
+                        </p>
+                        {!contact.smsConsent && (
+                          <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[rgba(var(--error-rgb),0.08)] text-[var(--error)]">
+                            <ShieldOff className="w-2.5 h-2.5" />
+                            Opt-out
+                          </span>
+                        )}
+                      </div>
                       {contact.email && (
                         <p className="text-xs text-[var(--text-muted)] mt-0.5 truncate">
                           {contact.email}

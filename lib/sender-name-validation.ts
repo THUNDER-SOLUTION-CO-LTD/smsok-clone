@@ -2,7 +2,7 @@
  * Sender Name Validation — กสทช. (NBTC) naming rules
  */
 
-const NAME_REGEX = /^[A-Za-z0-9.\-_ ]{3,11}$/;
+const NAME_REGEX = /^[A-Za-z0-9._-]{3,11}$/;
 
 const BLOCKED_WORDS = [
   "OTP", "SMS", "NOTICE", "VERIFY", "ALERT", "INFO",

@@ -1,3 +1,4 @@
+import { useId } from "react"
 import { NavigationMenu as NavigationMenuPrimitive } from "@base-ui/react/navigation-menu"
 import { cva } from "class-variance-authority"
 
@@ -8,12 +9,15 @@ function NavigationMenu({
   align = "start",
   className,
   children,
+  id,
   ...props
 }: NavigationMenuPrimitive.Root.Props &
   Pick<NavigationMenuPrimitive.Positioner.Props, "align">) {
+  const autoId = useId()
   return (
     <NavigationMenuPrimitive.Root
       data-slot="navigation-menu"
+      id={id ?? autoId}
       className={cn(
         "group/navigation-menu relative flex max-w-max flex-1 items-center justify-center",
         className

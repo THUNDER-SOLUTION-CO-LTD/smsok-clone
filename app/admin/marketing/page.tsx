@@ -31,6 +31,7 @@ import PageLayout, {
   StatCard,
   StatsRow,
   TableWrapper,
+  EmptyState,
 } from "@/components/blocks/PageLayout";
 
 /* ─── Types ─── */
@@ -421,6 +422,9 @@ export default function MarketingDashboardPage() {
               ))}
             </tbody>
           </table>
+          {INACTIVE_USERS.length === 0 && (
+            <EmptyState icon={<UserPlus size={32} />} title="ไม่มีผู้ใช้ Inactive" subtitle="ยังไม่มีผู้ใช้ที่ไม่ได้ใช้งานเกิน 30 วัน" />
+          )}
         </SectionCard>
 
         {/* Power Users */}
@@ -459,6 +463,9 @@ export default function MarketingDashboardPage() {
               ))}
             </tbody>
           </table>
+          {POWER_USERS.length === 0 && (
+            <EmptyState icon={<Zap size={32} />} title="ไม่มี Power Users" subtitle="ยังไม่มีผู้ใช้ที่ส่ง SMS จำนวนมาก" />
+          )}
         </SectionCard>
 
         {/* Trial → Paid */}
@@ -495,6 +502,9 @@ export default function MarketingDashboardPage() {
               ))}
             </tbody>
           </table>
+          {CONVERSIONS.length === 0 && (
+            <EmptyState icon={<Target size={32} />} title="ไม่มี Conversion" subtitle="ยังไม่มีผู้ใช้ที่เปลี่ยนจาก Trial เป็น Paid" />
+          )}
         </SectionCard>
       </div>
 
@@ -571,6 +581,9 @@ export default function MarketingDashboardPage() {
               })}
             </tbody>
           </table>
+          {PROMO_CODES.length === 0 && (
+            <EmptyState icon={<Tag size={32} />} title="ไม่มี Promo Code" subtitle="สร้าง Promo Code ใหม่เพื่อเริ่มแคมเปญส่วนลด" />
+          )}
         </SectionCard>
       </div>
 

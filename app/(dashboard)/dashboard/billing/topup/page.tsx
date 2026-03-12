@@ -18,6 +18,7 @@ import {
   Building2,
   Clock,
 } from "lucide-react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
@@ -49,9 +50,9 @@ const FALLBACK_PACKAGES: SmsPackage[] = [
 ]
 
 const FALLBACK_BANK: BankAccount = {
-  bank: "ธนาคารกสิกรไทย (KBank)",
-  accountNumber: "123-4-56789-0",
-  accountName: "บริษัท เอสเอ็มเอสโอเค จำกัด",
+  bank: "ไทยพาณิชย์ (SCB)",
+  accountNumber: "407-824-0476",
+  accountName: "นายภูมิชนะ อุดแก้ว",
   accountType: "ออมทรัพย์",
   branch: "สำนักงานใหญ่",
 }
@@ -299,6 +300,7 @@ export default function TopupWizardPage() {
   function handleCopy(text: string) {
     navigator.clipboard.writeText(text.replace(/-/g, ""))
     setCopied(true)
+    toast.success("คัดลอกเลขบัญชีแล้ว")
     setTimeout(() => setCopied(false), 2000)
   }
 
@@ -402,10 +404,11 @@ export default function TopupWizardPage() {
       const result = await purchaseRes.json()
       setTxnId(result.transactionId || `TXN-${Date.now()}`)
       setSubmitted(true)
+      toast.success("ส่งหลักฐานการโอนสำเร็จ!")
     } catch (err) {
-      setErrorMessage(
-        err instanceof Error ? err.message : "เกิดข้อผิดพลาด กรุณาลองใหม่"
-      )
+      const msg = err instanceof Error ? err.message : "เกิดข้อผิดพลาด กรุณาลองใหม่"
+      setErrorMessage(msg)
+      toast.error(msg)
     } finally {
       setSubmitting(false)
     }

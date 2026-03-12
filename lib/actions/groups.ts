@@ -5,6 +5,7 @@ import { prisma as db } from "../db";
 import { z } from "zod";
 import { normalizePhone } from "../validations";
 import { checkRateLimit } from "../rate-limit";
+import { resolveActionUserId } from "../action-user";
 
 const createGroupSchema = z.object({
   name: z.string().min(1, "กรุณากรอกชื่อกลุ่ม").max(100),
@@ -18,6 +19,7 @@ const importContactSchema = z.object({
 const MAX_IMPORT_BATCH = 200;
 
 export async function getGroups(userId: string) {
+  userId = await resolveActionUserId(userId);
   return db.contactGroup.findMany({
     where: { userId },
     include: {
@@ -28,6 +30,7 @@ export async function getGroups(userId: string) {
 }
 
 export async function createGroup(userId: string, data: unknown) {
+  userId = await resolveActionUserId(userId);
   const parsed = createGroupSchema.safeParse(data);
   if (!parsed.success) {
     throw new Error(parsed.error.issues[0]?.message || "ข้อมูลไม่ถูกต้อง");
@@ -40,6 +43,7 @@ export async function createGroup(userId: string, data: unknown) {
 }
 
 export async function updateGroup(userId: string, groupId: string, data: unknown) {
+  userId = await resolveActionUserId(userId);
   const parsed = createGroupSchema.safeParse(data);
   if (!parsed.success) {
     throw new Error(parsed.error.issues[0]?.message || "ข้อมูลไม่ถูกต้อง");
@@ -56,6 +60,7 @@ export async function updateGroup(userId: string, groupId: string, data: unknown
 }
 
 export async function deleteGroup(userId: string, groupId: string) {
+  userId = await resolveActionUserId(userId);
   const existing = await db.contactGroup.findFirst({ where: { id: groupId, userId } });
   if (!existing) throw new Error("ไม่พบกลุ่ม");
   await db.contactGroup.delete({ where: { id: groupId } });
@@ -63,6 +68,7 @@ export async function deleteGroup(userId: string, groupId: string) {
 }
 
 export async function getGroupContacts(userId: string, groupId: string) {
+  userId = await resolveActionUserId(userId);
   const group = await db.contactGroup.findFirst({ where: { id: groupId, userId } });
   if (!group) throw new Error("ไม่พบกลุ่ม");
   return db.contactGroupMember.findMany({
@@ -73,6 +79,7 @@ export async function getGroupContacts(userId: string, groupId: string) {
 }
 
 export async function addContactToGroup(userId: string, groupId: string, contactId: string) {
+  userId = await resolveActionUserId(userId);
   const [group, contact] = await Promise.all([
     db.contactGroup.findFirst({ where: { id: groupId, userId } }),
     db.contact.findFirst({ where: { id: contactId, userId } }),
@@ -96,6 +103,7 @@ export async function addContactToGroup(userId: string, groupId: string, contact
 }
 
 export async function removeContactFromGroup(userId: string, groupId: string, contactId: string) {
+  userId = await resolveActionUserId(userId);
   const group = await db.contactGroup.findFirst({ where: { id: groupId, userId } });
   if (!group) throw new Error("ไม่พบกลุ่ม");
   await db.contactGroupMember.delete({
@@ -105,6 +113,7 @@ export async function removeContactFromGroup(userId: string, groupId: string, co
 }
 
 export async function bulkRemoveFromGroup(userId: string, groupId: string, contactIds: string[]) {
+  userId = await resolveActionUserId(userId);
   const group = await db.contactGroup.findFirst({ where: { id: groupId, userId } });
   if (!group) throw new Error("ไม่พบกลุ่ม");
   if (contactIds.length === 0) throw new Error("กรุณาเลือกรายชื่อ");
@@ -126,6 +135,7 @@ export async function importContactsToGroup(
   groupId: string,
   csvData: { name: string; phone: string }[]
 ) {
+  userId = await resolveActionUserId(userId);
   // Rate limit
   const limit = await checkRateLimit(userId, "import");
   if (!limit.allowed) throw new Error("นำเข้าบ่อยเกินไป กรุณารอสักครู่");
@@ -236,6 +246,7 @@ export async function importContactsToGroup(
 }
 
 export async function getContactsNotInGroup(userId: string, groupId: string, search?: string) {
+  userId = await resolveActionUserId(userId);
   const group = await db.contactGroup.findFirst({ where: { id: groupId, userId } });
   if (!group) throw new Error("ไม่พบกลุ่ม");
 

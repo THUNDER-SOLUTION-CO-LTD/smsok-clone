@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { ACCESS_COOKIE_NAME, REFRESH_COOKIE_NAME, verifySessionJwt } from "@/lib/session-jwt";
 
 const ALLOWED_ORIGINS = [
   process.env.NEXT_PUBLIC_APP_URL,
@@ -61,21 +62,6 @@ function shouldVerifySession(pathname: string, hasApiKeyAuth: boolean) {
 
 function isPageNavigation(pathname: string) {
   return !pathname.startsWith("/api/");
-}
-
-function appendSetCookieHeaders(from: Headers, to: NextResponse) {
-  const maybeGetSetCookie = (from as Headers & { getSetCookie?: () => string[] }).getSetCookie;
-  if (typeof maybeGetSetCookie === "function") {
-    for (const value of maybeGetSetCookie.call(from)) {
-      to.headers.append("set-cookie", value);
-    }
-    return;
-  }
-
-  const single = from.get("set-cookie");
-  if (single) {
-    to.headers.append("set-cookie", single);
-  }
 }
 
 function unauthorizedResponse(req: NextRequest, base: NextResponse, pathname: string) {
@@ -208,38 +194,27 @@ export async function middleware(req: NextRequest) {
   }
 
   const requiresSessionVerification = shouldVerifySession(pathname, hasApiKeyAuth);
-  const hasSessionCookies = Boolean(req.cookies.get("session") || req.cookies.get("refresh_token"));
+  const accessToken = req.cookies.get(ACCESS_COOKIE_NAME)?.value;
+  const refreshToken = req.cookies.get(REFRESH_COOKIE_NAME)?.value;
+  const hasSessionCookies = Boolean(accessToken || refreshToken);
 
   if (requiresSessionVerification && !PUBLIC_SESSION_PAGES.has(pathname)) {
     if (!hasSessionCookies) {
       return unauthorizedResponse(req, response, pathname);
     }
 
-    try {
-      const verifyResponse = await fetch(new URL("/api/auth/verify-session", req.url), {
-        method: "GET",
-        headers: {
-          cookie: req.headers.get("cookie") || "",
-          "user-agent": req.headers.get("user-agent") || "",
-          "x-forwarded-for": req.headers.get("x-forwarded-for") || "",
-          "x-real-ip": req.headers.get("x-real-ip") || "",
-          "x-request-id": requestId,
-        },
-        cache: "no-store",
-      });
+    const hasValidAccessToken = accessToken
+      ? await verifySessionJwt(accessToken, "access")
+      : null;
 
-      if (!verifyResponse.ok) {
+    if (!hasValidAccessToken) {
+      const hasValidRefreshToken = refreshToken
+        ? await verifySessionJwt(refreshToken, "refresh")
+        : null;
+
+      if (!hasValidRefreshToken) {
         return unauthorizedResponse(req, response, pathname);
       }
-
-      appendSetCookieHeaders(verifyResponse.headers, response);
-    } catch {
-      const headers = new Headers(response.headers);
-      headers.set("Content-Type", "application/json");
-      return new NextResponse(
-        JSON.stringify({ error: "Session verification unavailable" }),
-        { status: 503, headers },
-      );
     }
   }
 

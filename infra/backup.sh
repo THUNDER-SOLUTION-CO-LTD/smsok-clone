@@ -54,4 +54,22 @@ WEEKLY_DEL=$(find "$BACKUP_DIR/weekly" -name "*.dump" -mtime +84 -delete -print 
 MONTHLY_DEL=$(find "$BACKUP_DIR/monthly" -name "*.dump" -mtime +180 -delete -print | wc -l)
 log "Rotation: daily -$DAILY_DEL (>30d), weekly -$WEEKLY_DEL (>12w), monthly -$MONTHLY_DEL (>6m)"
 
+# ── 5. Upload to R2 (optional — if R2 env vars are set) ──
+if [ -n "${R2_ENDPOINT:-}" ] && [ -n "${R2_ACCESS_KEY_ID:-}" ] && command -v aws &> /dev/null; then
+  R2_BACKUP_BUCKET="${R2_BUCKET_DOCS:-smsok-docs}"
+  export AWS_ACCESS_KEY_ID="$R2_ACCESS_KEY_ID"
+  export AWS_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY"
+  export AWS_DEFAULT_REGION="auto"
+
+  log "Uploading to R2: s3://$R2_BACKUP_BUCKET/backups/daily/"
+  if aws s3 cp "$DAILY_FILE" "s3://$R2_BACKUP_BUCKET/backups/daily/$(basename "$DAILY_FILE")" \
+    --endpoint-url "$R2_ENDPOINT" 2>/dev/null; then
+    log "R2 upload: OK"
+  else
+    log "R2 upload: FAILED (local backup is fine)"
+  fi
+else
+  log "R2 upload: skipped (no R2 env vars or aws cli)"
+fi
+
 log "Done"

@@ -4,10 +4,14 @@ import { ApiError, apiError, apiResponse } from "@/lib/api-auth";
 import { getSession } from "@/lib/auth";
 import { prisma as db } from "@/lib/db";
 import { applyRateLimit } from "@/lib/rate-limit";
+import { ensureOrderDocument, orderSummarySelect } from "@/lib/orders/api";
 import {
   calculateOrderAmounts,
   createOrderHistory,
+  getOrderExpirationDate,
   getUserPrimaryOrganizationId,
+  isWhtEligible,
+  parseLegacyOrderStatus,
   serializeOrder,
   upsertDefaultCompanyTaxProfile,
 } from "@/lib/orders/service";
@@ -23,6 +27,7 @@ const createSchema = z.object({
   tax_branch_number: z.string().regex(/^\d{5}$/).optional(),
   has_wht: z.boolean().default(false),
   save_tax_profile: z.boolean().default(false),
+  payment_method: z.enum(["bank_transfer", "promptpay"]).default("bank_transfer"),
 }).superRefine((value, ctx) => {
   if (value.tax_branch_type === "BRANCH" && !value.tax_branch_number) {
     ctx.addIssue({
@@ -57,39 +62,6 @@ const listSchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
 });
 
-const orderSelect = {
-  id: true,
-  orderNumber: true,
-  packageTierId: true,
-  packageName: true,
-  smsCount: true,
-  customerType: true,
-  taxName: true,
-  taxId: true,
-  taxAddress: true,
-  taxBranchType: true,
-  taxBranchNumber: true,
-  netAmount: true,
-  vatAmount: true,
-  totalAmount: true,
-  hasWht: true,
-  whtAmount: true,
-  payAmount: true,
-  status: true,
-  expiresAt: true,
-  quotationNumber: true,
-  quotationUrl: true,
-  invoiceNumber: true,
-  invoiceUrl: true,
-  slipUrl: true,
-  whtCertUrl: true,
-  easyslipVerified: true,
-  rejectReason: true,
-  adminNote: true,
-  paidAt: true,
-  createdAt: true,
-} as const;
-
 export async function GET(req: NextRequest) {
   try {
     const session = await getSession();
@@ -102,7 +74,10 @@ export async function GET(req: NextRequest) {
     const where: Record<string, unknown> = { userId: session.id };
 
     if (input.status) {
-      where.status = input.status;
+      const mappedStatuses = parseLegacyOrderStatus(input.status);
+      if (mappedStatuses?.length) {
+        where.status = { in: mappedStatuses };
+      }
     }
 
     if (input.search) {
@@ -116,17 +91,22 @@ export async function GET(req: NextRequest) {
     const [orders, total, totalOrders, pendingOrders, completedOrders, spent] = await Promise.all([
       db.order.findMany({
         where,
-        select: orderSelect,
+        select: orderSummarySelect,
         orderBy: { createdAt: "desc" },
         skip: (input.page - 1) * input.limit,
         take: input.limit,
       }),
       db.order.count({ where }),
       db.order.count({ where: { userId: session.id } }),
-      db.order.count({ where: { userId: session.id, status: { in: ["PENDING", "SLIP_UPLOADED", "PENDING_REVIEW"] } } }),
-      db.order.count({ where: { userId: session.id, status: "COMPLETED" } }),
+      db.order.count({
+        where: {
+          userId: session.id,
+          status: { in: ["DRAFT", "PENDING_PAYMENT", "VERIFYING"] },
+        },
+      }),
+      db.order.count({ where: { userId: session.id, status: "PAID" } }),
       db.order.aggregate({
-        where: { userId: session.id, status: "COMPLETED" },
+        where: { userId: session.id, status: "PAID" },
         _sum: { payAmount: true },
       }),
     ]);
@@ -171,10 +151,13 @@ export async function POST(req: NextRequest) {
       },
     });
     if (!tier || !tier.isActive) throw new ApiError(404, "ไม่พบแพ็กเกจ");
+    if (input.has_wht && !isWhtEligible(Number(tier.price), input.customer_type)) {
+      throw new ApiError(400, "หักภาษี ณ ที่จ่ายใช้ได้เมื่อเป็นนิติบุคคลและยอดก่อน VAT ตั้งแต่ 1,000 บาท");
+    }
 
     const organizationId = await getUserPrimaryOrganizationId(session.id);
     const totals = calculateOrderAmounts(Number(tier.price), input.has_wht);
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const expiresAt = getOrderExpirationDate(input.payment_method);
 
     const order = await db.$transaction(async (tx) => {
       const orderNumber = await generateOrderDocumentNumber("order", tx);
@@ -213,23 +196,25 @@ export async function POST(req: NextRequest) {
           hasWht: input.has_wht,
           whtAmount: totals.whtAmount,
           payAmount: totals.payAmount,
-          status: "PENDING",
+          status: "PENDING_PAYMENT",
           expiresAt,
           quotationNumber,
           quotationUrl: "",
           createdBy: session.id,
         },
-        select: orderSelect,
+        select: orderSummarySelect,
       });
 
       const quotationUrl = `/api/v1/orders/${created.id}/quotation`;
+      await ensureOrderDocument(tx, { id: created.id }, "INVOICE");
+
       const updated = await tx.order.update({
         where: { id: created.id },
         data: { quotationUrl },
-        select: orderSelect,
+        select: orderSummarySelect,
       });
 
-      await createOrderHistory(tx, updated.id, "PENDING", {
+      await createOrderHistory(tx, updated.id, "PENDING_PAYMENT", {
         changedBy: session.id,
         note: "Order created",
       });

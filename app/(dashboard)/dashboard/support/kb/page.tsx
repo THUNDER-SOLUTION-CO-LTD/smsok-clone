@@ -287,7 +287,6 @@ export default function KnowledgeBasePage() {
       })
       .catch((err) => {
         if (err.name !== "AbortError") {
-          console.error("Failed to fetch articles:", err);
           setArticles([]);
         }
       })
@@ -317,7 +316,6 @@ export default function KnowledgeBasePage() {
       })
       .catch((err) => {
         if (err.name !== "AbortError") {
-          console.error("Failed to fetch article:", err);
           setCurrentArticle(null);
         }
       })
@@ -383,8 +381,8 @@ export default function KnowledgeBasePage() {
         body: JSON.stringify({ helpful }),
       });
       setFeedbackSent(true);
-    } catch (err) {
-      console.error("Failed to send feedback:", err);
+    } catch {
+      // silently fail — feedback is non-critical
     } finally {
       setFeedbackLoading(false);
     }

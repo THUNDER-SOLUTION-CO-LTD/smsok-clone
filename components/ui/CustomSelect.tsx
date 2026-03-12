@@ -133,7 +133,7 @@ export default function CustomSelect({
         disabled={disabled}
         className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm
           bg-[var(--bg-surface)]/80 border transition-colors
-          ${open ? "border-[rgba(0,226,181,0.15)]" : "border-[var(--border-subtle)] hover:border-[rgba(0,226,181,0.15)]"}
+          ${open ? "border-[rgba(var(--accent-rgb),0.15)]" : "border-[var(--border-subtle)] hover:border-[rgba(var(--accent-rgb),0.15)]"}
           text-[var(--text-secondary)] disabled:opacity-50 disabled:cursor-not-allowed`}
       >
         <span className={selectedLabel ? "" : "text-[var(--text-muted)]"}>

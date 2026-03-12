@@ -21,6 +21,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Send, ArrowLeft, ArrowRight, Eye, EyeOff, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { clearLogoutMarker } from "@/components/AuthGuard";
 
 type LoginValues = z.infer<typeof loginSchema>;
@@ -48,17 +49,23 @@ export default function LoginPage() {
       });
       const result: LoginResponse = await res.json();
       if (!res.ok) {
-        setServerError((result as { error?: string }).error || "เกิดข้อผิดพลาด กรุณาลองใหม่");
+        const msg = (result as { error?: string }).error || "เกิดข้อผิดพลาด กรุณาลองใหม่";
+        setServerError(msg);
+        toast.error(msg);
         return;
       }
       if (result.needs2FA) {
+        toast.info("กรุณายืนยันตัวตนด้วย 2FA");
         router.push(`/2fa?token=${encodeURIComponent(result.challengeToken)}`);
         return;
       }
+      toast.success("เข้าสู่ระบบสำเร็จ");
       clearLogoutMarker();
       router.push(result.redirectTo ?? "/dashboard");
     } catch {
-      setServerError("ไม่สามารถเชื่อมต่อได้ กรุณาลองใหม่");
+      const msg = "ไม่สามารถเชื่อมต่อได้ กรุณาลองใหม่";
+      setServerError(msg);
+      toast.error(msg);
     }
   }
 

@@ -1,5 +1,9 @@
 import { z } from "zod";
 import { passwordSchema } from "./password-policy";
+import {
+  normalizeApiKeyPermission,
+  normalizeApiKeyPermissions,
+} from "./api-key-permissions";
 
 // Re-export password policy for frontend
 export { passwordSchema, getPasswordStrength, isCommonPassword, PASSWORD_RULES } from "./password-policy";
@@ -329,6 +333,7 @@ export const createContactSchema = z.object({
   phone: phoneSchema,
   email: optionalEmailSchema,
   tags: sanitizedOptionalTextSchema(500, "tags ต้องไม่เกิน 500 ตัวอักษร"),
+  smsConsent: z.boolean().optional(),
 });
 
 export const updateContactSchema = createContactSchema.partial();
@@ -472,19 +477,24 @@ export const scheduledSmsCancelSchema = z.object({
 // API Key Validations
 // ==========================================
 
-const VALID_API_PERMISSIONS = [
-  "sms:send", "sms:read",
-  "contacts:read", "contacts:write",
-  "campaigns:read", "campaigns:write",
-  "templates:read", "templates:write",
-  "groups:read", "groups:write",
-  "webhooks:read", "webhooks:write",
-  "billing:read",
-] as const;
+const apiKeyPermissionsSchema = z
+  .array(z.string())
+  .optional()
+  .superRefine((permissions, ctx) => {
+    for (const permission of permissions ?? []) {
+      if (!normalizeApiKeyPermission(permission)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `สิทธิ์ API Key ไม่ถูกต้อง: ${permission}`,
+        });
+      }
+    }
+  })
+  .transform((permissions) => normalizeApiKeyPermissions(permissions));
 
 export const createApiKeySchema = z.object({
   name: sanitizedNameSchema(1, 100, "กรุณาตั้งชื่อ API Key", "ชื่อ API Key ต้องไม่เกิน 100 ตัวอักษร"),
-  permissions: z.array(z.enum(VALID_API_PERMISSIONS)).optional(),
+  permissions: apiKeyPermissionsSchema,
 });
 
 export const createOrganizationSchema = z.object({

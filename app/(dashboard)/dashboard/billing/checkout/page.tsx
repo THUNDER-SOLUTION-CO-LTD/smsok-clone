@@ -315,6 +315,7 @@ export default function CheckoutPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tierParam = searchParams.get("tier");
+  const isReorder = searchParams.get("reorder") === "1";
 
   const [tiers, setTiers] = useState<PackageTier[]>([]);
   const [tiersLoading, setTiersLoading] = useState(true);
@@ -369,22 +370,46 @@ export default function CheckoutPage() {
     if (customerType === "INDIVIDUAL") setHasWht(false);
   }, [customerType]);
 
-  // Load saved tax profile
+  // Load tax profile — from reorder params or saved profile
   useEffect(() => {
+    // Reorder: populate from query params (order snapshot)
+    if (isReorder) {
+      const ct = searchParams.get("customerType") as CustomerType | null;
+      if (ct) setCustomerType(ct);
+      const name = searchParams.get("taxName");
+      if (name) setTaxName(name);
+      const tid = searchParams.get("taxId");
+      if (tid) setTaxId(formatTaxId(tid));
+      const addr = searchParams.get("taxAddress");
+      if (addr) setTaxAddress(addr);
+      const bt = searchParams.get("branchType") as BranchType | null;
+      if (bt) setBranchType(bt);
+      const bn = searchParams.get("branchNumber");
+      if (bn) setBranchNumber(bn);
+      if (searchParams.get("hasWht") === "1") setHasWht(true);
+      // Don't overwrite saved tax profile on reorder unless user opts in
+      if (searchParams.get("saveTaxProfile") === "0") setSaveTaxProfile(false);
+      return;
+    }
+
+    // Normal: load from saved tax profile
     async function loadTaxProfile() {
       try {
         const res = await fetch("/api/v1/settings/tax-profile");
         if (res.ok) {
           const json = await res.json();
           const tp = json?.data?.taxProfile ?? json?.taxProfile;
-          if (tp) {
-            setCustomerType("COMPANY");
+          if (tp && tp.companyName) {
+            const isIndividual = tp.branch === "INDIVIDUAL";
+            setCustomerType(isIndividual ? "INDIVIDUAL" : "COMPANY");
             setTaxName(tp.companyName || "");
             setTaxId(tp.taxId ? formatTaxId(tp.taxId) : "");
             setTaxAddress(tp.address || "");
-            const isHq = !tp.branch || tp.branch === "สำนักงานใหญ่";
-            setBranchType(isHq ? "HEAD" : "BRANCH");
-            if (!isHq && tp.branchCode) setBranchNumber(tp.branchCode);
+            if (!isIndividual) {
+              const isHq = !tp.branch || tp.branch === "สำนักงานใหญ่";
+              setBranchType(isHq ? "HEAD" : "BRANCH");
+              if (!isHq && tp.branchCode) setBranchNumber(tp.branchCode);
+            }
           }
         }
       } catch {
@@ -392,7 +417,7 @@ export default function CheckoutPage() {
       }
     }
     loadTaxProfile();
-  }, []);
+  }, [isReorder, searchParams]);
 
   // Price breakdown
   const breakdown = useMemo(
@@ -409,9 +434,32 @@ export default function CheckoutPage() {
     return true;
   }, [taxName, rawTaxId, taxAddress, branchType, branchNumber]);
 
+  // Track which fields have been touched for inline error display
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const markTouched = (field: string) => setTouched((p) => ({ ...p, [field]: true }));
+
+  // Validation errors per field
+  const fieldErrors = useMemo(() => {
+    const errors: Record<string, string> = {};
+    if (touched.taxName && !taxName.trim()) errors.taxName = "กรุณากรอกชื่อ";
+    if (touched.taxId && rawTaxId.length > 0 && rawTaxId.length < 13) errors.taxId = `${rawTaxId.length}/13 หลัก`;
+    if (touched.taxId && rawTaxId.length === 13 && !taxIdValid) errors.taxId = "เลขไม่ถูกต้อง";
+    if (touched.taxAddress && !taxAddress.trim()) errors.taxAddress = "กรุณากรอกที่อยู่";
+    if (touched.branchNumber && branchType === "BRANCH" && branchNumber.length > 0 && branchNumber.length < 5) errors.branchNumber = `${branchNumber.length}/5 หลัก`;
+    return errors;
+  }, [touched, taxName, rawTaxId, taxIdValid, taxAddress, branchType, branchNumber]);
+
   // Submit — create order
   async function handleCreateOrder() {
-    if (!tier || !breakdown || !isFormValid) return;
+    if (!tier || !breakdown) return;
+
+    // Mark all fields as touched to show errors
+    if (!isFormValid) {
+      setTouched({ taxName: true, taxId: true, taxAddress: true, branchNumber: true });
+      toast.error("กรุณากรอกข้อมูลให้ครบถ้วน");
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -482,7 +530,7 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="p-6 md:p-8 max-w-6xl animate-fade-in-up">
+    <div className="p-4 md:p-6 lg:p-8 pb-24 lg:pb-8 max-w-6xl animate-fade-in-up">
       {/* Step Indicator */}
       <StepIndicator current={2} />
 
@@ -646,13 +694,17 @@ export default function CheckoutPage() {
               <Input
                 value={taxName}
                 onChange={(e) => setTaxName(e.target.value)}
+                onBlur={() => markTouched("taxName")}
                 placeholder={
                   customerType === "COMPANY"
                     ? "บริษัท ABC จำกัด"
                     : "สมชาย กรุงเทพมหานคร"
                 }
-                className="mt-1.5"
+                className={`mt-1.5 ${fieldErrors.taxName ? "border-[rgba(242,54,69,0.6)]" : ""}`}
               />
+              {fieldErrors.taxName && (
+                <p className="text-xs mt-1" style={{ color: "var(--error)" }}>{fieldErrors.taxName}</p>
+              )}
             </div>
 
             {/* Tax ID */}
@@ -673,8 +725,9 @@ export default function CheckoutPage() {
                   const digits = v.replace(/\D/g, "");
                   if (digits.length <= 13) setTaxId(formatTaxId(v));
                 }}
+                onBlur={() => markTouched("taxId")}
                 placeholder="X-XXXX-XXXXX-XX-X"
-                className="mt-1.5 font-mono tracking-wider"
+                className={`mt-1.5 font-mono tracking-wider ${fieldErrors.taxId ? "border-[rgba(242,54,69,0.6)]" : taxIdValid ? "border-[rgba(16,185,129,0.4)]" : ""}`}
               />
               {taxIdValid && (
                 <p
@@ -684,16 +737,15 @@ export default function CheckoutPage() {
                   <Check size={12} /> ถูกต้อง
                 </p>
               )}
-              {taxIdPartial && (
+              {fieldErrors.taxId ? (
+                <p className="text-xs mt-1" style={{ color: "var(--error)" }}>
+                  {fieldErrors.taxId}
+                </p>
+              ) : taxIdPartial ? (
                 <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
                   {rawTaxId.length}/13 หลัก
                 </p>
-              )}
-              {rawTaxId.length === 13 && !taxIdValid && (
-                <p className="text-xs mt-1" style={{ color: "var(--error)" }}>
-                  เลขไม่ถูกต้อง
-                </p>
-              )}
+              ) : null}
             </div>
 
             {/* Branch (Company only) */}
@@ -736,8 +788,9 @@ export default function CheckoutPage() {
                           e.target.value.replace(/\D/g, "").slice(0, 5)
                         )
                       }
+                      onBlur={() => markTouched("branchNumber")}
                       placeholder="00001"
-                      className="w-24 h-8 font-mono text-center"
+                      className={`w-24 h-8 font-mono text-center ${fieldErrors.branchNumber ? "border-[rgba(242,54,69,0.6)]" : ""}`}
                     />
                   )}
                 </RadioGroup>
@@ -758,9 +811,13 @@ export default function CheckoutPage() {
               <Textarea
                 value={taxAddress}
                 onChange={(e) => setTaxAddress(e.target.value)}
+                onBlur={() => markTouched("taxAddress")}
                 placeholder="123/45 ถนนสีลม แขวงสุริยวงศ์ เขตบางรัก กรุงเทพฯ 10500"
-                className="mt-1.5 min-h-[80px]"
+                className={`mt-1.5 min-h-[80px] ${fieldErrors.taxAddress ? "border-[rgba(242,54,69,0.6)]" : ""}`}
               />
+              {fieldErrors.taxAddress && (
+                <p className="text-xs mt-1" style={{ color: "var(--error)" }}>{fieldErrors.taxAddress}</p>
+              )}
             </div>
           </div>
 
@@ -938,9 +995,9 @@ export default function CheckoutPage() {
         </div>
 
         {/* Mobile: Sticky bottom bar */}
-        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 p-4" style={{ background: "var(--bg-surface)", borderTop: "1px solid var(--border-default)" }}>
-          <div className="flex items-center justify-between">
-            <div>
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 p-4 safe-area-bottom" style={{ background: "var(--bg-surface)", borderTop: "1px solid var(--border-default)" }}>
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
               <p className="text-xs" style={{ color: "var(--text-muted)" }}>ยอดโอน</p>
               <p className="text-lg font-bold font-mono tabular-nums" style={{ color: "var(--accent)" }}>
                 ฿{formatBaht(breakdown.netPay)}
@@ -948,11 +1005,16 @@ export default function CheckoutPage() {
             </div>
             <Button
               onClick={handleCreateOrder}
-              disabled={!isFormValid || submitting}
-              className="h-11 px-6"
+              disabled={submitting}
+              className="h-11 px-6 shrink-0"
               style={isFormValid ? { background: "var(--accent)", color: "var(--bg-base)" } : undefined}
             >
-              {submitting ? <Loader2 size={14} className="animate-spin" /> : "สร้างคำสั่งซื้อ →"}
+              {submitting ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 size={14} className="animate-spin" />
+                  สร้าง...
+                </span>
+              ) : "สร้างคำสั่งซื้อ →"}
             </Button>
           </div>
         </div>

@@ -15,12 +15,26 @@ export type OrderStatus =
 export type CustomerType = "INDIVIDUAL" | "COMPANY";
 export type BranchType = "HEAD" | "BRANCH";
 
+export interface OrderStatusEvent {
+  status: OrderStatus;
+  timestamp: string | null;
+}
+
+export interface OrderDocument {
+  type: "invoice" | "tax_invoice" | "receipt" | "credit_note";
+  document_number: string;
+  issued_at: string;
+  url: string;
+}
+
 export interface Order {
   id: string;
   order_number: string;
   package_tier_id: string;
   package_name: string;
   sms_count: number;
+  bonus_sms?: number;
+  price_per_sms?: number;
 
   customer_type: CustomerType;
   tax_name: string;
@@ -43,6 +57,13 @@ export interface Order {
   quotation_url?: string;
   invoice_number?: string;
   invoice_url?: string;
+  tax_invoice_number?: string;
+  tax_invoice_url?: string;
+  receipt_number?: string;
+  receipt_url?: string;
+
+  documents?: OrderDocument[];
+  timeline?: OrderStatusEvent[];
 
   slip_url?: string;
   wht_cert_url?: string;
@@ -52,6 +73,8 @@ export interface Order {
   admin_note?: string;
 
   paid_at?: string;
+  cancelled_at?: string;
+  cancellation_reason?: string;
   created_at: string;
 }
 
@@ -137,11 +160,6 @@ export const ORDER_STATUS_CONFIG: Record<
 };
 
 // ── Bank Account ──
-// TODO: Fetch from admin settings API instead of hardcoding
-
-export const BANK_ACCOUNT = {
-  bankName: "ธนาคารกสิกรไทย (KBank)",
-  bankColor: "#00A850",
-  accountName: "บจก.SMSOK",
-  accountNumber: "123-4-56789-0",
-};
+// Bank info is now fetched from GET /api/v1/payments/bank-accounts at runtime.
+// See config/bank.ts for env-var fallback (used by other pages if needed).
+export { BANK_ACCOUNT } from "@/config/bank";

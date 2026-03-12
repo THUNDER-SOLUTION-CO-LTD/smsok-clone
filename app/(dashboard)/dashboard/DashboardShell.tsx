@@ -66,7 +66,6 @@ import {
   Bell,
   Search,
   LogOut,
-  Plus,
   ChevronDown,
   MoreVertical,
   type LucideIcon,
@@ -306,7 +305,7 @@ export default function DashboardShell({
       {/* ── Main Content ── */}
       <main className="flex-1 overflow-auto flex flex-col">
         {/* Header */}
-        <header className="sticky top-0 z-40 border-b border-[var(--border-default)] bg-[var(--bg-base)] h-14 flex items-center justify-between px-6 md:px-8">
+        <header className="sticky top-0 z-40 border-b border-[var(--border-default)] bg-[var(--bg-base)] h-12 md:h-14 flex items-center justify-between px-4 md:px-8">
           <h1 className="text-base font-semibold text-[var(--text-primary)] tracking-tight">
             {title || sidebarItems.find((i) => i.href === pathname)?.label || "ภาพรวม"}
           </h1>
@@ -382,7 +381,7 @@ export default function DashboardShell({
             {/* SMS Remaining */}
             <Link
               href="/dashboard/packages/my"
-              className="hidden sm:flex items-center gap-2 px-3 py-1.5 min-h-[44px] md:min-h-0 rounded-lg bg-[rgba(0,226,181,0.06)] border border-[rgba(0,226,181,0.15)] hover:border-[rgba(0,226,181,0.3)] transition-colors duration-200"
+              className="hidden sm:flex items-center gap-2 px-3 py-1.5 min-h-[44px] md:min-h-0 rounded-lg bg-[rgba(var(--accent-rgb),0.06)] border border-[rgba(var(--accent-rgb),0.15)] hover:border-[rgba(var(--accent-rgb),0.3)] transition-colors duration-200"
             >
               <MessageSquare className="w-3.5 h-3.5 text-[var(--accent)]" />
               <span className="text-sm font-bold text-[var(--accent)]">
@@ -407,7 +406,7 @@ export default function DashboardShell({
         </header>
 
         {/* Page Content — no page transitions per Nansen directive */}
-        <div className="flex-1">{children}</div>
+        <div className="flex-1 pb-20 md:pb-0">{children}</div>
 
         {/* Footer */}
         <footer className="border-t border-[var(--border-default)] px-8 py-4 shrink-0">
@@ -549,45 +548,32 @@ export default function DashboardShell({
 
       {/* ── Mobile Bottom Nav ── */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-[var(--border-default)] bg-[var(--bg-base)] flex items-center justify-around px-2 py-2 safe-area-bottom">
-        <Link
-          href="/dashboard"
-          className={cn(
-            "flex flex-col items-center justify-center gap-0.5 min-w-[44px] min-h-[44px] px-3 rounded-lg transition-colors duration-200",
-            pathname === "/dashboard" ? "text-[var(--accent)]" : "text-[var(--text-muted)]"
-          )}
-        >
-          <LayoutDashboard className="w-5 h-5" />
-          <span className="text-[10px]">หน้าหลัก</span>
-        </Link>
-        <Link
-          href="/dashboard/send"
-          className={cn(
-            "flex flex-col items-center justify-center gap-0.5 min-w-[44px] min-h-[44px] px-3 rounded-lg transition-colors duration-200",
-            pathname === "/dashboard/send" ? "text-[var(--accent)]" : "text-[var(--text-muted)]"
-          )}
-        >
-          <Send className="w-5 h-5" />
-          <span className="text-[10px]">ส่ง SMS</span>
-        </Link>
-        <Link
-          href="/dashboard/send"
-          className="flex items-center justify-center w-12 h-12 -mt-3 rounded-full bg-[var(--accent)]"
-        >
-          <Plus className="w-6 h-6 text-[var(--bg-base)]" strokeWidth={2.5} />
-        </Link>
-        <Link
-          href="/dashboard/messages"
-          className={cn(
-            "flex flex-col items-center justify-center gap-0.5 min-w-[44px] min-h-[44px] px-3 rounded-lg transition-colors duration-200",
-            pathname === "/dashboard/messages" ? "text-[var(--accent)]" : "text-[var(--text-muted)]"
-          )}
-        >
-          <MessageSquare className="w-5 h-5" />
-          <span className="text-[10px]">ประวัติ</span>
-        </Link>
+        {[
+          { href: "/dashboard", icon: LayoutDashboard, label: "ภาพรวม" },
+          { href: "/dashboard/send", icon: Send, label: "ส่ง" },
+          { href: "/dashboard/otp", icon: Lock, label: "OTP" },
+          { href: "/dashboard/analytics", icon: BarChart3, label: "รายงาน" },
+        ].map((item) => {
+          const Icon = item.icon;
+          const isActive = pathname === item.href;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "flex flex-col items-center justify-center gap-0.5 min-w-[44px] min-h-[44px] px-3 rounded-lg transition-colors duration-200",
+                isActive ? "text-[var(--accent)]" : "text-[var(--text-muted)]"
+              )}
+            >
+              <Icon className="w-5 h-5" />
+              <span className="text-[10px]">{item.label}</span>
+            </Link>
+          );
+        })}
         <button
+          type="button"
           onClick={() => setMobileSheetOpen(true)}
-          className="flex flex-col items-center gap-0.5 py-1.5 px-3 text-[var(--text-muted)] cursor-pointer min-w-[44px] min-h-[44px]"
+          className="flex flex-col items-center justify-center gap-0.5 py-1.5 px-3 text-[var(--text-muted)] cursor-pointer min-w-[44px] min-h-[44px]"
         >
           <MoreVertical className="w-5 h-5" />
           <span className="text-[10px]">เพิ่มเติม</span>

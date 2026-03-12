@@ -54,15 +54,22 @@ type StatsRowProps = {
 export function StatsRow({ children, columns = 4 }: StatsRowProps) {
   const colClass =
     columns === 2
-      ? "grid-cols-1 sm:grid-cols-2"
+      ? "sm:grid-cols-2"
       : columns === 3
-        ? "grid-cols-1 sm:grid-cols-3"
-        : "grid-cols-2 md:grid-cols-4";
+        ? "sm:grid-cols-3"
+        : "sm:grid-cols-2 md:grid-cols-4";
 
   return (
-    <div className={`grid ${colClass} gap-4 mb-4`}>
-      {children}
-    </div>
+    <>
+      {/* Mobile: horizontal scroll strip */}
+      <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 -mx-4 px-4 sm:hidden no-scrollbar mb-4">
+        {children}
+      </div>
+      {/* Desktop: grid */}
+      <div className={`hidden sm:grid ${colClass} gap-4 mb-4`}>
+        {children}
+      </div>
+    </>
   );
 }
 
@@ -88,7 +95,7 @@ export function StatCard({
   subtitle,
 }: StatCardProps) {
   return (
-    <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg p-4">
+    <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg p-4 snap-start shrink-0 min-w-[160px] sm:min-w-0">
       <div
         className="w-9 h-9 rounded-md flex items-center justify-center mb-3"
         style={{ background: `rgba(${iconColor},0.08)` }}
@@ -189,7 +196,7 @@ export function PaginationBar({
           type="button"
           onClick={() => onPageChange(page - 1)}
           disabled={page <= 1}
-          className="w-8 h-8 rounded-lg border border-[var(--border-default)] flex items-center justify-center text-[var(--text-secondary)] hover:bg-black hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+          className="w-8 h-8 rounded-lg border border-[var(--border-default)] flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M15 18l-6-6 6-6" /></svg>
         </button>
@@ -204,7 +211,7 @@ export function PaginationBar({
               className={`w-8 h-8 rounded-lg border text-[13px] font-medium transition-colors cursor-pointer ${
                 isActive
                   ? "bg-[rgba(var(--accent-rgb),0.08)] border-[rgba(var(--accent-rgb),0.3)] text-[var(--accent)]"
-                  : "border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-black hover:text-white"
+                  : "border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-white"
               }`}
             >
               {p}
@@ -218,7 +225,7 @@ export function PaginationBar({
           type="button"
           onClick={() => onPageChange(page + 1)}
           disabled={page >= totalPages}
-          className="w-8 h-8 rounded-lg border border-[var(--border-default)] flex items-center justify-center text-[var(--text-secondary)] hover:bg-black hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+          className="w-8 h-8 rounded-lg border border-[var(--border-default)] flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M9 18l6-6-6-6" /></svg>
         </button>

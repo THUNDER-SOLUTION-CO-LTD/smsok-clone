@@ -79,170 +79,34 @@ export function formatBaht(amount: number): string {
   });
 }
 
-// ── Mock Data (until backend API #1455 is ready) ──
+// ── Package data fetched from API /api/v1/packages ──
+// No hardcoded pricing — fetch via usePackageTiers() hook
 
-export const PACKAGE_TIERS: PackageTier[] = [
-  // SME (A-D)
-  {
-    id: "tier-a",
-    tier: "A",
-    name: "Starter",
-    group: "sme",
-    smsCredits: 500,
-    bonusCredits: 0,
-    priceNet: 500,
-    pricePerSms: 1.0,
-    features: ["500 SMS", "1 Sender Name", "30 วัน", "Email Support"],
-    isBestValue: false,
-    senderNames: 1,
-    validity: 30,
-  },
-  {
-    id: "tier-b",
-    tier: "B",
-    name: "Growth",
-    group: "sme",
-    smsCredits: 2000,
-    bonusCredits: 100,
-    priceNet: 1500,
-    pricePerSms: 0.75,
-    features: [
-      "2,000 SMS",
-      "3 Sender Names",
-      "90 วัน",
-      "Priority Support",
-    ],
-    isBestValue: true,
-    senderNames: 3,
-    validity: 90,
-  },
-  {
-    id: "tier-c",
-    tier: "C",
-    name: "Pro",
-    group: "sme",
-    smsCredits: 6000,
-    bonusCredits: 300,
-    priceNet: 2100,
-    pricePerSms: 0.35,
-    features: [
-      "6,000 SMS",
-      "5 Sender Names",
-      "180 วัน",
-      "Priority Support",
-    ],
-    isBestValue: false,
-    senderNames: 5,
-    validity: 180,
-  },
-  {
-    id: "tier-d",
-    tier: "D",
-    name: "Scale",
-    group: "sme",
-    smsCredits: 15000,
-    bonusCredits: 1000,
-    priceNet: 4500,
-    pricePerSms: 0.3,
-    features: [
-      "15,000 SMS",
-      "10 Sender Names",
-      "365 วัน",
-      "Dedicated Support",
-    ],
-    isBestValue: false,
-    senderNames: 10,
-    validity: 365,
-  },
-  // Enterprise (E-H)
-  {
-    id: "tier-e",
-    tier: "E",
-    name: "Business",
-    group: "enterprise",
-    smsCredits: 30000,
-    bonusCredits: 3000,
-    priceNet: 7500,
-    pricePerSms: 0.25,
-    features: [
-      "30,000 SMS",
-      "20 Sender Names",
-      "365 วัน",
-      "Dedicated Support",
-    ],
-    isBestValue: false,
-    senderNames: 20,
-    validity: 365,
-  },
-  {
-    id: "tier-f",
-    tier: "F",
-    name: "Corporate",
-    group: "enterprise",
-    smsCredits: 80000,
-    bonusCredits: 10000,
-    priceNet: 16000,
-    pricePerSms: 0.2,
-    features: [
-      "80,000 SMS",
-      "50 Sender Names",
-      "365 วัน",
-      "Dedicated Support",
-      "SLA 99.9%",
-    ],
-    isBestValue: true,
-    senderNames: 50,
-    validity: 365,
-  },
-  {
-    id: "tier-g",
-    tier: "G",
-    name: "Premium",
-    group: "enterprise",
-    smsCredits: 200000,
-    bonusCredits: 30000,
-    priceNet: 30000,
-    pricePerSms: 0.15,
-    features: [
-      "200,000 SMS",
-      "100 Sender Names",
-      "365 วัน",
-      "Dedicated Support",
-      "SLA 99.9%",
-      "Custom API",
-    ],
-    isBestValue: false,
-    senderNames: 100,
-    validity: 365,
-  },
-  {
-    id: "tier-h",
-    tier: "H",
-    name: "Unlimited",
-    group: "enterprise",
-    smsCredits: 500000,
-    bonusCredits: 100000,
-    priceNet: 50000,
-    pricePerSms: 0.1,
-    features: [
-      "500,000 SMS",
-      "ไม่จำกัด Sender Names",
-      "365 วัน",
-      "Dedicated Account Manager",
-      "SLA 99.99%",
-      "Custom API",
-    ],
-    isBestValue: false,
-    senderNames: -1,
-    validity: 365,
-  },
-];
+export async function fetchPackageTiers(): Promise<PackageTier[]> {
+  try {
+    const res = await fetch("/api/v1/packages");
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.data ?? data.packages ?? []) as PackageTier[];
+  } catch {
+    return [];
+  }
+}
 
-export const MOCK_BANK_ACCOUNT = {
-  bankName: "ธนาคารกสิกรไทย (KBank)",
-  accountName: "บจก.SMSOK",
-  accountNumber: "123-4-56789-0",
-};
+export async function fetchBankAccount(): Promise<{
+  bankName: string;
+  accountName: string;
+  accountNumber: string;
+} | null> {
+  try {
+    const res = await fetch("/api/v1/payments/bank-account");
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.data ?? data;
+  } catch {
+    return null;
+  }
+}
 
 // Comparison table features
 export const COMPARISON_FEATURES = [

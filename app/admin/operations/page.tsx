@@ -338,7 +338,7 @@ export default function OperationsPage() {
         <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg p-4">
           <div
             className="w-9 h-9 rounded-md flex items-center justify-center mb-3"
-            style={{ background: "rgba(0,226,181,0.08)" }}
+            style={{ background: "rgba(var(--accent-rgb),0.08)" }}
           >
             <BarChart3 className="w-4 h-4 text-[var(--accent)]" />
           </div>
@@ -845,7 +845,7 @@ export default function OperationsPage() {
                 {msg.retryable ? (
                   <button
                     type="button"
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--accent)] hover:bg-[rgba(0,226,181,0.08)] transition-colors cursor-pointer"
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--accent)] hover:bg-[rgba(var(--accent-rgb),0.08)] transition-colors cursor-pointer"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
                   </button>

@@ -62,7 +62,7 @@ function DonutChart({ data }: { data: { label: string; value: number; color: str
             className="transition-opacity duration-500"
           />
         ))}
-        <text x={cx} y={cy - 8} textAnchor="middle" fill="white" fontSize="24" fontWeight="700" className="rotate-90 origin-center" transform={`rotate(90 ${cx} ${cy})`}>
+        <text x={cx} y={cy - 8} textAnchor="middle" fill="var(--text-primary)" fontSize="24" fontWeight="700" className="rotate-90 origin-center" transform={`rotate(90 ${cx} ${cy})`}>
           {total.toLocaleString()}
         </text>
         <text x={cx} y={cy + 12} textAnchor="middle" fill="rgba(148,163,184,0.5)" fontSize="10" fontWeight="500" className="rotate-90 origin-center" transform={`rotate(90 ${cx} ${cy})`}>

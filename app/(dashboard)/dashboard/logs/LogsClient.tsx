@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ScrollText } from "lucide-react";
 import CustomSelect from "@/components/ui/CustomSelect";
+import PillTabs from "@/components/ui/PillTabs";
 import { Input } from "@/components/ui/input";
 import EmptyState from "@/components/EmptyState";
 
@@ -58,12 +59,7 @@ const ENDPOINT_OPTIONS = [
   { value: "/api/v1/auth/login", label: "/auth/login" },
 ];
 
-const API_KEY_OPTIONS = [
-  { value: "all", label: "ทุก API Key" },
-  { value: "sk_live_a1b2", label: "Production ****a1b2" },
-  { value: "sk_test_c3d4", label: "Staging ****c3d4" },
-  { value: "sk_test_e5f6", label: "Test ****e5f6" },
-];
+// API key options fetched dynamically — see LogsClient component
 
 function statusBadgeCls(code: number) {
   if (code < 300) return "bg-emerald-500/15 text-emerald-400 border-emerald-500/20";
@@ -138,66 +134,54 @@ function exportCsv(logs: LogEntry[]) {
   URL.revokeObjectURL(url);
 }
 
-// ─── Mock Data ────────────────────────────────────────────────────────────
+// ─── API Fetch ────────────────────────────────────────────────────────────
 
-function generateMockLogs(count: number): LogEntry[] {
-  const methods: LogEntry["method"][] = ["GET", "POST", "POST", "DELETE"];
-  const endpoints = [
-    "/api/v1/sms/send", "/api/v1/sms/batch", "/api/v1/otp/generate",
-    "/api/v1/otp/verify", "/api/v1/contacts", "/api/v1/balance",
-    "/api/v1/templates", "/api/v1/sms/status", "/api/v1/auth/login",
-  ];
-  const statuses = [200, 200, 200, 200, 201, 400, 401, 429, 500];
-  const keys = [
-    { name: "Production Key", id: "sk_live_a1b2" },
-    { name: "Staging Key", id: "sk_test_c3d4" },
-    { name: "Test Key", id: "sk_test_e5f6" },
-  ];
+type ApiLogEntry = {
+  id: string;
+  method: string;
+  url: string;
+  endpoint: string | null;
+  resStatus: number;
+  latencyMs: number;
+  ipAddress: string | null;
+  source: string | null;
+  apiKeyId: string | null;
+  errorCode: string | null;
+  errorMsg: string | null;
+  createdAt: string;
+};
 
-  return Array.from({ length: count }, (_, i) => {
-    const method = methods[i % methods.length];
-    const url = endpoints[i % endpoints.length];
-    const statusCode = statuses[i % statuses.length];
-    const latencyMs = Math.floor(Math.random() * 800) + 20;
-    const ts = new Date(Date.now() - i * 45000).toISOString();
-    const isError = statusCode >= 400;
-    const phone = `089${String(1000000 + i).slice(0, 7)}`;
-    const messageId = `msg_${Date.now()}_${i}`;
+type ApiLogDetail = ApiLogEntry & {
+  reqHeaders: Record<string, string> | null;
+  reqBody: unknown;
+  resBody: unknown;
+};
 
-    return {
-      id: `log_${Date.now()}_${i}`,
-      timestamp: ts,
-      method,
-      url,
-      statusCode,
-      latencyMs,
-      requestHeaders: {
-        Authorization: "Bearer sk_live_abc123def456ghi789jkl",
-        "Content-Type": "application/json",
-      },
-      requestBody: method === "POST" ? {
-        sender: "EasySlip",
-        to: phone,
-        message: "สวัสดีครับ ข้อความทดสอบ #" + (i + 1),
-      } : null,
-      responseBody: isError
-        ? { error: { code: String(statusCode), message: statusCode === 401 ? "Invalid API Key" : statusCode === 429 ? "Rate limit exceeded" : "Bad request" } }
-        : { id: messageId, status: "pending", credits_used: 1, credits_remaining: 1500 - i },
-      errorCode: isError ? String(statusCode) : undefined,
-      errorMessage: isError
-        ? (statusCode === 401 ? "Invalid API Key" : statusCode === 429 ? "Rate limit exceeded (10/min)" : statusCode === 500 ? "Internal server error" : "Validation failed")
-        : undefined,
-      apiKeyName: keys[i % keys.length].name,
-      apiKeyId: keys[i % keys.length].id,
-      ip: `203.154.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`,
-      phone,
-      messageId: isError ? undefined : messageId,
-      source: i % 3 === 0 ? "WEB" as const : "API" as const,
-    };
-  });
+type ApiKeyInfo = {
+  id: string;
+  name: string;
+  prefix: string;
+};
+
+function mapApiLogToEntry(log: ApiLogEntry): LogEntry {
+  return {
+    id: log.id,
+    timestamp: log.createdAt,
+    method: (log.method || "GET") as LogEntry["method"],
+    url: log.url || log.endpoint || "",
+    statusCode: log.resStatus ?? 0,
+    latencyMs: log.latencyMs ?? 0,
+    requestHeaders: {},
+    requestBody: null,
+    responseBody: null,
+    errorCode: log.errorCode ?? undefined,
+    errorMessage: log.errorMsg ?? undefined,
+    apiKeyId: log.apiKeyId ?? undefined,
+    ip: log.ipAddress || "",
+    source: (log.source === "API" ? "API" : "WEB") as LogEntry["source"],
+  };
 }
 
-const ALL_LOGS = generateMockLogs(87);
 const PAGE_SIZE = 25;
 
 // ─── JSON Viewer ──────────────────────────────────────────────────────────
@@ -406,7 +390,8 @@ const rowVariant = { hidden: { opacity: 0, x: -8 }, show: { opacity: 1, x: 0, tr
 // ─── Main Component — Stripe-style Split Pane ────────────────────────────
 
 export default function LogsClient() {
-  const [logs, setLogs] = useState<LogEntry[]>(ALL_LOGS);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -421,61 +406,115 @@ export default function LogsClient() {
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [isReplaying, setIsReplaying] = useState(false);
   const [replayResult, setReplayResult] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [apiKeyOptions, setApiKeyOptions] = useState<{ value: string; label: string }[]>([{ value: "all", label: "ทุก API Key" }]);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Auto-refresh polling
-  const refreshLogs = useCallback(() => {
-    setLogs(generateMockLogs(87));
+  // Fetch logs from real API
+  const fetchLogs = useCallback(async () => {
+    try {
+      const params = new URLSearchParams();
+      params.set("page", String(page));
+      params.set("limit", String(PAGE_SIZE));
+      if (search) params.set("search", search);
+      if (statusFilter !== "all") {
+        const statusMap: Record<string, string> = { "2xx": "200", "4xx": "400", "5xx": "500" };
+        if (statusMap[statusFilter]) params.set("status", statusMap[statusFilter]);
+      }
+      if (methodFilter !== "all") params.set("method", methodFilter);
+      if (endpointFilter !== "all") params.set("endpoint", endpointFilter);
+      if (sourceFilter !== "all") params.set("source", sourceFilter);
+      if (apiKeyFilter !== "all") params.set("apiKeyId", apiKeyFilter);
+      if (ipSearch) params.set("ip", ipSearch);
+      if (dateFrom) params.set("from", dateFrom);
+      if (dateTo) params.set("to", dateTo);
+
+      const res = await fetch(`/api/v1/logs?${params.toString()}`);
+      if (!res.ok) throw new Error(`API error ${res.status}`);
+      const data = await res.json();
+      const apiLogs: ApiLogEntry[] = data.data?.logs ?? data.logs ?? [];
+      setLogs(apiLogs.map(mapApiLogToEntry));
+      setTotalCount(data.data?.pagination?.total ?? data.pagination?.total ?? apiLogs.length);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "เกิดข้อผิดพลาด");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [page, search, statusFilter, methodFilter, endpointFilter, sourceFilter, apiKeyFilter, ipSearch, dateFrom, dateTo]);
+
+  // Fetch API keys for filter dropdown
+  useEffect(() => {
+    fetch("/api/v1/api-keys")
+      .then((r) => r.json())
+      .then((data) => {
+        const keys: ApiKeyInfo[] = data.data?.apiKeys ?? data.apiKeys ?? [];
+        setApiKeyOptions([
+          { value: "all", label: "ทุก API Key" },
+          ...keys.map((k) => ({ value: k.id, label: `${k.name} ****${k.prefix?.slice(-4) || ""}` })),
+        ]);
+      })
+      .catch(() => {});
   }, []);
 
+  // Initial fetch + refetch on filter change
+  useEffect(() => { fetchLogs(); }, [fetchLogs]);
+
+  // Auto-refresh polling
   useEffect(() => {
     if (autoRefresh) {
-      intervalRef.current = setInterval(refreshLogs, 5000);
+      intervalRef.current = setInterval(fetchLogs, 5000);
     }
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [autoRefresh, refreshLogs]);
+  }, [autoRefresh, fetchLogs]);
+
+  // Fetch log detail when selecting a log
+  const handleSelectLog = useCallback(async (log: LogEntry) => {
+    setSelectedLog(log);
+    setReplayResult(null);
+    try {
+      const res = await fetch(`/api/v1/logs/${log.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        const detail: ApiLogDetail = data.data ?? data;
+        setSelectedLog((prev) =>
+          prev?.id === log.id
+            ? {
+                ...prev,
+                requestHeaders: detail.reqHeaders ?? {},
+                requestBody: detail.reqBody ?? null,
+                responseBody: detail.resBody ?? null,
+              }
+            : prev
+        );
+      }
+    } catch {
+      // Detail fetch failed — show basic info only
+    }
+  }, []);
 
   // Replay request
   const handleReplay = useCallback(async (log: LogEntry) => {
     setIsReplaying(true);
     setReplayResult(null);
     try {
-      // In production: actually replay the API call
-      // For now: simulate with delay
-      await new Promise((r) => setTimeout(r, 1500));
-      setReplayResult({ type: "success", text: `Replayed ${log.method} ${log.url} — 200 OK` });
+      const replayRes = await fetch(log.url, {
+        method: log.method,
+        headers: log.requestHeaders,
+        body: log.method !== "GET" && log.requestBody ? JSON.stringify(log.requestBody) : undefined,
+      });
+      setReplayResult({ type: replayRes.ok ? "success" : "error", text: `Replayed ${log.method} ${log.url} — ${replayRes.status}` });
     } catch {
-      setReplayResult({ type: "error", text: "Replay failed" });
+      setReplayResult({ type: "error", text: "Replay failed — ไม่สามารถเรียก API ซ้ำได้" });
     } finally {
       setIsReplaying(false);
     }
   }, []);
 
-  // Filter
-  const filtered = logs.filter((log) => {
-    const q = search.toLowerCase().trim();
-    const matchSearch = !q ||
-      log.url.toLowerCase().includes(q) ||
-      (log.phone && log.phone.includes(q)) ||
-      (log.messageId && log.messageId.toLowerCase().includes(q)) ||
-      log.ip.includes(q);
-    const matchStatus = statusFilter === "all" || statusGroup(log.statusCode) === statusFilter;
-    const matchMethod = methodFilter === "all" || log.method === methodFilter;
-    const matchEndpoint = endpointFilter === "all" || log.url === endpointFilter;
-    const matchSource = sourceFilter === "all" || log.source === sourceFilter;
-    const matchApiKey = apiKeyFilter === "all" || log.apiKeyId === apiKeyFilter;
-    const ipQ = ipSearch.trim();
-    const matchIp = !ipQ || log.ip.includes(ipQ);
-    const logDate = new Date(log.timestamp);
-    const matchFrom = !dateFrom || logDate >= new Date(dateFrom);
-    const matchTo = !dateTo || logDate <= new Date(dateTo + "T23:59:59");
-    return matchSearch && matchStatus && matchMethod && matchEndpoint && matchSource && matchApiKey && matchIp && matchFrom && matchTo;
-  });
-
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  const showingFrom = Math.min((page - 1) * PAGE_SIZE + 1, filtered.length);
-  const showingTo = Math.min(page * PAGE_SIZE, filtered.length);
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const showingFrom = totalCount > 0 ? (page - 1) * PAGE_SIZE + 1 : 0;
+  const showingTo = Math.min(page * PAGE_SIZE, totalCount);
 
   function clearFilters() {
     setSearch(""); setStatusFilter("all"); setMethodFilter("all"); setEndpointFilter("all"); setSourceFilter("all"); setApiKeyFilter("all"); setIpSearch(""); setDateFrom(""); setDateTo(""); setPage(1);
@@ -500,7 +539,7 @@ export default function LogsClient() {
         </div>
         <div className="flex items-center gap-2">
           <motion.button
-            onClick={() => exportCsv(filtered)}
+            onClick={() => exportCsv(logs)}
             className="bg-transparent border border-[var(--border-default)] text-[var(--text-primary)] rounded-xl hover:border-[rgba(var(--accent-rgb),0.3)] hover:bg-[rgba(var(--accent-rgb),0.04)] px-3 py-1.5 rounded-lg text-[11px] font-medium inline-flex items-center gap-1.5 cursor-pointer"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
@@ -522,7 +561,7 @@ export default function LogsClient() {
             {autoRefresh ? "Live" : "Auto"}
           </button>
           <motion.button
-            onClick={refreshLogs}
+            onClick={() => fetchLogs()}
             className="bg-transparent border border-[var(--border-default)] text-[var(--text-primary)] rounded-xl hover:border-[rgba(var(--accent-rgb),0.3)] hover:bg-[rgba(var(--accent-rgb),0.04)] px-3 py-1.5 rounded-lg text-[11px] font-medium inline-flex items-center gap-1.5 cursor-pointer"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
@@ -534,14 +573,31 @@ export default function LogsClient() {
         </div>
       </div>
 
-      {/* Empty state — when no logs at all */}
-      {logs.length === 0 ? (
+      {/* Loading state */}
+      {isLoading ? (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <svg className="animate-spin h-8 w-8 mx-auto mb-3 text-[var(--accent)]" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+            <p className="text-xs text-[var(--text-muted)]">กำลังโหลด...</p>
+          </div>
+        </div>
+      ) : error ? (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-sm text-[var(--error)] mb-2">{error}</p>
+            <button onClick={fetchLogs} className="text-xs text-[var(--accent)] hover:underline cursor-pointer">ลองอีกครั้ง</button>
+          </div>
+        </div>
+      ) : logs.length === 0 && !hasFilters ? (
         <EmptyState
           icon={ScrollText}
           iconColor="var(--accent)"
           iconBg="rgba(var(--accent-rgb), 0.1)"
           title="ยังไม่มีบันทึก"
-          description="บันทึกการส่ง SMS จะแสดงที่นี่เมื่อเริ่มใช้งาน"
+          description="บันทึกการเรียก API จะแสดงที่นี่เมื่อเริ่มใช้งาน"
         />
       ) : (
       <>
@@ -563,40 +619,40 @@ export default function LogsClient() {
               />
             </div>
             <CustomSelect value={endpointFilter} onChange={(v) => { setEndpointFilter(v); setPage(1); }} options={ENDPOINT_OPTIONS} className="min-w-[140px]" />
-            <CustomSelect
+            <PillTabs
               value={methodFilter}
               onChange={(v) => { setMethodFilter(v); setPage(1); }}
+              label="Filter by HTTP method"
               options={[
-                { value: "all", label: "Method" },
+                { value: "all", label: "All" },
                 { value: "GET", label: "GET" },
                 { value: "POST", label: "POST" },
                 { value: "PUT", label: "PUT" },
-                { value: "DELETE", label: "DELETE" },
+                { value: "DELETE", label: "DEL" },
               ]}
-              className="min-w-[100px]"
             />
-            <CustomSelect
+            <PillTabs
               value={statusFilter}
               onChange={(v) => { setStatusFilter(v); setPage(1); }}
+              label="Filter by status code"
               options={[
-                { value: "all", label: "Status" },
+                { value: "all", label: "All" },
                 { value: "2xx", label: "2xx" },
                 { value: "4xx", label: "4xx" },
                 { value: "5xx", label: "5xx" },
               ]}
-              className="min-w-[90px]"
             />
-            <CustomSelect
+            <PillTabs
               value={sourceFilter}
               onChange={(v) => { setSourceFilter(v); setPage(1); }}
+              label="Filter by source"
               options={[
-                { value: "all", label: "Source" },
+                { value: "all", label: "All" },
                 { value: "WEB", label: "WEB" },
                 { value: "API", label: "API" },
               ]}
-              className="min-w-[90px]"
             />
-            <CustomSelect value={apiKeyFilter} onChange={(v) => { setApiKeyFilter(v); setPage(1); }} options={API_KEY_OPTIONS} className="min-w-[170px]" />
+            <CustomSelect value={apiKeyFilter} onChange={(v) => { setApiKeyFilter(v); setPage(1); }} options={apiKeyOptions} className="min-w-[170px]" />
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative min-w-[180px]">
@@ -622,7 +678,7 @@ export default function LogsClient() {
             {hasFilters && (
               <button onClick={clearFilters} className="text-[10px] text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors cursor-pointer">ล้าง</button>
             )}
-            <span className="text-[10px] text-[var(--text-muted)] ml-auto">{filtered.length} รายการ</span>
+            <span className="text-[10px] text-[var(--text-muted)] ml-auto">{totalCount} รายการ</span>
           </div>
         </div>
       </div>
@@ -660,15 +716,15 @@ export default function LogsClient() {
           {/* Scrollable rows */}
           <div className="flex-1 overflow-y-auto">
             <AnimatePresence mode="wait">
-              {paginated.length > 0 ? (
+              {logs.length > 0 ? (
                 <motion.div key="rows" variants={stagger} initial="hidden" animate="show">
-                  {paginated.map((log) => {
+                  {logs.map((log) => {
                     const isSelected = selectedLog?.id === log.id;
                     return (
                       <motion.button
                         key={log.id}
                         variants={rowVariant}
-                        onClick={() => { setSelectedLog(log); setReplayResult(null); }}
+                        onClick={() => handleSelectLog(log)}
                         className={`w-full grid grid-cols-1 md:grid-cols-[1fr_60px_60px_60px] gap-x-2 px-4 py-2.5 items-center text-left border-b border-[var(--border-default)] hover:bg-white/[0.03] transition-colors cursor-pointer ${
                           isSelected ? "bg-[rgba(var(--accent-rgb),0.06)] border-l-2 border-l-[var(--accent)]" : ""
                         }`}
@@ -721,9 +777,9 @@ export default function LogsClient() {
           </div>
 
           {/* Pagination */}
-          {filtered.length > 0 && (
+          {totalCount > 0 && (
             <div className="border-t border-[var(--border-default)] px-4 py-2 flex items-center justify-between text-[10px] text-[var(--text-muted)] shrink-0">
-              <span>{showingFrom}–{showingTo} / {filtered.length}</span>
+              <span>{showingFrom}–{showingTo} / {totalCount}</span>
               {totalPages > 1 && (
                 <div className="flex items-center gap-1">
                   <button

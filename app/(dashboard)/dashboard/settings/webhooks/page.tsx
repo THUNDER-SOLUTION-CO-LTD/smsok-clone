@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Globe,
   Send,
@@ -65,8 +65,6 @@ interface DeliveryLog {
   responseBody: string;
 }
 
-/* ─── Mock Data ─── */
-
 const EVENT_GROUPS = [
   {
     group: "SMS",
@@ -86,93 +84,7 @@ const EVENT_GROUPS = [
   },
 ];
 
-const MOCK_WEBHOOKS: WebhookRow[] = [
-  {
-    id: "wh_01",
-    url: "https://api.example.com/webhooks/sms",
-    events: ["sms.sent", "sms.delivered", "sms.failed"],
-    status: "active",
-    successRate: 99.2,
-    lastTriggered: "2 นาทีที่แล้ว",
-  },
-  {
-    id: "wh_02",
-    url: "https://hooks.slack.com/services/T0XXXXX/B0YYYYY/zZZzzZzzZZZzzZZ",
-    events: ["campaign.completed"],
-    status: "active",
-    successRate: 100,
-    lastTriggered: "1 ชั่วโมงที่แล้ว",
-  },
-  {
-    id: "wh_03",
-    url: "https://crm.company.co.th/webhook/inbound",
-    events: ["contact.opted_out", "contact.created"],
-    status: "error",
-    successRate: 78.5,
-    lastTriggered: "15 นาทีที่แล้ว",
-  },
-  {
-    id: "wh_04",
-    url: "https://billing.internal/events/smsok",
-    events: ["credits.low", "credits.depleted"],
-    status: "paused",
-    successRate: 95.0,
-    lastTriggered: "3 วันที่แล้ว",
-  },
-];
-
-const MOCK_DELIVERIES: DeliveryLog[] = [
-  {
-    id: "dl_001",
-    webhookId: "wh_01",
-    timestamp: "2026-03-11 14:32:07",
-    event: "sms.delivered",
-    status: "success",
-    responseCode: 200,
-    requestBody: { event: "sms.delivered", messageId: "msg_abc123", to: "0812345678", status: "delivered", timestamp: 1741675927 },
-    responseBody: '{"ok":true}',
-  },
-  {
-    id: "dl_002",
-    webhookId: "wh_01",
-    timestamp: "2026-03-11 14:31:52",
-    event: "sms.sent",
-    status: "success",
-    responseCode: 200,
-    requestBody: { event: "sms.sent", messageId: "msg_abc123", to: "0812345678", timestamp: 1741675912 },
-    responseBody: '{"ok":true}',
-  },
-  {
-    id: "dl_003",
-    webhookId: "wh_01",
-    timestamp: "2026-03-11 14:28:11",
-    event: "sms.failed",
-    status: "failed",
-    responseCode: 503,
-    requestBody: { event: "sms.failed", messageId: "msg_xyz789", to: "0899999999", reason: "invalid_number", timestamp: 1741675691 },
-    responseBody: '{"error":"Service Unavailable"}',
-  },
-  {
-    id: "dl_004",
-    webhookId: "wh_01",
-    timestamp: "2026-03-11 13:55:40",
-    event: "sms.delivered",
-    status: "success",
-    responseCode: 200,
-    requestBody: { event: "sms.delivered", messageId: "msg_def456", to: "0876543210", status: "delivered", timestamp: 1741673740 },
-    responseBody: '{"ok":true}',
-  },
-  {
-    id: "dl_005",
-    webhookId: "wh_01",
-    timestamp: "2026-03-11 12:10:22",
-    event: "sms.sent",
-    status: "success",
-    responseCode: 201,
-    requestBody: { event: "sms.sent", messageId: "msg_ghi321", to: "0855000111", timestamp: 1741666222 },
-    responseBody: '{"received":true,"queued":1}',
-  },
-];
+// Webhooks and delivery logs fetched from real API
 
 /* ─── Sub-components ─── */
 
@@ -253,7 +165,36 @@ function DeliveryStatusBadge({ status, code }: { status: "success" | "failed"; c
 
 function DeliveryLogSection({ webhookId }: { webhookId: string }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const logs = MOCK_DELIVERIES.filter((d) => d.webhookId === webhookId);
+  const [logs, setLogs] = useState<DeliveryLog[]>([]);
+  const [logsLoading, setLogsLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`/api/v1/webhooks/${webhookId}/logs`)
+      .then((r) => r.json())
+      .then((data) => {
+        const items = data.data?.logs ?? data.logs ?? [];
+        setLogs(items.map((l: Record<string, unknown>) => ({
+          id: l.id as string,
+          webhookId: webhookId,
+          timestamp: new Date(l.createdAt as string).toLocaleString("th-TH"),
+          event: l.event as string,
+          status: (l.statusCode as number) < 400 ? "success" : "failed",
+          responseCode: l.statusCode as number ?? 0,
+          requestBody: l.requestBody as object ?? {},
+          responseBody: l.responseBody as string ?? "",
+        })));
+      })
+      .catch(() => setLogs([]))
+      .finally(() => setLogsLoading(false));
+  }, [webhookId]);
+
+  if (logsLoading) {
+    return <div className="mt-2 text-center py-4"><span className="text-xs text-[var(--text-muted)]">กำลังโหลด...</span></div>;
+  }
+
+  if (logs.length === 0) {
+    return <div className="mt-2 text-center py-4"><span className="text-xs text-[var(--text-muted)]">ยังไม่มีประวัติการส่ง</span></div>;
+  }
 
   return (
     <div className="mt-2 space-y-1.5">
@@ -319,7 +260,7 @@ function WebhookTableRow({
   onDelete: (id: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const hasLogs = MOCK_DELIVERIES.some((d) => d.webhookId === hook.id);
+  const hasLogs = true; // Always show expand — logs fetched on demand
 
   return (
     <>
@@ -476,12 +417,38 @@ function WebhookDialog({
 }) {
   const isEdit = !!initial;
   const [url, setUrl] = useState(initial?.url ?? "");
+  const [urlError, setUrlError] = useState<string | null>(null);
   const [selectedEvents, setSelectedEvents] = useState<Set<string>>(
     new Set(initial?.events ?? [])
   );
   const [copied, setCopied] = useState(false);
 
-  const mockSecret = "whsec_a4f8c2d1e9b3047f56a2c8d1e0f7b3a9";
+  function validateUrl(value: string): string | null {
+    if (!value.trim()) return null;
+    try {
+      const parsed = new URL(value);
+      if (parsed.protocol !== "https:") return "ต้องเป็น HTTPS เท่านั้น";
+      return null;
+    } catch {
+      return "URL ไม่ถูกต้อง";
+    }
+  }
+
+  const [signingSecret, setSigningSecret] = useState<string>("");
+
+  // Fetch signing secret from API when dialog opens
+  useEffect(() => {
+    if (!open) return;
+    if (initial?.id) {
+      fetch(`/api/v1/webhooks/${initial.id}/secret`)
+        .then((r) => r.ok ? r.json() : Promise.reject())
+        .then((data) => setSigningSecret(data.data?.secret ?? data.secret ?? ""))
+        .catch(() => setSigningSecret(""));
+    } else {
+      // New webhook — secret will be generated on save
+      setSigningSecret("จะสร้างให้อัตโนมัติเมื่อบันทึก");
+    }
+  }, [open, initial?.id]);
 
   function toggleEvent(event: string) {
     setSelectedEvents((prev) => {
@@ -506,7 +473,7 @@ function WebhookDialog({
   }
 
   function copySecret() {
-    navigator.clipboard.writeText(mockSecret).catch(() => {});
+    navigator.clipboard.writeText(signingSecret).catch(() => {});
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
@@ -528,10 +495,16 @@ function WebhookDialog({
             </label>
             <Input
               value={url}
-              onChange={(e) => setUrl(e.target.value)}
+              onChange={(e) => {
+                setUrl(e.target.value);
+                setUrlError(validateUrl(e.target.value));
+              }}
               placeholder="https://your-domain.com/webhook"
-              className="font-mono text-sm"
+              className={`font-mono text-sm ${urlError ? "border-[var(--error)]" : ""}`}
             />
+            {urlError && (
+              <p className="text-[11px] mt-1" style={{ color: "var(--error)" }}>{urlError}</p>
+            )}
           </div>
 
           {/* Signing Secret */}
@@ -541,7 +514,7 @@ function WebhookDialog({
             </label>
             <div className="flex items-center gap-2">
               <div className="flex-1 bg-black/30 border border-[var(--border-default)] rounded-lg px-3 py-2 font-mono text-[12px] text-[var(--text-muted)] overflow-hidden text-ellipsis whitespace-nowrap">
-                {mockSecret}
+                {signingSecret || "—"}
               </div>
               <Button
                 type="button"
@@ -660,6 +633,7 @@ function WebhookDialog({
             <Button
               type="button"
               onClick={onClose}
+              disabled={!url.trim() || !!validateUrl(url)}
               className="cursor-pointer"
               style={{
                 background: "var(--accent)",
@@ -680,10 +654,36 @@ function WebhookDialog({
 export default function WebhooksPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editHook, setEditHook] = useState<WebhookRow | undefined>(undefined);
-  const [webhooks, setWebhooks] = useState<WebhookRow[]>(MOCK_WEBHOOKS);
+  const [webhooks, setWebhooks] = useState<WebhookRow[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
+  const fetchWebhooks = useCallback(async () => {
+    setFetchError(null);
+    try {
+      const res = await fetch("/api/v1/webhooks");
+      if (!res.ok) throw new Error("ไม่สามารถโหลดข้อมูล webhooks");
+      const data = await res.json();
+      const items = data.data?.webhooks ?? data.webhooks ?? [];
+      setWebhooks(items.map((w: Record<string, unknown>) => ({
+        id: w.id as string,
+        url: w.url as string,
+        events: (w.events as string[]) ?? [],
+        status: (w.active === false ? "paused" : "active") as WebhookStatus,
+        successRate: (w.successRate as number) ?? 100,
+        lastTriggered: w.lastTriggeredAt ? new Date(w.lastTriggeredAt as string).toLocaleString("th-TH") : "ยังไม่เคย",
+      })));
+    } catch (err) {
+      setFetchError(err instanceof Error ? err.message : "เกิดข้อผิดพลาด");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchWebhooks(); }, [fetchWebhooks]);
 
   const activeCount = webhooks.filter((w) => w.status === "active").length;
-  const failedCount = 12; // mock 24h
+  const failedCount = webhooks.filter((w) => w.status === "error").length;
 
   function handleEdit(hook: WebhookRow) {
     setEditHook(hook);
@@ -708,14 +708,14 @@ export default function WebhooksPage() {
           <Button
             type="button"
             onClick={handleAdd}
-            className="gap-1.5 cursor-pointer"
+            className="gap-1.5 cursor-pointer shrink-0"
             style={{
               background: "var(--accent)",
               color: "var(--text-on-accent)",
             }}
           >
             <Plus className="w-4 h-4" />
-            เพิ่ม Webhook
+            <span className="hidden sm:inline">เพิ่ม Webhook</span>
           </Button>
         }
       />
@@ -731,7 +731,7 @@ export default function WebhooksPage() {
         <StatCard
           icon={<Send className="w-4 h-4" style={{ color: "var(--info)" }} />}
           iconColor="59,130,246"
-          value="1,247"
+          value="—"
           label="Total Deliveries (24h)"
         />
         <StatCard
@@ -748,9 +748,42 @@ export default function WebhooksPage() {
       </StatsRow>
 
       {/* Table */}
+      {isLoading ? (
+        <div className="flex items-center justify-center py-16">
+          <div className="text-center">
+            <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-[var(--text-muted)]" />
+            <p className="text-sm text-[var(--text-muted)]">กำลังโหลด...</p>
+          </div>
+        </div>
+      ) : fetchError ? (
+        <div className="flex items-center justify-center py-16">
+          <div className="text-center">
+            <AlertTriangle className="w-6 h-6 mx-auto mb-2 text-[var(--error)]" />
+            <p className="text-sm text-[var(--error)] mb-2">{fetchError}</p>
+            <button onClick={fetchWebhooks} className="text-xs text-[var(--accent)] hover:underline cursor-pointer">ลองอีกครั้ง</button>
+          </div>
+        </div>
+      ) : webhooks.length === 0 ? (
+        <div className="flex items-center justify-center py-16">
+          <div className="text-center">
+            <Globe className="w-10 h-10 mx-auto mb-3 text-[var(--text-muted)]" />
+            <p className="text-base font-semibold text-[var(--text-primary)] mb-1">ยังไม่มี Webhook</p>
+            <p className="text-sm text-[var(--text-muted)] mb-4">เพิ่ม webhook เพื่อรับการแจ้งเตือนเมื่อมี event เกิดขึ้น</p>
+            <Button
+              type="button"
+              onClick={handleAdd}
+              className="gap-1.5 cursor-pointer"
+              style={{ background: "var(--accent)", color: "var(--text-on-accent)" }}
+            >
+              <Plus className="w-4 h-4" />
+              เพิ่ม Webhook
+            </Button>
+          </div>
+        </div>
+      ) : (
       <TableWrapper>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[700px]">
+          <table className="w-full">
             <thead>
               <tr className="bg-[var(--table-header)]">
                 {["URL", "Events", "Status", "Success Rate", "Last Triggered", ""].map((col) => (
@@ -776,6 +809,7 @@ export default function WebhooksPage() {
           </table>
         </div>
       </TableWrapper>
+      )}
 
       {/* Add/Edit Dialog */}
       <WebhookDialog

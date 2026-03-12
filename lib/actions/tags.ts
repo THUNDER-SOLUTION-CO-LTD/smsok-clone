@@ -4,8 +4,10 @@ import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { prisma as db } from "../db";
 import { assignContactTagSchema, createTagSchema, idSchema, updateTagSchema } from "../validations";
+import { resolveActionUserId } from "../action-user";
 
 export async function getTags(userId: string) {
+  userId = await resolveActionUserId(userId);
   return db.tag.findMany({
     where: { userId },
     include: {
@@ -18,6 +20,7 @@ export async function getTags(userId: string) {
 }
 
 export async function createTag(userId: string, data: unknown) {
+  userId = await resolveActionUserId(userId);
   const input = createTagSchema.parse(data);
 
   try {
@@ -40,6 +43,7 @@ export async function createTag(userId: string, data: unknown) {
 }
 
 export async function updateTag(userId: string, tagId: string, data: unknown) {
+  userId = await resolveActionUserId(userId);
   idSchema.parse({ id: tagId });
   const input = updateTagSchema.parse(data);
 
@@ -68,6 +72,7 @@ export async function updateTag(userId: string, tagId: string, data: unknown) {
 }
 
 export async function deleteTag(userId: string, tagId: string) {
+  userId = await resolveActionUserId(userId);
   idSchema.parse({ id: tagId });
 
   const tag = await db.tag.findFirst({
@@ -97,6 +102,7 @@ async function ensureOwnedTagAndContact(userId: string, contactId: string, tagId
 }
 
 export async function assignTagToContact(userId: string, contactId: string, data: unknown) {
+  userId = await resolveActionUserId(userId);
   idSchema.parse({ id: contactId });
   const input = assignContactTagSchema.parse(data);
 
@@ -122,6 +128,7 @@ export async function assignTagToContact(userId: string, contactId: string, data
 }
 
 export async function unassignTagFromContact(userId: string, contactId: string, data: unknown) {
+  userId = await resolveActionUserId(userId);
   idSchema.parse({ id: contactId });
   const input = assignContactTagSchema.parse(data);
 

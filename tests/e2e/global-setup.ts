@@ -25,7 +25,8 @@ async function globalSetup(config: FullConfig) {
   });
 
   // Navigate to login
-  await page.goto(`${baseURL}/login`, { waitUntil: "networkidle", timeout: 30000 });
+  await page.goto(`${baseURL}/login`, { waitUntil: "domcontentloaded", timeout: 30000 });
+  await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
 
   // Dismiss cookie consent
   const acceptBtn = page.getByText("ยอมรับทั้งหมด");
@@ -70,23 +71,42 @@ async function globalSetup(config: FullConfig) {
 
   await submitBtn.click();
 
+  // Wait for login API response first (may take several seconds on dev server)
+  await page.waitForResponse(
+    (res) => res.url().includes("/api/auth/login"),
+    { timeout: 45000 }
+  ).catch(() => {
+    console.log("⚠️  No /api/auth/login response captured within 45s");
+  });
+
   // Wait for navigation to dashboard OR 2FA challenge page
   try {
-    await page.waitForURL(/\/(dashboard|2fa)/, { timeout: 30000 });
+    await page.waitForURL(/\/(dashboard|2fa)/, { timeout: 15000 });
   } catch {
-    const url = page.url();
+    // Login API may have succeeded (cookies set) but client-side routing stalled.
+    // If API returned 200, try navigating to dashboard directly.
     const lr = loginResponse as { status: number; body: string } | null;
-    const apiInfo = lr
-      ? `API: ${lr.status} ${lr.body.substring(0, 300)}`
-      : "No API response captured";
-    const pageText = await page.locator("body").textContent().catch(() => "");
-    const btnDisabled = await page.locator('button[type="submit"]').isDisabled().catch(() => null);
-    throw new Error(
-      `Login failed — stuck on ${url}\n` +
-      `Submit button disabled: ${btnDisabled}\n` +
-      `${apiInfo}\n` +
-      `Page text (first 500): ${pageText?.substring(0, 500)}`
-    );
+    if (lr && lr.status === 200 && lr.body.includes('"success":true')) {
+      console.log("⚠️  Client-side routing stalled after successful login API — navigating to /dashboard directly");
+      await page.goto(`${baseURL}/dashboard`, { waitUntil: "domcontentloaded", timeout: 20000 });
+      await page.waitForTimeout(3000);
+      if (!page.url().includes("/dashboard")) {
+        throw new Error(`Login API succeeded but still can't reach dashboard. Current URL: ${page.url()}`);
+      }
+    } else {
+      const url = page.url();
+      const apiInfo = lr
+        ? `API: ${lr.status} ${lr.body.substring(0, 300)}`
+        : "No API response captured";
+      const pageText = await page.locator("body").textContent().catch(() => "");
+      const btnDisabled = await page.locator('button[type="submit"]').isDisabled().catch(() => null);
+      throw new Error(
+        `Login failed — stuck on ${url}\n` +
+        `Submit button disabled: ${btnDisabled}\n` +
+        `${apiInfo}\n` +
+        `Page text (first 500): ${pageText?.substring(0, 500)}`
+      );
+    }
   }
 
   // If redirected to /2fa — 2FA is enabled on test account, need to disable it

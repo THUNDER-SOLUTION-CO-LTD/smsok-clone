@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
@@ -15,9 +15,12 @@ import {
   Settings,
   ScrollText,
   Users,
+  ShoppingCart,
   ChevronLeft,
   ChevronRight,
   Bell,
+  Menu,
+  X,
 } from "lucide-react";
 
 /* ─── Nav Config ─── */
@@ -46,6 +49,11 @@ const DASHBOARDS: NavItem[] = [
     badge: 8,
     badgeColor: "var(--warning)",
   },
+  {
+    label: "Orders",
+    href: "/admin/orders",
+    icon: ShoppingCart,
+  },
   { label: "Support", href: "/admin/support", icon: Headphones },
   { label: "CEO", href: "/admin/ceo", icon: BarChart3 },
   { label: "CTO", href: "/admin/cto", icon: Cpu },
@@ -54,7 +62,7 @@ const DASHBOARDS: NavItem[] = [
 
 const SYSTEM: NavItem[] = [
   { label: "Settings", href: "/admin/settings", icon: Settings },
-  { label: "Audit Log", href: "/admin/audit", icon: ScrollText },
+  { label: "Audit Log", href: "/admin/audit-logs", icon: ScrollText },
   { label: "Users", href: "/admin/users", icon: Users },
 ];
 
@@ -63,6 +71,12 @@ const SYSTEM: NavItem[] = [
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
 
   function isActive(href: string) {
     if (href === "/admin") return pathname === "/admin";
@@ -78,12 +92,12 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         href={item.href}
         className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
           active
-            ? "bg-[rgba(0,226,181,0.08)] text-[var(--accent)] border-l-2 border-[var(--accent)] -ml-[2px]"
+            ? "bg-[rgba(var(--accent-rgb),0.08)] text-[var(--accent)] border-l-2 border-[var(--accent)] -ml-[2px]"
             : "text-[var(--text-muted)] hover:text-white hover:bg-[rgba(255,255,255,0.03)]"
-        } ${collapsed ? "justify-center px-2" : ""}`}
+        } ${collapsed && !mobileOpen ? "justify-center px-2" : ""}`}
       >
         <Icon className="w-4 h-4 flex-shrink-0" />
-        {!collapsed && (
+        {(!collapsed || mobileOpen) && (
           <>
             <span className="flex-1">{item.label}</span>
             {item.badge !== undefined && (
@@ -103,11 +117,33 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     );
   }
 
+  function SidebarContent() {
+    return (
+      <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-1">
+        <p className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider px-3 mb-2">
+          Dashboards
+        </p>
+        {DASHBOARDS.map((item) => (
+          <NavLink key={item.href} item={item} />
+        ))}
+
+        <div className="h-px bg-[var(--border-default)] my-3" />
+
+        <p className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider px-3 mb-2">
+          System
+        </p>
+        {SYSTEM.map((item) => (
+          <NavLink key={item.href} item={item} />
+        ))}
+      </nav>
+    );
+  }
+
   return (
     <div className="flex h-screen bg-[var(--bg-base)]">
-      {/* Sidebar */}
+      {/* Desktop Sidebar */}
       <aside
-        className={`flex flex-col border-r border-[var(--border-default)] bg-[var(--bg-base)] transition-[width] duration-200 ${
+        className={`hidden md:flex flex-col border-r border-[var(--border-default)] bg-[var(--bg-base)] transition-[width] duration-200 ${
           collapsed ? "w-[60px]" : "w-[240px]"
         }`}
       >
@@ -131,35 +167,66 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           </button>
         </div>
 
-        {/* Nav */}
-        <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-1">
-          {!collapsed && (
-            <p className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider px-3 mb-2">
-              Dashboards
-            </p>
-          )}
-          {DASHBOARDS.map((item) => (
-            <NavLink key={item.href} item={item} />
-          ))}
-
-          <div className="h-px bg-[var(--border-default)] my-3" />
-
-          {!collapsed && (
-            <p className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider px-3 mb-2">
-              System
-            </p>
-          )}
-          {SYSTEM.map((item) => (
-            <NavLink key={item.href} item={item} />
-          ))}
-        </nav>
+        {/* Desktop nav */}
+        {collapsed ? (
+          <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-1">
+            {DASHBOARDS.map((item) => (
+              <NavLink key={item.href} item={item} />
+            ))}
+            <div className="h-px bg-[var(--border-default)] my-3" />
+            {SYSTEM.map((item) => (
+              <NavLink key={item.href} item={item} />
+            ))}
+          </nav>
+        ) : (
+          <SidebarContent />
+        )}
       </aside>
+
+      {/* Mobile Sidebar Overlay */}
+      {mobileOpen && (
+        <div className="md:hidden fixed inset-0 z-50 flex">
+          {/* Backdrop */}
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setMobileOpen(false)}
+            aria-label="ปิดเมนู"
+          />
+          {/* Drawer */}
+          <aside className="relative w-[260px] bg-[var(--bg-base)] border-r border-[var(--border-default)] flex flex-col animate-fade-in">
+            <div className="flex items-center justify-between px-4 py-4 border-b border-[var(--border-default)]">
+              <span className="text-sm font-bold text-white tracking-tight">
+                SMSOK Admin
+              </span>
+              <button
+                type="button"
+                onClick={() => setMobileOpen(false)}
+                className="w-6 h-6 rounded-md flex items-center justify-center text-[var(--text-muted)] hover:text-white transition-colors cursor-pointer"
+                aria-label="ปิดเมนู"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <SidebarContent />
+          </aside>
+        </div>
+      )}
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="flex items-center justify-between px-6 py-3 border-b border-[var(--border-default)] bg-[var(--bg-base)]">
+        <header className="flex items-center justify-between px-4 md:px-6 py-3 border-b border-[var(--border-default)] bg-[var(--bg-base)]">
           <div className="flex items-center gap-3">
+            {/* Mobile hamburger */}
+            <button
+              type="button"
+              onClick={() => setMobileOpen(true)}
+              className="md:hidden w-8 h-8 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-white transition-colors cursor-pointer"
+              aria-label="เปิดเมนู"
+            >
+              <Menu className="w-4 h-4" />
+            </button>
             <h2 className="text-sm font-semibold text-white">Admin Panel</h2>
           </div>
           <div className="flex items-center gap-3">

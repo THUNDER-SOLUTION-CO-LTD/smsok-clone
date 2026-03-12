@@ -14,9 +14,14 @@ type ReceiverAccountError =
   | "receiver_verification_unavailable"
   | "receiver_mismatch";
 
-const RECEIVER_ACCOUNTS = [process.env.KBANK_ACCOUNT, process.env.SCB_ACCOUNT]
-  .filter(Boolean)
-  .map((account) => account!.replace(/\D/g, ""));
+import { COMPANY_ACCOUNT_DIGITS } from "@/lib/constants/bank-account";
+
+const RECEIVER_ACCOUNTS = [
+  COMPANY_ACCOUNT_DIGITS,
+  ...[process.env.KBANK_ACCOUNT, process.env.SCB_ACCOUNT]
+    .filter(Boolean)
+    .map((account) => account!.replace(/\D/g, "")),
+];
 
 function checkReceiverAccount(account: string | null | undefined): {
   matches: boolean;

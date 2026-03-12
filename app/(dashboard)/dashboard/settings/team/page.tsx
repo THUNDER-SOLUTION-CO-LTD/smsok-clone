@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Users,
   Mail,
@@ -12,6 +12,9 @@ import {
   ChevronRight,
   Search,
   ArrowRight,
+  Loader2,
+  AlertCircle,
+  RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -99,55 +102,41 @@ const INVITE_ROLES: { value: Role; label: string; description: string }[] = [
   { value: "api-only", label: "API", description: "เฉพาะ API" },
 ];
 
-/* ─── Mock Data ─── */
-
-const MOCK_MEMBERS: TeamMember[] = [
-  {
-    id: "1",
-    name: "สมชาย ใจดี",
-    email: "somchai@mail.com",
-    role: "owner",
-    status: "active",
-    lastSeen: "5 นาที",
-    online: true,
-  },
-  {
-    id: "2",
-    name: "สมศรี รักดี",
-    email: "somsri@mail.com",
-    role: "admin",
-    status: "active",
-    lastSeen: "1 ชม.",
-    online: true,
-  },
-  {
-    id: "3",
-    name: "วิชัย สุขใจ",
-    email: "wichai@mail.com",
-    role: "member",
-    status: "active",
-    lastSeen: "2 วัน",
-    online: false,
-  },
-  {
-    id: "4",
-    name: "",
-    email: "newmember@mail.com",
-    role: "member",
-    status: "pending",
-    lastSeen: "—",
-    online: false,
-  },
-];
-
 /* ─── Main Component ─── */
 
 export default function TeamPage() {
+  const [members, setMembers] = useState<TeamMember[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<Role>("member");
   const [inviteMessage, setInviteMessage] = useState("");
   const [inviteSending, setInviteSending] = useState(false);
+
+  const fetchMembers = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/v1/team/invite");
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || "ไม่สามารถโหลดข้อมูลทีมได้");
+      }
+      const data = await res.json();
+      const list: TeamMember[] = Array.isArray(data) ? data : (data.members ?? data.data ?? []);
+      setMembers(list);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "เกิดข้อผิดพลาด");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchMembers();
+  }, [fetchMembers]);
 
   async function handleSendInvite() {
     if (!inviteEmail.trim()) {
@@ -174,6 +163,7 @@ export default function TeamPage() {
       setInviteEmail("");
       setInviteRole("member");
       setInviteMessage("");
+      fetchMembers();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "เกิดข้อผิดพลาด");
     } finally {
@@ -181,20 +171,18 @@ export default function TeamPage() {
     }
   }
 
-  const activeCount = MOCK_MEMBERS.filter((m) => m.status === "active").length;
-  const pendingCount = MOCK_MEMBERS.filter(
-    (m) => m.status === "pending"
-  ).length;
+  const activeCount = members.filter((m) => m.status === "active").length;
+  const pendingCount = members.filter((m) => m.status === "pending").length;
 
   return (
     <PageLayout>
       <PageHeader
         title="สมาชิกทีม"
-        count={MOCK_MEMBERS.length}
+        count={members.length}
         actions={
           <Button
             onClick={() => setInviteOpen(true)}
-            className="bg-[var(--accent)] hover:bg-[var(--accent)]/80 text-[var(--text-on-accent)] font-semibold gap-2"
+            className={`bg-[var(--accent)] hover:bg-[var(--accent)]/80 text-[var(--text-on-accent)] font-semibold gap-2 ${members.length <= 1 ? "hidden sm:inline-flex" : ""}`}
           >
             <UserPlus className="w-4 h-4" /> เชิญสมาชิก
           </Button>
@@ -222,7 +210,40 @@ export default function TeamPage() {
         />
       </StatsRow>
 
-      {MOCK_MEMBERS.length <= 1 ? (
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-20 gap-3">
+          <Loader2 className="w-8 h-8 animate-spin text-[var(--accent)]" />
+          <p className="text-sm text-[var(--text-muted)]">กำลังโหลดข้อมูลทีม...</p>
+        </div>
+      ) : error ? (
+        <div className="flex flex-col items-center justify-center py-20 gap-4">
+          <div className="w-12 h-12 rounded-full bg-[rgba(var(--error-rgb,239,68,68),0.08)] flex items-center justify-center">
+            <AlertCircle className="w-6 h-6 text-[var(--error)]" />
+          </div>
+          <div className="text-center">
+            <p className="text-sm font-medium text-[var(--text-primary)] mb-1">ไม่สามารถโหลดข้อมูลได้</p>
+            <p className="text-xs text-[var(--text-muted)]">{error}</p>
+          </div>
+          <Button
+            variant="outline"
+            onClick={fetchMembers}
+            className="gap-2 border-[var(--border-default)] text-[var(--text-secondary)]"
+          >
+            <RefreshCw className="w-4 h-4" /> ลองอีกครั้ง
+          </Button>
+        </div>
+      ) : members.length === 0 ? (
+        <EmptyStateShared
+          icon={UserPlus}
+          iconColor="var(--accent)"
+          iconBg="rgba(var(--accent-rgb),0.06)"
+          iconBorder="rgba(var(--accent-rgb),0.1)"
+          title="ยังไม่มีสมาชิกในทีม"
+          description={"ยังไม่มีสมาชิกในทีม — เชิญสมาชิกเพื่อเริ่มต้น"}
+          ctaLabel="+ เชิญสมาชิก"
+          ctaAction={() => setInviteOpen(true)}
+        />
+      ) : members.length <= 1 ? (
         <EmptyStateShared
           icon={UserPlus}
           iconColor="var(--accent)"
@@ -246,7 +267,7 @@ export default function TeamPage() {
         </div>
 
         {/* Body */}
-        {MOCK_MEMBERS.map((member, i) => {
+        {members.map((member, i) => {
           const roleConfig = ROLE_CONFIG[member.role];
           const isPending = member.status === "pending";
           return (
@@ -379,8 +400,8 @@ export default function TeamPage() {
                     onClick={() => setInviteRole(role.value)}
                     className={`rounded-xl p-3 text-center transition-all cursor-pointer ${
                       inviteRole === role.value
-                        ? "border-2 border-[var(--accent)] bg-[rgba(0,226,181,0.04)]"
-                        : "border border-[var(--border-default)] hover:border-[rgba(0,226,181,0.2)]"
+                        ? "border-2 border-[var(--accent)] bg-[rgba(var(--accent-rgb),0.04)]"
+                        : "border border-[var(--border-default)] hover:border-[rgba(var(--accent-rgb),0.2)]"
                     }`}
                   >
                     <div className="text-[13px] font-semibold text-[var(--text-primary)]">

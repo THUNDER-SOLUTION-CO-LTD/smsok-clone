@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   ChevronDown,
   Gift,
   ShieldCheck,
   Landmark,
   Sparkles,
+  HelpCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -15,7 +17,6 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   type PackageGroup,
   type PackageTier,
-  PACKAGE_TIERS,
   formatBaht,
   COMPARISON_FEATURES,
 } from "@/types/purchase";
@@ -24,9 +25,10 @@ import {
 
 function getRecommendedTier(
   volume: number,
-  group: PackageGroup
+  group: PackageGroup,
+  allTiers: PackageTier[]
 ): PackageTier | null {
-  const tiers = PACKAGE_TIERS.filter((t) => t.group === group).sort(
+  const tiers = allTiers.filter((t) => t.group === group).sort(
     (a, b) => a.smsCredits - b.smsCredits
   );
   for (const tier of tiers) {
@@ -307,15 +309,17 @@ function AccordionCard({
 
 function VolumeSliderSection({
   group,
+  allTiers,
   onSelectTier,
 }: {
   group: PackageGroup;
+  allTiers: PackageTier[];
   onSelectTier: (tier: PackageTier) => void;
 }) {
   const [volume, setVolume] = useState(5000);
   const recommended = useMemo(
-    () => getRecommendedTier(volume, group),
-    [volume, group]
+    () => getRecommendedTier(volume, group, allTiers),
+    [volume, group, allTiers]
   );
 
   return (
@@ -326,19 +330,35 @@ function VolumeSliderSection({
         border: "1px solid var(--border-default)",
       }}
     >
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
-          ต้องการส่ง SMS ประมาณกี่ข้อความ?
-        </p>
-        <span
-          className="text-xl font-bold tabular-nums"
-          style={{ color: "var(--text-primary)" }}
-        >
-          {volume.toLocaleString()}{" "}
-          <span className="text-sm font-normal" style={{ color: "var(--text-muted)" }}>
-            SMS
+      <div className="mb-4">
+        <div className="flex items-center gap-2 mb-1">
+          <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+            เลือกจำนวน SMS ที่ต้องการ
+          </p>
+          <span
+            className="group relative"
+            title="เลื่อนแถบเพื่อเลือกจำนวน SMS ระบบจะแนะนำแพ็กเกจที่เหมาะสมให้อัตโนมัติ"
+          >
+            <HelpCircle size={14} style={{ color: "var(--text-muted)" }} className="cursor-help" />
           </span>
-        </span>
+        </div>
+        <p className="text-xs mb-3" style={{ color: "var(--text-muted)" }}>
+          เลื่อนแถบด้านล่างเพื่อดูแพ็กเกจที่เหมาะสม
+        </p>
+        <div className="flex items-center justify-between">
+          <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+            จำนวนที่เลือก
+          </span>
+          <span
+            className="text-xl font-bold tabular-nums px-3 py-1 rounded-md"
+            style={{ color: "var(--accent)", background: "rgba(var(--accent-rgb), 0.08)" }}
+          >
+            {volume.toLocaleString()}{" "}
+            <span className="text-sm font-normal" style={{ color: "var(--text-muted)" }}>
+              SMS
+            </span>
+          </span>
+        </div>
       </div>
 
       <Slider
@@ -392,9 +412,9 @@ function VolumeSliderSection({
 
 // ── Comparison Table ──
 
-function ComparisonTable({ group }: { group: PackageGroup }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const tiers = PACKAGE_TIERS.filter((t) => t.group === group);
+function ComparisonTable({ group, allTiers }: { group: PackageGroup; allTiers: PackageTier[] }) {
+  const [isOpen, setIsOpen] = useState(true);
+  const tiers = allTiers.filter((t) => t.group === group);
 
   function getCellValue(tier: PackageTier, key: string): string {
     switch (key) {
@@ -442,85 +462,106 @@ function ComparisonTable({ group }: { group: PackageGroup }) {
         เปรียบเทียบฟีเจอร์ทุกแพ็กเกจ
       </button>
 
-      <div
-        className="overflow-hidden transition-all duration-300"
-        style={{ maxHeight: isOpen ? "600px" : "0px" }}
-      >
-        <div
-          className="mt-4 rounded-lg overflow-hidden"
-          style={{
-            background: "var(--bg-surface)",
-            border: "1px solid var(--border-default)",
-          }}
-        >
-          <table className="w-full text-[13px]">
-            <thead>
-              <tr style={{ background: "var(--bg-base)" }}>
-                <th
-                  className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider"
-                  style={{ color: "var(--text-muted)" }}
-                >
-                  Feature
-                </th>
-                {tiers.map((t) => (
-                  <th
-                    key={t.tier}
-                    className="text-center px-4 py-2.5 text-xs font-semibold uppercase tracking-wider"
-                    style={{
-                      color: t.isBestValue
-                        ? "var(--accent)"
-                        : "var(--text-muted)",
-                      background: t.isBestValue
-                        ? "rgba(var(--accent-rgb), 0.03)"
-                        : undefined,
-                    }}
-                  >
-                    {t.tier}{" "}
-                    {t.isBestValue && "⭐"}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {COMPARISON_FEATURES.map((feature) => (
-                <tr
-                  key={feature.key}
-                  style={{ borderBottom: "1px solid var(--border-default)" }}
-                >
-                  <td
-                    className="px-4 py-3"
-                    style={{ color: "var(--text-muted)" }}
-                  >
-                    {feature.label}
-                  </td>
-                  {tiers.map((t) => {
-                    const val = getCellValue(t, feature.key);
-                    return (
-                      <td
+      <AnimatePresence initial={false}>
+        {isOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+            className="overflow-hidden"
+          >
+            <div
+              className="mt-4 rounded-lg overflow-x-auto"
+              style={{
+                background: "var(--bg-surface)",
+                border: "1px solid var(--border-default)",
+              }}
+            >
+              <table className="w-full text-[13px]">
+                <thead>
+                  <tr style={{ background: "var(--bg-base)" }}>
+                    <th
+                      className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider sticky left-0"
+                      style={{ color: "var(--text-muted)", background: "var(--bg-base)" }}
+                    >
+                      ฟีเจอร์
+                    </th>
+                    {tiers.map((t) => (
+                      <th
                         key={t.tier}
-                        className="text-center px-4 py-3"
+                        className="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wider relative"
                         style={{
-                          color:
-                            val === "✅"
-                              ? "var(--accent)"
-                              : val === "❌"
-                                ? "var(--text-muted)"
-                                : "var(--text-primary)",
+                          color: t.isBestValue
+                            ? "var(--accent)"
+                            : "var(--text-muted)",
                           background: t.isBestValue
-                            ? "rgba(var(--accent-rgb), 0.03)"
+                            ? "rgba(var(--accent-rgb), 0.06)"
                             : undefined,
                         }}
                       >
-                        {val}
+                        <span className="block">{t.name}</span>
+                        <span className="block text-[10px] font-normal mt-0.5">
+                          Tier {t.tier}
+                        </span>
+                        {t.isBestValue && (
+                          <span
+                            className="absolute -top-0.5 left-1/2 -translate-x-1/2 text-[9px] font-bold px-2 py-0.5 rounded-b-md"
+                            style={{ background: "var(--accent)", color: "var(--bg-base)" }}
+                          >
+                            แนะนำ
+                          </span>
+                        )}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {COMPARISON_FEATURES.map((feature, idx) => (
+                    <tr
+                      key={feature.key}
+                      style={{
+                        borderBottom: "1px solid var(--border-default)",
+                        background: idx % 2 === 1 ? "rgba(var(--accent-rgb), 0.01)" : undefined,
+                      }}
+                    >
+                      <td
+                        className="px-4 py-3 text-xs font-medium sticky left-0"
+                        style={{ color: "var(--text-secondary)", background: "var(--bg-surface)" }}
+                      >
+                        {feature.label}
                       </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                      {tiers.map((t) => {
+                        const val = getCellValue(t, feature.key);
+                        return (
+                          <td
+                            key={t.tier}
+                            className="text-center px-4 py-3 text-xs"
+                            style={{
+                              color:
+                                val === "✅"
+                                  ? "var(--accent)"
+                                  : val === "❌"
+                                    ? "var(--text-muted)"
+                                    : "var(--text-primary)",
+                              background: t.isBestValue
+                                ? "rgba(var(--accent-rgb), 0.06)"
+                                : undefined,
+                              fontWeight: t.isBestValue ? 600 : undefined,
+                            }}
+                          >
+                            {val}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -529,8 +570,8 @@ function ComparisonTable({ group }: { group: PackageGroup }) {
 
 function TrustSignals() {
   const banks = [
-    { name: "KBank", label: "กสิกรไทย" },
     { name: "SCB", label: "ไทยพาณิชย์" },
+    { name: "KBank", label: "กสิกรไทย" },
     { name: "BBL", label: "กรุงเทพ" },
     { name: "BAY", label: "กรุงศรี" },
   ];
@@ -613,10 +654,20 @@ export default function PricingPage() {
   );
   const [selectedMobileTier, setSelectedMobileTier] =
     useState<PackageTier | null>(null);
+  const [packageTiers, setPackageTiers] = useState<PackageTier[]>([]);
+  const [tiersLoading, setTiersLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/v1/packages")
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then((data) => setPackageTiers(data.data ?? data.packages ?? []))
+      .catch(() => setPackageTiers([]))
+      .finally(() => setTiersLoading(false));
+  }, []);
 
   const tiers = useMemo(
-    () => PACKAGE_TIERS.filter((t) => t.group === group),
-    [group]
+    () => packageTiers.filter((t) => t.group === group),
+    [group, packageTiers]
   );
 
   const handleSelect = useCallback(
@@ -631,14 +682,45 @@ export default function PricingPage() {
       const newExpanded = expandedAccordion === tierId ? null : tierId;
       setExpandedAccordion(newExpanded);
       if (newExpanded) {
-        const tier = PACKAGE_TIERS.find((t) => t.id === tierId) ?? null;
+        const tier = packageTiers.find((t) => t.id === tierId) ?? null;
         setSelectedMobileTier(tier);
       } else {
         setSelectedMobileTier(null);
       }
     },
-    [expandedAccordion]
+    [expandedAccordion, packageTiers]
   );
+
+  if (tiersLoading) {
+    return (
+      <div className="max-w-5xl mx-auto px-4 py-16 text-center">
+        <div
+          className="w-6 h-6 border-2 rounded-full animate-spin mx-auto mb-3"
+          style={{ borderColor: "var(--border-default)", borderTopColor: "var(--accent)" }}
+        />
+        <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+          กำลังโหลดแพ็กเกจ...
+        </p>
+      </div>
+    );
+  }
+
+  if (packageTiers.length === 0) {
+    return (
+      <div className="max-w-5xl mx-auto px-4 py-16 text-center">
+        <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+          ไม่พบแพ็กเกจ กรุณาลองใหม่อีกครั้ง
+        </p>
+        <button
+          className="mt-4 text-sm font-medium"
+          style={{ color: "var(--accent)" }}
+          onClick={() => window.location.reload()}
+        >
+          โหลดใหม่
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8 pb-24 sm:pb-8">
@@ -706,42 +788,51 @@ export default function PricingPage() {
             </TabsTrigger>
           </TabsList>
 
-          {/* Desktop Cards */}
-          <TabsContent value={group}>
-            {/* Desktop: 4-col grid */}
-            <div className="hidden sm:grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
-              {tiers.map((tier) => (
-                <PricingCard
-                  key={tier.id}
-                  tier={tier}
-                  isRecommended={false}
-                  onSelect={handleSelect}
-                />
-              ))}
-            </div>
-
-            {/* Mobile: Accordion */}
-            <div className="sm:hidden space-y-2 mt-6">
-              {tiers.map((tier) => (
-                <AccordionCard
-                  key={tier.id}
-                  tier={tier}
-                  isExpanded={expandedAccordion === tier.id}
-                  isRecommended={false}
-                  onToggle={() => handleAccordionToggle(tier.id)}
-                  onSelect={handleSelect}
-                />
-              ))}
-            </div>
-          </TabsContent>
         </Tabs>
       </div>
 
+      {/* Cards with tab switch animation */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={group}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.25, ease: "easeInOut" }}
+        >
+          {/* Desktop: 4-col grid */}
+          <div className="hidden sm:grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {tiers.map((tier) => (
+              <PricingCard
+                key={tier.id}
+                tier={tier}
+                isRecommended={false}
+                onSelect={handleSelect}
+              />
+            ))}
+          </div>
+
+          {/* Mobile: Accordion */}
+          <div className="sm:hidden space-y-2">
+            {tiers.map((tier) => (
+              <AccordionCard
+                key={tier.id}
+                tier={tier}
+                isExpanded={expandedAccordion === tier.id}
+                isRecommended={false}
+                onToggle={() => handleAccordionToggle(tier.id)}
+                onSelect={handleSelect}
+              />
+            ))}
+          </div>
+        </motion.div>
+      </AnimatePresence>
+
       {/* Volume Slider */}
-      <VolumeSliderSection group={group} onSelectTier={handleSelect} />
+      <VolumeSliderSection group={group} allTiers={packageTiers} onSelectTier={handleSelect} />
 
       {/* Comparison Table */}
-      <ComparisonTable group={group} />
+      <ComparisonTable group={group} allTiers={packageTiers} />
 
       {/* Trust Signals */}
       <TrustSignals />

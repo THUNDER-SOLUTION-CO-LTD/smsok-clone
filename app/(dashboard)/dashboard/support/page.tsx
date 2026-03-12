@@ -158,8 +158,8 @@ const CATEGORY_CONFIG: Record<TicketCategory, { label: string; cls: string; icon
 const FAQ_LINKS = [
   {
     icon: CreditCard,
-    title: "วิธีเติมเครดิตและชำระเงิน",
-    description: "ขั้นตอนเติมเครดิต, วิธีชำระเงิน, ใบเสร็จ/ใบกำกับภาษี",
+    title: "วิธีซื้อแพ็กเกจและชำระเงิน",
+    description: "ขั้นตอนซื้อแพ็กเกจ, วิธีชำระเงิน, ใบเสร็จ/ใบกำกับภาษี",
     href: "/dashboard/support/kb#billing",
   },
   {

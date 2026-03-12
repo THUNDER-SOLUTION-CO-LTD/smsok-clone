@@ -1,48 +1,16 @@
 import { ApiError, apiError, apiResponse } from "@/lib/api-auth";
 import { getSession } from "@/lib/auth";
 import { prisma as db } from "@/lib/db";
+import { orderSummarySelect } from "@/lib/orders/api";
 import { createOrderHistory, serializeOrder } from "@/lib/orders/service";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
-const cancellableStatuses = new Set(["PENDING", "SLIP_UPLOADED", "PENDING_REVIEW"]);
+const cancellableStatuses = new Set(["DRAFT", "PENDING_PAYMENT", "VERIFYING"]);
 
-const orderSelect = {
-  id: true,
-  orderNumber: true,
-  packageTierId: true,
-  packageName: true,
-  smsCount: true,
-  customerType: true,
-  taxName: true,
-  taxId: true,
-  taxAddress: true,
-  taxBranchType: true,
-  taxBranchNumber: true,
-  netAmount: true,
-  vatAmount: true,
-  totalAmount: true,
-  hasWht: true,
-  whtAmount: true,
-  payAmount: true,
-  status: true,
-  expiresAt: true,
-  quotationNumber: true,
-  quotationUrl: true,
-  invoiceNumber: true,
-  invoiceUrl: true,
-  slipUrl: true,
-  whtCertUrl: true,
-  easyslipVerified: true,
-  rejectReason: true,
-  adminNote: true,
-  paidAt: true,
-  createdAt: true,
-} as const;
-
-export async function POST(_req: Request, ctx: RouteContext) {
+export async function POST(req: Request, ctx: RouteContext) {
   try {
     const session = await getSession();
     if (!session?.id) throw new ApiError(401, "กรุณาเข้าสู่ระบบ");
@@ -57,16 +25,26 @@ export async function POST(_req: Request, ctx: RouteContext) {
       throw new ApiError(400, "คำสั่งซื้อนี้ไม่สามารถยกเลิกได้");
     }
 
+    const body = await req.json().catch(() => ({}));
+    const cancellationReason =
+      typeof body.reason === "string" && body.reason.trim().length > 0
+        ? body.reason.trim()
+        : "Customer cancelled order";
+
     const updated = await db.$transaction(async (tx) => {
       const next = await tx.order.update({
         where: { id: order.id },
-        data: { status: "CANCELLED" },
-        select: orderSelect,
+        data: {
+          status: "CANCELLED",
+          cancelledAt: new Date(),
+          cancellationReason,
+        },
+        select: orderSummarySelect,
       });
       await createOrderHistory(tx, order.id, "CANCELLED", {
         fromStatus: order.status,
         changedBy: session.id,
-        note: "Customer cancelled order",
+        note: cancellationReason,
       });
       return next;
     });

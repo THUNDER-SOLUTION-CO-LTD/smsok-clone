@@ -34,9 +34,9 @@ const sections = [
         />
         <P>
           <strong style={{ color: "var(--text-primary)" }}>
-            SMS เครดิตที่ใช้ไปแล้วไม่สามารถขอคืนเงินได้
+            SMS ที่ใช้ไปแล้วไม่สามารถขอคืนเงินได้
           </strong>{" "}
-          — เครดิตที่ถูกหักจากการส่ง SMS สำเร็จ ไม่ว่าผู้รับจะเปิดอ่านหรือไม่
+          — ข้อความที่ถูกหักจากการส่ง SMS สำเร็จ ไม่ว่าผู้รับจะเปิดอ่านหรือไม่
           ถือว่าใช้งานแล้วและไม่สามารถคืนได้
         </P>
       </>
@@ -56,9 +56,9 @@ const sections = [
         />
         <P>
           <strong style={{ color: "var(--text-primary)" }}>
-            Used SMS credits are non-refundable
+            Used SMS are non-refundable
           </strong>{" "}
-          — Credits deducted for successfully sent SMS, regardless of whether the
+          — SMS deducted for successfully sent messages, regardless of whether the
           recipient reads the message, are considered used and cannot be refunded.
         </P>
       </>
@@ -73,8 +73,8 @@ const sections = [
         <P>การคืนเงินจะไม่ได้รับการพิจารณาในกรณีดังนี้:</P>
         <List
           items={[
-            "SMS เครดิตที่ใช้ไปแล้ว (ส่งสำเร็จ)",
-            "SMS เครดิตที่หมดอายุตามระยะเวลาของแพ็กเกจ",
+            "SMS ที่ใช้ไปแล้ว (ส่งสำเร็จ)",
+            "SMS ที่หมดอายุตามระยะเวลาของแพ็กเกจ",
             "การเปลี่ยนใจหลังซื้อแพ็กเกจและเปิดใช้งานแล้ว",
             "การถูกระงับบัญชีเนื่องจากละเมิดข้อตกลงการใช้บริการ",
             "ความล่าช้าหรือความล้มเหลวในการส่งที่เกิดจากเครือข่ายผู้ให้บริการโทรศัพท์",
@@ -88,8 +88,8 @@ const sections = [
         <P>Refunds will not be granted in the following cases:</P>
         <List
           items={[
-            "Used SMS credits (successfully sent)",
-            "SMS credits that expired per package duration",
+            "Used SMS (successfully sent)",
+            "SMS that expired per package duration",
             "Change of mind after package activation",
             "Account suspension due to Terms of Service violations",
             "Delivery delays or failures caused by carrier networks",
@@ -209,8 +209,8 @@ const sections = [
   },
   {
     id: "delivery-failure",
-    titleTh: "การคืนเครดิตกรณีส่งไม่สำเร็จ (Delivery-Failure Refund)",
-    titleEn: "Delivery-Failure Credit Refund",
+    titleTh: "การคืน SMS กรณีส่งไม่สำเร็จ (Delivery-Failure Refund)",
+    titleEn: "Delivery-Failure SMS Refund",
     contentTh: (
       <>
         <P>
@@ -219,9 +219,9 @@ const sections = [
         </P>
         <List
           items={[
-            "เครดิตจะถูกคืนกลับอัตโนมัติภายใน 24 ชั่วโมง",
-            "ตรวจสอบได้ที่ Dashboard → ประวัติเครดิต",
-            "กรณีไม่ได้รับเครดิตคืนอัตโนมัติ สามารถเปิดตั๋วสนับสนุนได้",
+            "SMS จะถูกคืนกลับอัตโนมัติภายใน 24 ชั่วโมง",
+            "ตรวจสอบได้ที่ Dashboard → ประวัติการใช้งาน",
+            "กรณีไม่ได้รับ SMS คืนอัตโนมัติ สามารถเปิดตั๋วสนับสนุนได้",
           ]}
         />
       </>
@@ -234,8 +234,8 @@ const sections = [
         </P>
         <List
           items={[
-            "Credits are automatically refunded within 24 hours",
-            "Check at Dashboard → Credit History",
+            "SMS are automatically refunded within 24 hours",
+            "Check at Dashboard → Usage History",
             "If automatic refund is not received, open a Support Ticket",
           ]}
         />
@@ -253,7 +253,7 @@ const sections = [
           items={[
             "ฝ่ายสนับสนุน: support@smsok.com",
             "ตั๋วสนับสนุน: Dashboard → ช่วยเหลือ",
-            "โทรศัพท์: 02-XXX-XXXX (จ.-ศ. 9:00-18:00)",
+            "LINE Official: @smsok (จ.-ศ. 9:00-18:00)",
           ]}
         />
       </>
@@ -265,7 +265,7 @@ const sections = [
           items={[
             "Support: support@smsok.com",
             "Support Ticket: Dashboard → Help",
-            "Phone: 02-XXX-XXXX (Mon-Fri 9:00-18:00)",
+            "LINE Official: @smsok (Mon-Fri 9:00-18:00)",
           ]}
         />
       </>

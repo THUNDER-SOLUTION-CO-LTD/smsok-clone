@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { authenticateRequest, apiResponse, apiError } from "@/lib/api-auth";
+import { authenticateRequest, ApiError, apiResponse, apiError } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 
 // GET /api/v1/logs?page=1&limit=20&status=400&endpoint=/sms/send&method=POST&from=2026-03-01&to=2026-03-10&search=0812345678
@@ -25,7 +25,17 @@ export async function GET(req: NextRequest) {
     const where: Record<string, unknown> = { userId: user.id };
 
     if (status) {
-      where.resStatus = parseInt(status, 10);
+      const normalizedStatus = status.trim();
+      if (!/^\d{3}$/.test(normalizedStatus)) {
+        throw new ApiError(400, "status ต้องเป็นรหัส HTTP 3 หลัก", "INVALID_STATUS");
+      }
+
+      const statusCode = Number(normalizedStatus);
+      if (statusCode < 100 || statusCode > 599) {
+        throw new ApiError(400, "status ต้องอยู่ระหว่าง 100-599", "INVALID_STATUS");
+      }
+
+      where.resStatus = statusCode;
     }
     if (endpoint) {
       where.endpoint = { contains: endpoint };

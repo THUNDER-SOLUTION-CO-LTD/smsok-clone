@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import {
   Upload, FileSpreadsheet, ArrowRight, ArrowLeft, Check,
-  Loader2, AlertTriangle, X,
+  Loader2, AlertTriangle, X, CheckCircle, XCircle, SkipForward,
 } from "lucide-react";
 import { parseExcelFile, importContactsFromExcel } from "@/lib/actions/excel-import";
 import type { ColumnMapping } from "@/lib/actions/excel-import";
@@ -11,7 +11,6 @@ import { safeErrorMessage } from "@/lib/error-messages";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -20,7 +19,9 @@ import {
 } from "@/components/ui/table";
 import CustomSelect from "@/components/ui/CustomSelect";
 
-type Step = "upload" | "mapping" | "preview" | "result";
+type Step = "upload" | "mapping" | "preview" | "importing" | "result";
+
+type DuplicateAction = "skip" | "update" | "overwrite";
 
 type ImportResult = {
   total: number;
@@ -30,6 +31,16 @@ type ImportResult = {
   errors: Array<{ row: number; phone: string; error: string }>;
 };
 
+type ValidationSummary = {
+  validRows: number;
+  invalidRows: number;
+  duplicatePhones: number;
+  missingName: number;
+  missingPhone: number;
+  invalidPhone: number;
+  sampleErrors: Array<{ row: number; field: string; error: string }>;
+};
+
 const CONTACT_FIELDS = [
   { value: "", label: "— ข้าม —" },
   { value: "name", label: "ชื่อ (จำเป็น)" },
@@ -37,6 +48,14 @@ const CONTACT_FIELDS = [
   { value: "email", label: "อีเมล" },
   { value: "tags", label: "แท็ก" },
 ];
+
+const DUPLICATE_OPTIONS: { value: DuplicateAction; label: string; desc: string }[] = [
+  { value: "skip", label: "ข้าม", desc: "ไม่ทำอะไรกับเบอร์ซ้ำ" },
+  { value: "update", label: "ผสานข้อมูล", desc: "อัปเดตเฉพาะฟิลด์ที่มีค่าใหม่" },
+  { value: "overwrite", label: "เขียนทับ", desc: "แทนที่ข้อมูลเดิมทั้งหมด" },
+];
+
+const PHONE_REGEX = /^(0[0-9]{8,9}|\+66[0-9]{8,9}|66[0-9]{8,9})$/;
 
 export default function ImportWizard({
   userId,
@@ -54,12 +73,15 @@ export default function ImportWizard({
   const [fileName, setFileName] = useState("");
   const [headers, setHeaders] = useState<string[]>([]);
   const [preview, setPreview] = useState<Record<string, string>[]>([]);
+  const [allRows, setAllRows] = useState<Record<string, string>[]>([]);
   const [totalRows, setTotalRows] = useState(0);
   const [mapping, setMapping] = useState<Record<string, string>>({});
-  const [updateExisting, setUpdateExisting] = useState(false);
+  const [duplicateAction, setDuplicateAction] = useState<DuplicateAction>("skip");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
+  const [validation, setValidation] = useState<ValidationSummary | null>(null);
+  const [importProgress, setImportProgress] = useState(0);
 
   const reset = () => {
     setStep("upload");
@@ -67,11 +89,14 @@ export default function ImportWizard({
     setFileName("");
     setHeaders([]);
     setPreview([]);
+    setAllRows([]);
     setTotalRows(0);
     setMapping({});
-    setUpdateExisting(false);
+    setDuplicateAction("skip");
     setError(null);
     setResult(null);
+    setValidation(null);
+    setImportProgress(0);
   };
 
   const handleClose = () => {
@@ -106,6 +131,7 @@ export default function ImportWizard({
       setFileName(file.name);
       setHeaders(parsed.headers);
       setPreview(parsed.preview);
+      setAllRows(parsed.allRows ?? parsed.preview);
       setTotalRows(parsed.totalRows);
 
       // Auto-detect mapping
@@ -145,6 +171,59 @@ export default function ImportWizard({
     return vals.includes("name") && vals.includes("phone");
   };
 
+  // Validate data before import
+  const runValidation = () => {
+    const nameHeader = Object.entries(mapping).find(([, v]) => v === "name")?.[0];
+    const phoneHeader = Object.entries(mapping).find(([, v]) => v === "phone")?.[0];
+
+    const rows = allRows.length > 0 ? allRows : preview;
+    let validRows = 0;
+    let invalidRows = 0;
+    let missingName = 0;
+    let missingPhone = 0;
+    let invalidPhone = 0;
+    const seenPhones = new Set<string>();
+    let duplicatePhones = 0;
+    const sampleErrors: ValidationSummary["sampleErrors"] = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      let hasError = false;
+
+      const name = nameHeader ? (row[nameHeader] || "").trim() : "";
+      const phone = phoneHeader ? (row[phoneHeader] || "").trim() : "";
+
+      if (!name) {
+        missingName++;
+        hasError = true;
+        if (sampleErrors.length < 5) sampleErrors.push({ row: i + 2, field: "ชื่อ", error: "ไม่มีชื่อ" });
+      }
+      if (!phone) {
+        missingPhone++;
+        hasError = true;
+        if (sampleErrors.length < 5) sampleErrors.push({ row: i + 2, field: "เบอร์โทร", error: "ไม่มีเบอร์โทร" });
+      } else if (!PHONE_REGEX.test(phone.replace(/[-\s]/g, ""))) {
+        invalidPhone++;
+        hasError = true;
+        if (sampleErrors.length < 5) sampleErrors.push({ row: i + 2, field: "เบอร์โทร", error: `เบอร์ไม่ถูกต้อง: ${phone}` });
+      } else {
+        const normalized = phone.replace(/[-\s]/g, "");
+        if (seenPhones.has(normalized)) {
+          duplicatePhones++;
+          hasError = true;
+          if (sampleErrors.length < 5) sampleErrors.push({ row: i + 2, field: "เบอร์โทร", error: `เบอร์ซ้ำในไฟล์: ${phone}` });
+        }
+        seenPhones.add(normalized);
+      }
+
+      if (hasError) invalidRows++;
+      else validRows++;
+    }
+
+    setValidation({ validRows, invalidRows, duplicatePhones, missingName, missingPhone, invalidPhone, sampleErrors });
+    setStep("preview");
+  };
+
   const handleImport = async () => {
     if (!fileBuffer || !mappingValid()) return;
 
@@ -156,23 +235,37 @@ export default function ImportWizard({
       else if (field === "tags") columnMapping.tags = header;
     }
 
-    setLoading(true);
+    setStep("importing");
+    setImportProgress(0);
     setError(null);
+
+    // Simulate progress during import
+    const progressInterval = setInterval(() => {
+      setImportProgress((prev) => {
+        if (prev >= 90) return prev;
+        return prev + Math.random() * 15;
+      });
+    }, 500);
+
     try {
       const importResult = await importContactsFromExcel(
         userId,
         fileBuffer,
         columnMapping,
-        { updateExisting },
+        { updateExisting: duplicateAction !== "skip" },
       );
+      clearInterval(progressInterval);
+      setImportProgress(100);
       setResult(importResult);
-      setStep("result");
+      setTimeout(() => setStep("result"), 300);
     } catch (err) {
+      clearInterval(progressInterval);
       setError(safeErrorMessage(err));
-    } finally {
-      setLoading(false);
+      setStep("preview");
     }
   };
+
+  const progressPercent = Math.min(Math.round(importProgress), 100);
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
@@ -180,9 +273,35 @@ export default function ImportWizard({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileSpreadsheet className="w-5 h-5" />
-            นำเข้ารายชื่อ {step === "upload" ? "— เลือกไฟล์" : step === "mapping" ? "— จับคู่คอลัมน์" : step === "preview" ? "— ตรวจสอบ" : "— ผลลัพธ์"}
+            นำเข้ารายชื่อ {step === "upload" ? "— เลือกไฟล์" : step === "mapping" ? "— จับคู่คอลัมน์" : step === "preview" ? "— ตรวจสอบข้อมูล" : step === "importing" ? "— กำลังนำเข้า" : "— ผลลัพธ์"}
           </DialogTitle>
         </DialogHeader>
+
+        {/* Step Indicator */}
+        <div className="flex items-center gap-1 mb-2">
+          {(["upload", "mapping", "preview", "result"] as const).map((s, i) => {
+            const labels = ["เลือกไฟล์", "จับคู่", "ตรวจสอบ", "ผลลัพธ์"];
+            const stepOrder = ["upload", "mapping", "preview", "result"];
+            const currentIdx = stepOrder.indexOf(step === "importing" ? "preview" : step);
+            const isDone = i < currentIdx;
+            const isCurrent = i === currentIdx;
+            return (
+              <div key={s} className="flex items-center gap-1 flex-1">
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
+                  isDone ? "bg-[var(--accent)] text-[var(--bg-base)]" :
+                  isCurrent ? "bg-[var(--accent)] text-[var(--bg-base)]" :
+                  "bg-[var(--bg-elevated)] text-[var(--text-muted)]"
+                }`}>
+                  {isDone ? <Check className="w-3 h-3" /> : i + 1}
+                </div>
+                <span className={`text-[11px] hidden sm:block ${isCurrent ? "text-[var(--text-primary)] font-medium" : "text-[var(--text-muted)]"}`}>
+                  {labels[i]}
+                </span>
+                {i < 3 && <div className={`flex-1 h-px mx-1 ${isDone ? "bg-[var(--accent)]" : "bg-[var(--border-default)]"}`} />}
+              </div>
+            );
+          })}
+        </div>
 
         {error && (
           <div className="flex items-center gap-2 p-3 rounded-lg bg-[rgba(var(--error-rgb,239,68,68),0.1)] text-sm text-[var(--error)]">
@@ -257,15 +376,33 @@ export default function ImportWizard({
               </CardContent>
             </Card>
 
-            <div className="flex items-center gap-2">
-              <Checkbox
-                checked={updateExisting}
-                onCheckedChange={(v) => setUpdateExisting(!!v)}
-              />
-              <span className="text-sm text-muted-foreground">
-                อัปเดตรายชื่อที่มีอยู่แล้ว (เบอร์ซ้ำ)
-              </span>
-            </div>
+            {/* Duplicate Handling */}
+            <Card>
+              <CardContent className="p-4">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium mb-3">
+                  เมื่อเจอเบอร์ซ้ำ
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  {DUPLICATE_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setDuplicateAction(opt.value)}
+                      className={`p-3 rounded-lg border text-left transition-all cursor-pointer ${
+                        duplicateAction === opt.value
+                          ? "border-[var(--accent)] bg-[rgba(var(--accent-rgb),0.06)]"
+                          : "border-[var(--border-default)] hover:border-[var(--text-muted)]"
+                      }`}
+                    >
+                      <p className={`text-sm font-medium ${duplicateAction === opt.value ? "text-[var(--accent)]" : "text-[var(--text-primary)]"}`}>
+                        {opt.label}
+                      </p>
+                      <p className="text-[11px] text-[var(--text-muted)] mt-0.5">{opt.desc}</p>
+                    </button>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Preview table */}
             {preview.length > 0 && (
@@ -302,6 +439,113 @@ export default function ImportWizard({
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Step 3: Validation Summary */}
+        {step === "preview" && validation && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-3 gap-3">
+              <Card>
+                <CardContent className="p-4 text-center">
+                  <CheckCircle className="w-5 h-5 text-[var(--success)] mx-auto mb-1" />
+                  <p className="text-2xl font-bold text-[var(--success)]">{validation.validRows}</p>
+                  <p className="text-xs text-muted-foreground">พร้อมนำเข้า</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4 text-center">
+                  <XCircle className="w-5 h-5 text-[var(--error)] mx-auto mb-1" />
+                  <p className="text-2xl font-bold text-[var(--error)]">{validation.invalidRows}</p>
+                  <p className="text-xs text-muted-foreground">ข้อมูลไม่ถูกต้อง</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4 text-center">
+                  <SkipForward className="w-5 h-5 text-[var(--warning)] mx-auto mb-1" />
+                  <p className="text-2xl font-bold text-[var(--warning)]">{validation.duplicatePhones}</p>
+                  <p className="text-xs text-muted-foreground">เบอร์ซ้ำในไฟล์</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Breakdown */}
+            {(validation.missingName > 0 || validation.missingPhone > 0 || validation.invalidPhone > 0) && (
+              <Card>
+                <CardContent className="p-4 space-y-2">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">รายละเอียดข้อผิดพลาด</p>
+                  {validation.missingName > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-[var(--text-secondary)]">ไม่มีชื่อ</span>
+                      <span className="text-[var(--error)] font-medium">{validation.missingName} แถว</span>
+                    </div>
+                  )}
+                  {validation.missingPhone > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-[var(--text-secondary)]">ไม่มีเบอร์โทร</span>
+                      <span className="text-[var(--error)] font-medium">{validation.missingPhone} แถว</span>
+                    </div>
+                  )}
+                  {validation.invalidPhone > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-[var(--text-secondary)]">เบอร์ไม่ถูกต้อง</span>
+                      <span className="text-[var(--error)] font-medium">{validation.invalidPhone} แถว</span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Sample Errors */}
+            {validation.sampleErrors.length > 0 && (
+              <div>
+                <p className="text-xs text-muted-foreground mb-2">ตัวอย่างข้อผิดพลาด</p>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">แถว</TableHead>
+                      <TableHead className="text-xs">ฟิลด์</TableHead>
+                      <TableHead className="text-xs">ข้อผิดพลาด</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {validation.sampleErrors.map((err, i) => (
+                      <TableRow key={i}>
+                        <TableCell className="text-xs">{err.row}</TableCell>
+                        <TableCell className="text-xs font-medium">{err.field}</TableCell>
+                        <TableCell className="text-xs text-[var(--error)]">{err.error}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+
+            {validation.validRows === 0 && (
+              <p className="text-sm text-center text-[var(--error)] py-2">
+                ไม่มีข้อมูลที่ถูกต้องสำหรับนำเข้า กรุณาตรวจสอบไฟล์อีกครั้ง
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Step 3.5: Importing (Progress) */}
+        {step === "importing" && (
+          <div className="py-8 space-y-4">
+            <div className="text-center">
+              <Loader2 className="w-10 h-10 animate-spin text-[var(--accent)] mx-auto mb-3" />
+              <p className="text-sm font-medium">กำลังนำเข้ารายชื่อ...</p>
+              <p className="text-xs text-muted-foreground mt-1">{totalRows} รายการ</p>
+            </div>
+            <div className="max-w-sm mx-auto">
+              <div className="h-2 rounded-full bg-[var(--bg-elevated)] overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-[var(--accent)] transition-all duration-500 ease-out"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+              <p className="text-xs text-center text-muted-foreground mt-1.5">{progressPercent}%</p>
+            </div>
           </div>
         )}
 
@@ -374,12 +618,21 @@ export default function ImportWizard({
               <Button variant="outline" onClick={() => { reset(); setStep("upload"); }}>
                 <ArrowLeft className="w-4 h-4" /> เลือกไฟล์ใหม่
               </Button>
-              <Button onClick={handleImport} disabled={!mappingValid() || loading}>
-                {loading ? (
-                  <><Loader2 className="w-4 h-4 animate-spin" /> กำลังนำเข้า...</>
-                ) : (
-                  <><Upload className="w-4 h-4" /> นำเข้า {totalRows} รายชื่อ</>
-                )}
+              <Button onClick={runValidation} disabled={!mappingValid() || loading}>
+                ตรวจสอบข้อมูล <ArrowRight className="w-4 h-4" />
+              </Button>
+            </>
+          )}
+          {step === "preview" && (
+            <>
+              <Button variant="outline" onClick={() => setStep("mapping")}>
+                <ArrowLeft className="w-4 h-4" /> กลับ
+              </Button>
+              <Button
+                onClick={handleImport}
+                disabled={!validation || validation.validRows === 0}
+              >
+                <Upload className="w-4 h-4" /> นำเข้า {validation?.validRows ?? 0} รายชื่อ
               </Button>
             </>
           )}

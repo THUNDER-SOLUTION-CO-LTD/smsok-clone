@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   Radio,
@@ -118,6 +119,7 @@ const TYPE_OPTIONS = [
 // ---------------------------------------------------------------------------
 
 export default function SendersPage() {
+  const router = useRouter();
   // ---- State ----
   const [senders, setSenders] = useState<Sender[]>([]);
   const [quota, setQuota] = useState<Quota>({ used: 0, limit: 0, packageName: "" });
@@ -232,14 +234,14 @@ export default function SendersPage() {
         <EmptyState
           icon={Radio}
           iconColor="var(--accent)"
-          iconBg="rgba(var(--accent-rgb,0,226,181),0.08)"
-          iconBorder="rgba(var(--accent-rgb,0,226,181),0.15)"
+          iconBg="rgba(var(--accent-rgb),0.08)"
+          iconBorder="rgba(var(--accent-rgb),0.15)"
           title="ยังไม่มีชื่อผู้ส่ง"
           description={"เพิ่มชื่อผู้ส่งเพื่อเริ่มส่ง SMS\nชื่อผู้ส่งจะแสดงเป็นชื่อที่ผู้รับเห็น"}
           ctaLabel="เพิ่มชื่อผู้ส่ง"
           ctaAction={() => setDialogOpen(true)}
           helpLabel="วิธีตั้งชื่อผู้ส่งที่ดี"
-          helpAction={() => window.open("/docs/senders", "_blank")}
+          helpAction={() => router.push("/dashboard/docs/senders")}
         />
       </div>
     );
@@ -395,8 +397,8 @@ export default function SendersPage() {
       )}
 
       {/* ========== Filter Bar ========== */}
-      <div className="flex items-center gap-3 mb-4">
-        <div className="relative" style={{ width: 280 }}>
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-4">
+        <div className="relative w-full sm:w-[280px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-[var(--text-muted)]" />
           <Input
             value={search}

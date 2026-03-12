@@ -1,27 +1,26 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect, useTransition, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { sendSms, sendBatchSms } from "@/lib/actions/sms";
-import { smsCounterText } from "@/lib/form-utils";
 import { calculateCreditCost as calculateSmsCost } from "@/lib/validations";
 import { safeErrorMessage } from "@/lib/error-messages";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import SenderDropdown from "@/components/ui/SenderDropdown";
+import { SmsCharCounter, UnicodeWarning } from "@/components/sms/SmsCharCounter";
+import { PhonePreview } from "@/components/sms/PhonePreview";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  VariableInsertButtons,
+  useVariableAutocomplete,
+  VariableSuggestionDropdown,
+} from "@/components/sms/VariableInsert";
 
 import { toast } from "sonner";
-import { ArrowRight, Loader2, AlertTriangle } from "lucide-react";
+import { ArrowRight, Loader2, AlertTriangle, Send, FlaskConical } from "lucide-react";
 import SendingHoursWarning from "@/components/blocks/SendingHoursWarning";
 
 type MsgType = "english" | "thai" | "unicode";
@@ -32,7 +31,7 @@ const MSG_LIMITS: Record<MsgType, { single: number; multi: number }> = {
   unicode: { single: 70, multi: 67 },
 };
 
-export default function SendSmsForm({ userId, senderNames: rawNames = ["EasySlip"] }: { userId: string; senderNames?: string[] }) {
+export default function SendSmsForm({ senderNames: rawNames = ["EasySlip"] }: { senderNames?: string[] }) {
   const router = useRouter();
   const senderNames = rawNames.length > 0 ? rawNames : ["EasySlip"];
   const [senderName, setSenderName] = useState(senderNames[0]);
@@ -42,11 +41,15 @@ export default function SendSmsForm({ userId, senderNames: rawNames = ["EasySlip
   const [result, setResult] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [isPending, startTransition] = useTransition();
   const [smsRemaining, setSmsRemaining] = useState<number | null>(null);
+  const [testPhone, setTestPhone] = useState("");
+  const [showTestSend, setShowTestSend] = useState(false);
+  const [isTestSending, setIsTestSending] = useState(false);
 
-  // Fetch credit balance on mount — graceful fallback chain
+  const messageTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Fetch credit balance on mount
   useEffect(() => {
     async function fetchBalance() {
-      // Try primary endpoint
       try {
         const res = await fetch("/api/v1/credits/balance");
         if (res.ok) {
@@ -54,25 +57,21 @@ export default function SendSmsForm({ userId, senderNames: rawNames = ["EasySlip
           const remaining = data.smsRemaining ?? data.remaining ?? data.balance;
           if (typeof remaining === "number") { setSmsRemaining(remaining); return; }
         }
-      } catch { /* endpoint may not exist yet — leave as null, backend enforces */ }
+      } catch { /* endpoint may not exist yet */ }
     }
     fetchBalance();
   }, []);
 
   const charCount = message.length;
-  // Auto-detect encoding: Thai/emoji/non-ASCII → UCS-2 (70/67), pure ASCII → GSM-7 (160/153)
   const hasThai = /[\u0E00-\u0E7F]/.test(message);
   const hasNonGsm = /[^\x00-\x7F]/.test(message);
   const isUcs2 = hasThai || hasNonGsm;
   const detectedType: MsgType = hasThai ? "thai" : hasNonGsm ? "unicode" : "english";
   const limits = MSG_LIMITS[message ? detectedType : msgType];
-
-  // Use shared calculateSmsCost (synced with backend formula)
   const smsCount = message ? calculateSmsCost(message) : 0;
 
   const recipientList = recipients.split(/[,\n]/).map((r) => r.trim()).filter(Boolean);
   const recipientCount = recipientList.length;
-
   const validPhones = recipientList.filter((r) => /^0[0-9]\d{8}$/.test(r.replace(/[^0-9]/g, "")));
   const invalidPhones = recipientList.filter((r) => !/^0[0-9]\d{8}$/.test(r.replace(/[^0-9]/g, "")));
   const phoneError = invalidPhones.length > 0 ? `เบอร์ไม่ถูกต้อง: ${invalidPhones.slice(0, 3).join(", ")}${invalidPhones.length > 3 ? ` +${invalidPhones.length - 3} เบอร์` : ""}` : "";
@@ -80,11 +79,47 @@ export default function SendSmsForm({ userId, senderNames: rawNames = ["EasySlip
   const costPerSms = smsCount;
   const totalSmsCost = costPerSms * recipientCount;
 
-  const maxChars = limits.single;
-  const charProgress = Math.min((charCount / maxChars) * 100, 100);
-
   const hasInsufficientCredits = smsRemaining !== null && totalSmsCost > 0 && totalSmsCost > smsRemaining;
   const hasNoCredits = smsRemaining !== null && smsRemaining <= 0;
+
+  // Variable insertion into message textarea
+  const insertVariable = useCallback((variable: string) => {
+    const textarea = messageTextareaRef.current;
+    if (textarea) {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const newMessage = message.substring(0, start) + variable + message.substring(end);
+      setMessage(newMessage);
+      setTimeout(() => {
+        textarea.selectionStart = textarea.selectionEnd = start + variable.length;
+        textarea.focus();
+      }, 0);
+    } else {
+      setMessage(message + variable);
+    }
+  }, [message]);
+
+  // Variable autocomplete
+  const autocomplete = useVariableAutocomplete(
+    messageTextareaRef,
+    useCallback((variable: string) => {
+      const textarea = messageTextareaRef.current;
+      if (!textarea) return;
+      const cursorPos = textarea.selectionStart;
+      const textBefore = message.substring(0, cursorPos);
+      const match = textBefore.match(/\{\{(\w*)$/);
+      if (match) {
+        const replaceStart = cursorPos - match[0].length;
+        const newMessage = message.substring(0, replaceStart) + variable + message.substring(cursorPos);
+        setMessage(newMessage);
+        setTimeout(() => {
+          const newPos = replaceStart + variable.length;
+          textarea.selectionStart = textarea.selectionEnd = newPos;
+          textarea.focus();
+        }, 0);
+      }
+    }, [message]),
+  );
 
   const handleSend = () => {
     if (!recipients.trim() || !message.trim()) return;
@@ -93,12 +128,11 @@ export default function SendSmsForm({ userId, senderNames: rawNames = ["EasySlip
     startTransition(async () => {
       try {
         const result = recipientCount === 1
-          ? await sendSms(userId, { senderName, recipient: recipientList[0], message })
-          : await sendBatchSms(userId, { senderName, recipients: recipientList, message });
+          ? await sendSms({ senderName, recipient: recipientList[0], message })
+          : await sendBatchSms({ senderName, recipients: recipientList, message });
 
-        // Check for structured insufficient credits error (returned, not thrown)
         if (result && "error" in result && result.error === "INSUFFICIENT_CREDITS") {
-          const detail = `เครดิตไม่พอ — เหลือ ${result.creditsRemaining} ต้องการ ${result.creditsRequired}`;
+          const detail = `SMS ไม่พอ — เหลือ ${result.creditsRemaining} ต้องการ ${result.creditsRequired}`;
           setResult({ type: "error", text: detail });
           toast.error(detail);
           setSmsRemaining(result.creditsRemaining);
@@ -114,6 +148,29 @@ export default function SendSmsForm({ userId, senderNames: rawNames = ["EasySlip
         toast.error(safeErrorMessage(e));
       }
     });
+  };
+
+  const handleTestSend = async () => {
+    if (!testPhone.trim() || !message.trim()) return;
+    const cleanPhone = testPhone.replace(/[^0-9]/g, "");
+    if (!/^0[0-9]\d{8}$/.test(cleanPhone)) {
+      toast.error("เบอร์โทรไม่ถูกต้อง");
+      return;
+    }
+    setIsTestSending(true);
+    try {
+      const result = await sendSms({ senderName, recipient: cleanPhone, message });
+      if (result && "error" in result && result.error === "INSUFFICIENT_CREDITS") {
+        toast.error("SMS ไม่พอสำหรับทดสอบ");
+      } else {
+        toast.success("ส่งทดสอบสำเร็จ!");
+        setShowTestSend(false);
+      }
+    } catch (e) {
+      toast.error(safeErrorMessage(e));
+    } finally {
+      setIsTestSending(false);
+    }
   };
 
   return (
@@ -134,8 +191,8 @@ export default function SendSmsForm({ userId, senderNames: rawNames = ["EasySlip
             <AlertTriangle size={16} style={{ color: "var(--warning)" }} />
             <span style={{ color: "var(--warning)" }}>
               {hasNoCredits
-                ? "เครดิต SMS หมดแล้ว — ไม่สามารถส่งได้"
-                : `เครดิตไม่พอ (เหลือ ${smsRemaining?.toLocaleString()} SMS, ต้องใช้ ${totalSmsCost.toLocaleString()})`}
+                ? "SMS หมดแล้ว — ไม่สามารถส่งได้"
+                : `SMS ไม่พอ (เหลือ ${smsRemaining?.toLocaleString()} SMS, ต้องใช้ ${totalSmsCost.toLocaleString()})`}
             </span>
           </div>
           <button
@@ -144,7 +201,7 @@ export default function SendSmsForm({ userId, senderNames: rawNames = ["EasySlip
             className="text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors"
             style={{ background: "var(--warning)", color: "var(--bg-base)" }}
           >
-            เติมเครดิต →
+            ซื้อแพ็กเกจ →
           </button>
         </div>
       )}
@@ -161,7 +218,7 @@ export default function SendSmsForm({ userId, senderNames: rawNames = ["EasySlip
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        {/* ── Compose Panel ── */}
+        {/* Compose Panel */}
         <Card className="lg:col-span-3 bg-[var(--bg-surface)] border-[var(--border-default)] rounded-lg">
           <CardContent className="p-5 md:p-6">
             <h3 className="text-base font-semibold text-[var(--text-primary)] mb-5">เขียนข้อความ</h3>
@@ -170,18 +227,7 @@ export default function SendSmsForm({ userId, senderNames: rawNames = ["EasySlip
               {/* Sender */}
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-[0.05em] text-[var(--text-muted)] mb-1.5">ผู้ส่ง</label>
-                <Select value={senderName} onValueChange={(v) => v && setSenderName(v)}>
-                  <SelectTrigger className="h-11 bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] rounded-xl focus:border-[rgba(var(--accent-rgb),0.6)] focus:ring-[rgba(0,255,167,0.15)]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[var(--bg-surface)] border-[var(--border-default)] rounded-xl">
-                    {senderNames.map((name) => (
-                      <SelectItem key={name} value={name} className="hover:bg-[var(--bg-base)] text-[var(--text-primary)]">
-                        {name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SenderDropdown value={senderName} onChange={setSenderName} senderNames={senderNames} />
               </div>
 
               {/* Message Type */}
@@ -229,53 +275,55 @@ export default function SendSmsForm({ userId, senderNames: rawNames = ["EasySlip
                 )}
               </div>
 
+              {/* Variable Insert Buttons */}
+              <VariableInsertButtons onInsert={insertVariable} />
+
               {/* Message */}
-              <div>
+              <div className="relative">
                 <label className="block text-xs font-semibold uppercase tracking-[0.05em] text-[var(--text-muted)] mb-1.5">ข้อความ</label>
                 <Textarea
+                  ref={messageTextareaRef}
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
+                  onInput={autocomplete.handleInput}
+                  onKeyDown={autocomplete.handleKeyDown}
+                  onBlur={() => setTimeout(autocomplete.closeSuggestions, 150)}
                   className="bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] rounded-xl resize-none focus:border-[rgba(var(--accent-rgb),0.6)] focus:ring-[rgba(0,255,167,0.15)]"
                   rows={5}
-                  placeholder="พิมพ์ข้อความ SMS ที่นี่..."
+                  placeholder="พิมพ์ข้อความ SMS ที่นี่... พิมพ์ {{ เพื่อแทรกตัวแปร"
                   maxLength={1000}
                 />
-                <div className="flex items-center justify-between mt-1.5">
-                  <p className="text-xs text-[var(--text-secondary)]">
-                    {charCount > 0
-                      ? `${charCount}/${limits.single} ตัวอักษร · ${smsCount} SMS (${isUcs2 ? "UCS-2" : "GSM-7"})`
-                      : `0/${limits.single} ตัวอักษร · 0 SMS`}
-                  </p>
-                  {charCount > 0 && (
-                    <p className={`text-xs font-semibold ${charCount > limits.single ? "text-[var(--warning)]" : "text-[var(--accent)]"}`}>
-                      {smsCount} SMS{recipientCount > 1 ? ` × ${recipientCount} = ${totalSmsCost}` : ""}
-                    </p>
-                  )}
-                </div>
-                {/* Progress bar */}
-                <div className="h-0.5 mt-1 rounded-full bg-[var(--border-default)] overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-[var(--accent)] transition-all duration-200"
-                    style={{ width: `${charProgress}%` }}
-                  />
+                <VariableSuggestionDropdown
+                  show={autocomplete.showSuggestions}
+                  position={autocomplete.suggestionPos}
+                  variables={autocomplete.filteredVars}
+                  selectedIndex={autocomplete.selectedIndex}
+                  onSelect={(v) => {
+                    autocomplete.closeSuggestions();
+                    insertVariable(v);
+                  }}
+                  onHover={autocomplete.setSelectedIndex}
+                />
+
+                {/* Enhanced char counter */}
+                <div className="mt-1.5">
+                  <SmsCharCounter message={message} recipientCount={recipientCount} />
                 </div>
               </div>
+
+              {/* Unicode Warning */}
+              <UnicodeWarning message={message} />
             </div>
           </CardContent>
         </Card>
 
-        {/* ── Preview & Cost Panel ── */}
+        {/* Preview & Cost Panel */}
         <div className="lg:col-span-2 space-y-6 lg:sticky lg:top-[80px] lg:self-start pb-20 lg:pb-0">
-          {/* Preview */}
+          {/* Phone Preview */}
           <Card className="bg-[var(--bg-surface)] border-[var(--border-default)] rounded-lg">
             <CardContent className="p-5">
               <h3 className="text-xs font-semibold uppercase tracking-[0.05em] text-[var(--text-muted)] mb-4">ตัวอย่าง</h3>
-              <div className="bg-[var(--bg-base)] border border-[var(--border-default)] rounded-xl p-4 min-h-[120px]">
-                <div className="text-xs text-[var(--accent)] mb-2">From: {senderName || "EasySlip"}</div>
-                <p className="text-sm text-[var(--text-primary)] whitespace-pre-wrap">
-                  {message || <span className="text-[var(--text-muted)]">ข้อความจะแสดงที่นี่...</span>}
-                </p>
-              </div>
+              <PhonePreview message={message} senderName={senderName || "EasySlip"} />
             </CardContent>
           </Card>
 
@@ -293,8 +341,18 @@ export default function SendSmsForm({ userId, senderNames: rawNames = ["EasySlip
                   <span className="text-[var(--text-primary)]">{smsCount}</span>
                 </div>
                 <div className="flex justify-between text-[13px] border-b border-[var(--border-default)] pb-2.5">
-                  <span className="text-[var(--text-muted)]">ต้นทุน/SMS</span>
-                  <span className="text-[var(--text-primary)]">{costPerSms}</span>
+                  <span className="text-[var(--text-muted)]">Encoding</span>
+                  <span
+                    className="text-[11px] px-1.5 py-0.5 rounded font-mono font-medium"
+                    style={{
+                      background: isUcs2
+                        ? "rgba(var(--warning-rgb,245,158,11),0.08)"
+                        : "rgba(var(--accent-rgb),0.08)",
+                      color: isUcs2 ? "var(--warning)" : "var(--accent)",
+                    }}
+                  >
+                    {message ? (isUcs2 ? "UCS-2 (70/SMS)" : "GSM-7 (160/SMS)") : "—"}
+                  </span>
                 </div>
                 <div className="flex justify-between pt-1">
                   <span className="text-base font-bold text-[var(--text-primary)]">รวม</span>
@@ -303,6 +361,55 @@ export default function SendSmsForm({ userId, senderNames: rawNames = ["EasySlip
               </div>
 
               <SendingHoursWarning className="mt-3" />
+
+              {/* Test Send */}
+              <div className="mt-4 space-y-2">
+                <button
+                  type="button"
+                  onClick={() => setShowTestSend(!showTestSend)}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-[13px] font-medium transition-all border"
+                  style={{
+                    borderColor: "rgba(var(--accent-rgb),0.2)",
+                    color: "var(--accent)",
+                    background: showTestSend ? "rgba(var(--accent-rgb),0.06)" : "transparent",
+                  }}
+                >
+                  <FlaskConical className="w-3.5 h-3.5" />
+                  ทดสอบส่ง
+                </button>
+                {showTestSend && (
+                  <div
+                    className="p-3 rounded-lg border space-y-2"
+                    style={{
+                      background: "rgba(var(--accent-rgb),0.02)",
+                      borderColor: "rgba(var(--accent-rgb),0.1)",
+                    }}
+                  >
+                    <label className="block text-[11px] text-[var(--text-muted)]">
+                      เบอร์ทดสอบ (ส่งไปเบอร์ตัวเอง)
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="tel"
+                        value={testPhone}
+                        onChange={(e) => setTestPhone(e.target.value)}
+                        placeholder="08X-XXX-XXXX"
+                        className="flex-1 h-9 px-3 rounded-lg text-sm bg-[var(--bg-base)] border border-[var(--border-default)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[rgba(var(--accent-rgb),0.6)]"
+                        maxLength={12}
+                      />
+                      <Button
+                        type="button"
+                        onClick={handleTestSend}
+                        disabled={isTestSending || !testPhone.trim() || !message.trim()}
+                        className="h-9 px-3 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--bg-base)] font-semibold text-xs"
+                      >
+                        {isTestSending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                      </Button>
+                    </div>
+                    <p className="text-[10px] text-[var(--text-muted)]">ใช้ 1 SMS สำหรับทดสอบ</p>
+                  </div>
+                )}
+              </div>
 
               <Button
                 onClick={handleSend}

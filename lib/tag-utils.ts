@@ -4,7 +4,7 @@
  *
  * Color mapping (UXUI spec):
  *   emerald #10B981, cyan #00FFA7, blue #4779FF, amber #F59E0B,
- *   red #EF4444, slate #6B7075, sky #00E2B5, teal #14B8A6
+ *   red #EF4444, slate #6B7075, sky #00FFA7, teal #14B8A6
  *
  * ❌ NO violet, NO pink — replaced with cyan/red
  */
@@ -26,7 +26,7 @@ export const TAG_COLORS: TagColor[] = [
   { name: "amber",   hex: "#F59E0B", dot: "bg-amber-500",   bg: "bg-amber-500/8",  text: "text-amber-400",  border: "border-amber-500/20",  activeBg: "bg-amber-500/20" },
   { name: "red",     hex: "#EF4444", dot: "bg-red-500",     bg: "bg-red-500/8",    text: "text-red-400",    border: "border-red-500/20",    activeBg: "bg-red-500/20" },
   { name: "slate",   hex: "#6B7075", dot: "bg-[#6B7075]",   bg: "bg-[rgba(107,112,117,0.08)]", text: "text-[#6B7075]", border: "border-[rgba(107,112,117,0.2)]", activeBg: "bg-[rgba(107,112,117,0.2)]" },
-  { name: "sky",     hex: "#00E2B5", dot: "bg-[#00E2B5]",   bg: "bg-[rgba(0,226,181,0.08)]",  text: "text-[#00E2B5]", border: "border-[rgba(0,226,181,0.2)]",  activeBg: "bg-[rgba(0,226,181,0.2)]" },
+  { name: "sky",     hex: "#00FFA7", dot: "bg-[#00FFA7]",   bg: "bg-[rgba(0,255,167,0.08)]",  text: "text-[#00FFA7]", border: "border-[rgba(0,255,167,0.2)]",  activeBg: "bg-[rgba(0,255,167,0.2)]" },
   { name: "teal",    hex: "#14B8A6", dot: "bg-teal-500",   bg: "bg-teal-500/8", text: "text-teal-400", border: "border-teal-500/20", activeBg: "bg-teal-500/20" },
 ];
 

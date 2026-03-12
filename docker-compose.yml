@@ -1,26 +1,11 @@
-services:
-  app:
-    build: .
-    ports:
-      - "3000:3000"
-    environment:
-      - NODE_ENV=production
-      - DATABASE_URL=postgresql://smsok:smsok_dev_2026@postgres:5432/smsok
-      - REDIS_URL=redis://redis:6379
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    restart: unless-stopped
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "3"
+# SMSOK Clone — Development Docker Compose
+# Usage: docker compose up -d (starts postgres + redis)
+#        bun run dev (start Next.js locally with hot reload)
 
+services:
   postgres:
     image: postgres:16-alpine
+    container_name: smsok-postgres
     environment:
       POSTGRES_USER: smsok
       POSTGRES_PASSWORD: smsok_dev_2026
@@ -38,7 +23,8 @@ services:
 
   redis:
     image: redis:7-alpine
-    command: redis-server --maxmemory 128mb --maxmemory-policy noeviction
+    container_name: smsok-redis
+    command: redis-server --maxmemory 128mb --maxmemory-policy noeviction --appendonly yes
     ports:
       - "6380:6379"
     volumes:
@@ -49,6 +35,36 @@ services:
       timeout: 3s
       retries: 5
     restart: unless-stopped
+
+  # Full app in Docker (optional — use "docker compose --profile app up")
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: smsok-app
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env.development
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://smsok:smsok_dev_2026@postgres:5432/smsok
+      - REDIS_URL=redis://redis:6379
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    profiles:
+      - app
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   pgdata:

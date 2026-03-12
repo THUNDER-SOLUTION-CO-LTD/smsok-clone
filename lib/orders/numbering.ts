@@ -1,4 +1,4 @@
-import { type DocumentType, type PrismaClient } from "@prisma/client";
+import { type PrismaClient } from "@prisma/client";
 import { prisma as db } from "@/lib/db";
 
 type TxClient = Parameters<Parameters<typeof db.$transaction>[0]>[0];
@@ -8,6 +8,8 @@ export type OrderDocumentKind =
   | "order"
   | "quotation"
   | "invoice"
+  | "tax-invoice"
+  | "receipt"
   | "credit-note"
   | "debit-note";
 
@@ -15,32 +17,33 @@ const PREFIX_BY_KIND: Record<OrderDocumentKind, string> = {
   order: "ORD",
   quotation: "QT",
   invoice: "INV",
+  "tax-invoice": "TIV",
+  receipt: "RCP",
   "credit-note": "CN",
   "debit-note": "DN",
 };
 
-const TYPE_BY_KIND: Record<OrderDocumentKind, DocumentType> = {
-  order: "ORDER",
-  quotation: "QUOTATION",
-  invoice: "INVOICE",
-  "credit-note": "CREDIT_NOTE",
-  "debit-note": "DEBIT_NOTE",
-};
+function toYearMonth(now = new Date()) {
+  return `${String(now.getFullYear()).slice(-2)}${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
+export function formatOrderDocumentNumber(prefix: string, sequence: number, now = new Date()) {
+  return `${prefix}-${toYearMonth(now)}-${String(sequence).padStart(5, "0")}`;
+}
 
 export async function generateOrderDocumentNumber(
   kind: OrderDocumentKind,
   client: DbClient = db,
   now = new Date(),
 ) {
-  const year = now.getFullYear();
-  const type = TYPE_BY_KIND[kind];
   const prefix = PREFIX_BY_KIND[kind];
+  const yearMonth = toYearMonth(now);
 
   const sequence = await client.documentSequence.upsert({
     where: {
-      type_year: {
-        type,
-        year,
+      prefix_yearMonth: {
+        prefix,
+        yearMonth,
       },
     },
     update: {
@@ -49,11 +52,11 @@ export async function generateOrderDocumentNumber(
       },
     },
     create: {
-      type,
-      year,
+      prefix,
+      yearMonth,
       lastNumber: 1,
     },
   });
 
-  return `${prefix}${year}-${String(sequence.lastNumber).padStart(5, "0")}`;
+  return formatOrderDocumentNumber(prefix, sequence.lastNumber, now);
 }

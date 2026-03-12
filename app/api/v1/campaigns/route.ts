@@ -16,8 +16,9 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const page = searchParams.get("page") || "1";
     const limit = searchParams.get("limit") || "20";
+    const status = searchParams.get("status") || undefined;
 
-    const result = await getCampaigns(user.id, { page, limit });
+    const result = await getCampaigns(user.id, { page, limit, status });
     return apiResponse(result);
   } catch (error) {
     return apiError(error);

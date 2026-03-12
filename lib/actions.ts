@@ -5,6 +5,7 @@ import { hashPassword, verifyPassword, setSession, clearSession } from "./auth";
 import { redirect } from "next/navigation";
 import { loginSchema, registerSchema, normalizePhone } from "./validations";
 import { forgotPassword as forgotPasswordAction, resetPassword as resetPasswordAction } from "./actions/auth";
+import { resolveActionUserId } from "./action-user";
 
 export async function register(formData: FormData) {
   const parsed = registerSchema.safeParse({
@@ -184,6 +185,7 @@ export async function resetPassword(token: string, newPassword: string) {
 // ==========================================
 
 export async function changePasswordForced(userId: string, newPassword: string) {
+  userId = await resolveActionUserId(userId);
   if (!newPassword || newPassword.length < 8) throw new Error("รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร");
   const hashed = await hashPassword(newPassword);
   await prisma.user.update({

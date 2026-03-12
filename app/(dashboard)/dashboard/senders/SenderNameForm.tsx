@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
 import { requestSenderName } from "@/lib/actions/sender-names";
 import { allowAlphaNumericSpace, fieldCls } from "@/lib/form-utils";
 import { safeErrorMessage } from "@/lib/error-messages";
@@ -24,10 +25,13 @@ export default function SenderNameForm({ userId }: { userId: string }) {
     try {
       await requestSenderName(userId, { name });
       setResult({ type: "success", message: "ยื่นคำขอเรียบร้อย! ทีมงานจะตรวจสอบภายใน 1-2 วันทำการ" });
+      toast.success("ยื่นคำขอ Sender Name สำเร็จ!");
       setName("");
       setPurpose("");
     } catch (e) {
-      setResult({ type: "error", message: safeErrorMessage(e) });
+      const msg = safeErrorMessage(e);
+      setResult({ type: "error", message: msg });
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

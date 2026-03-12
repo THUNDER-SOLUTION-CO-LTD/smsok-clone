@@ -1,9 +1,11 @@
 "use server";
 
 import { prisma } from "@/lib/db";
+import { resolveActionUserId } from "@/lib/action-user";
 
 // ── List custom fields ───────────────────────────────
 export async function getCustomFields(userId: string) {
+  userId = await resolveActionUserId(userId);
   return prisma.customField.findMany({
     where: { userId },
     orderBy: { createdAt: "asc" },
@@ -15,6 +17,7 @@ export async function createCustomField(
   userId: string,
   data: { name: string; type: string; options?: string[]; required?: boolean }
 ) {
+  userId = await resolveActionUserId(userId);
   const validTypes = ["text", "number", "date", "select", "boolean"];
   if (!validTypes.includes(data.type)) {
     throw new Error("ประเภทฟิลด์ไม่ถูกต้อง");
@@ -45,6 +48,7 @@ export async function updateCustomField(
   fieldId: string,
   data: { name?: string; type?: string; options?: string[]; required?: boolean }
 ) {
+  userId = await resolveActionUserId(userId);
   const field = await prisma.customField.findFirst({
     where: { id: fieldId, userId },
   });
@@ -70,6 +74,7 @@ export async function updateCustomField(
 
 // ── Delete custom field ──────────────────────────────
 export async function deleteCustomField(userId: string, fieldId: string) {
+  userId = await resolveActionUserId(userId);
   const field = await prisma.customField.findFirst({
     where: { id: fieldId, userId },
   });
@@ -81,6 +86,7 @@ export async function deleteCustomField(userId: string, fieldId: string) {
 
 // ── Get custom field values for a contact ────────────
 export async function getCustomFieldValues(userId: string, contactId: string) {
+  userId = await resolveActionUserId(userId);
   // Verify contact ownership
   const contact = await prisma.contact.findFirst({
     where: { id: contactId, userId },
@@ -100,6 +106,7 @@ export async function setCustomFieldValues(
   contactId: string,
   values: Array<{ fieldId: string; value: string }>
 ) {
+  userId = await resolveActionUserId(userId);
   // Verify contact ownership
   const contact = await prisma.contact.findFirst({
     where: { id: contactId, userId },

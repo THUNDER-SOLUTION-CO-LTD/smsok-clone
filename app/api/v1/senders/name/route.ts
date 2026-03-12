@@ -1,6 +1,5 @@
 import { NextRequest } from "next/server";
-import { ApiError, apiResponse, apiError } from "@/lib/api-auth";
-import { getSession } from "@/lib/auth";
+import { ApiError, apiResponse, apiError, authenticateRequest } from "@/lib/api-auth";
 import { prisma as db } from "@/lib/db";
 import { z } from "zod";
 import { validateSenderName, validateUrls } from "@/lib/sender-name-validation";
@@ -14,11 +13,10 @@ const submitSchema = z.object({
 // GET /api/v1/senders/name — list user's sender names
 export async function GET(req: NextRequest) {
   try {
-    const session = await getSession();
-    if (!session?.id) throw new ApiError(401, "Unauthorized");
+    const user = await authenticateRequest(req);
 
     const senderNames = await db.senderName.findMany({
-      where: { userId: session.id },
+      where: { userId: user.id },
       select: {
         id: true,
         name: true,
@@ -42,11 +40,10 @@ export async function GET(req: NextRequest) {
 // POST /api/v1/senders/name — submit sender name request
 export async function POST(req: NextRequest) {
   try {
-    const session = await getSession();
-    if (!session?.id) throw new ApiError(401, "Unauthorized");
+    const user = await authenticateRequest(req);
 
     const { applyRateLimit } = await import("@/lib/rate-limit");
-    const rl = await applyRateLimit(session.id, "sender_name");
+    const rl = await applyRateLimit(user.id, "sender_name");
     if (rl.blocked) return rl.blocked;
 
     let body: unknown;
@@ -74,7 +71,7 @@ export async function POST(req: NextRequest) {
 
     // Check duplicate name for this user
     const existing = await db.senderName.findUnique({
-      where: { userId_name: { userId: session.id, name: input.name.toUpperCase() } },
+      where: { userId_name: { userId: user.id, name: input.name.toUpperCase() } },
     });
     if (existing) {
       throw new ApiError(400, "ชื่อผู้ส่งนี้มีอยู่แล้ว");
@@ -84,7 +81,7 @@ export async function POST(req: NextRequest) {
     const senderName = await db.$transaction(async (tx) => {
       const sn = await tx.senderName.create({
         data: {
-          userId: session.id,
+          userId: user.id,
           name: input.name.toUpperCase(),
           status: "PENDING",
           accountType: input.accountType,
@@ -106,12 +103,12 @@ export async function POST(req: NextRequest) {
       await tx.senderNameHistory.create({
         data: {
           senderNameId: sn.id,
-          action: "submitted",
-          fromStatus: "DRAFT",
-          toStatus: "PENDING",
-          performedBy: session.id,
-        },
-      });
+            action: "submitted",
+            fromStatus: "DRAFT",
+            toStatus: "PENDING",
+            performedBy: user.id,
+          },
+        });
 
       return sn;
     });

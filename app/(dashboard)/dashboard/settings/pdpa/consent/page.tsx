@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Check,
   X,
@@ -15,6 +15,8 @@ import {
   XCircle,
   Clock,
   BarChart3,
+  Loader2,
+  RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -78,72 +80,53 @@ function ConsentIcon({ status }: { status: ConsentStatus }) {
   }
 }
 
-/* ─── Mock Data ─── */
-
-const MOCK_CONTACTS: Contact[] = [
-  {
-    id: "1",
-    name: "สมชาย",
-    phone: "081-xxx-xxxx",
-    marketing: "consented",
-    transactional: "consented",
-    updates: "consented",
-    consentDate: "1 มี.ค.",
-  },
-  {
-    id: "2",
-    name: "สมศรี",
-    phone: "089-xxx-xxxx",
-    marketing: "consented",
-    transactional: "consented",
-    updates: "opted-out",
-    consentDate: "5 มี.ค.",
-  },
-  {
-    id: "3",
-    name: "วิชัย",
-    phone: "092-xxx-xxxx",
-    marketing: "opted-out",
-    transactional: "consented",
-    updates: "opted-out",
-    consentDate: "8 มี.ค.",
-  },
-  {
-    id: "4",
-    name: "มานี",
-    phone: "095-xxx-xxxx",
-    marketing: "none",
-    transactional: "consented",
-    updates: "none",
-    consentDate: "—",
-  },
-];
-
 const PAGE_SIZE = 10;
 
 /* ─── Main Component ─── */
 
 export default function ConsentPage() {
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [purposeFilter, setPurposeFilter] = useState("");
   const [page, setPage] = useState(1);
 
-  const consentedCount = MOCK_CONTACTS.filter(
+  const fetchContacts = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/v1/pdpa/consent");
+      if (!res.ok) throw new Error(`API error: ${res.status}`);
+      const data = await res.json();
+      setContacts(Array.isArray(data) ? data : data.data ?? []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "เกิดข้อผิดพลาดในการโหลดข้อมูล");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchContacts();
+  }, [fetchContacts]);
+
+  const consentedCount = contacts.filter(
     (c) => c.marketing === "consented" || c.transactional === "consented"
   ).length;
-  const optedOutCount = MOCK_CONTACTS.filter(
+  const optedOutCount = contacts.filter(
     (c) => c.marketing === "opted-out"
   ).length;
-  const pendingCount = MOCK_CONTACTS.filter(
+  const pendingCount = contacts.filter(
     (c) => c.marketing === "none"
   ).length;
   const rate =
-    MOCK_CONTACTS.length > 0
-      ? ((consentedCount / MOCK_CONTACTS.length) * 100).toFixed(1)
+    contacts.length > 0
+      ? ((consentedCount / contacts.length) * 100).toFixed(1)
       : "0";
 
-  const filtered = MOCK_CONTACTS.filter((c) => {
+  const filtered = contacts.filter((c) => {
     if (
       searchQuery &&
       !c.name.includes(searchQuery) &&
@@ -242,6 +225,28 @@ export default function ConsentPage() {
         />
       </FilterBar>
 
+      {loading ? (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-[var(--text-muted)]" />
+        </div>
+      ) : error ? (
+        <div className="flex flex-col items-center justify-center py-20 gap-4">
+          <XCircle className="w-10 h-10 text-[var(--error)]" />
+          <p className="text-sm text-[var(--text-secondary)]">{error}</p>
+          <Button
+            variant="outline"
+            onClick={fetchContacts}
+            className="gap-2 border-[var(--border-default)] text-[var(--text-secondary)]"
+          >
+            <RefreshCw className="w-4 h-4" /> ลองใหม่
+          </Button>
+        </div>
+      ) : contacts.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 gap-3">
+          <CheckCircle className="w-10 h-10 text-[var(--text-muted)]" />
+          <p className="text-sm text-[var(--text-secondary)]">ยังไม่มีข้อมูลความยินยอม</p>
+        </div>
+      ) : (
       <TableWrapper>
         {/* Header */}
         <div className="grid grid-cols-[1fr_120px_80px_80px_80px_100px_50px] gap-x-4 px-5 py-3 bg-[var(--table-header)] text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">
@@ -312,6 +317,7 @@ export default function ConsentPage() {
           />
         )}
       </TableWrapper>
+      )}
     </PageLayout>
   );
 }

@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/db";
+import { resolveActionUserId } from "../action-user";
 
 export type ActivityItem = {
   type: "sms" | "otp" | "credit";
@@ -14,6 +15,7 @@ export async function getContactActivity(
   contactId: string,
   options: { page?: number; limit?: number; type?: string } = {}
 ) {
+  userId = await resolveActionUserId(userId);
   // Verify ownership + get phone
   const contact = await prisma.contact.findFirst({
     where: { id: contactId, userId },

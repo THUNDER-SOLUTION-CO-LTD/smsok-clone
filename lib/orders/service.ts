@@ -1,4 +1,8 @@
-import { type PrismaClient, type OrderStatus } from "@prisma/client";
+import {
+  type OrderDocumentType,
+  type OrderStatus,
+  type PrismaClient,
+} from "@prisma/client";
 import { prisma as db } from "@/lib/db";
 
 type TxClient = Parameters<Parameters<typeof db.$transaction>[0]>[0];
@@ -34,11 +38,151 @@ type OrderRecord = {
   rejectReason: string | null;
   adminNote: string | null;
   paidAt: Date | null;
+  cancelledAt: Date | null;
+  cancellationReason: string | null;
   createdAt: Date;
+};
+
+type OrderDocumentRecord = {
+  id: string;
+  type: OrderDocumentType;
+  documentNumber: string;
+  issuedAt: Date;
+  voidedAt: Date | null;
+  voidReason: string | null;
+  replacesDocumentId: string | null;
+  pdfUrl: string | null;
+  deletedAt: Date | null;
+};
+
+type OrderHistoryRecord = {
+  id: string;
+  fromStatus: OrderStatus | null;
+  toStatus: OrderStatus;
+  changedBy: string | null;
+  note: string | null;
+  createdAt: Date;
+};
+
+type OrderSlipRecord = {
+  id: string;
+  fileUrl: string;
+  fileKey: string;
+  fileSize: number | null;
+  fileType: string | null;
+  uploadedAt: Date;
+  verifiedAt: Date | null;
+  verifiedBy: string | null;
+  deletedAt: Date | null;
+};
+
+type OrderSerializeInput = OrderRecord & {
+  documents?: OrderDocumentRecord[];
+  history?: OrderHistoryRecord[];
+};
+
+export type LegacyOrderStatus =
+  | "PENDING"
+  | "SLIP_UPLOADED"
+  | "VERIFIED"
+  | "PENDING_REVIEW"
+  | "APPROVED"
+  | "COMPLETED"
+  | "EXPIRED"
+  | "CANCELLED"
+  | "REJECTED";
+
+export type OrderApiStatus =
+  | "draft"
+  | "pending_payment"
+  | "verifying"
+  | "paid"
+  | "expired"
+  | "cancelled";
+
+export type OrderDocumentApiType =
+  | "invoice"
+  | "tax_invoice"
+  | "receipt"
+  | "credit_note";
+
+const ORDER_STATUS_TO_API: Record<OrderStatus, OrderApiStatus> = {
+  DRAFT: "draft",
+  PENDING_PAYMENT: "pending_payment",
+  VERIFYING: "verifying",
+  PAID: "paid",
+  EXPIRED: "expired",
+  CANCELLED: "cancelled",
+};
+
+const ORDER_STATUS_TO_LEGACY: Record<OrderStatus, LegacyOrderStatus> = {
+  DRAFT: "PENDING",
+  PENDING_PAYMENT: "PENDING",
+  VERIFYING: "PENDING_REVIEW",
+  PAID: "COMPLETED",
+  EXPIRED: "EXPIRED",
+  CANCELLED: "CANCELLED",
+};
+
+const LEGACY_STATUS_TO_DB: Record<LegacyOrderStatus, OrderStatus[]> = {
+  PENDING: ["DRAFT", "PENDING_PAYMENT"],
+  SLIP_UPLOADED: ["VERIFYING"],
+  VERIFIED: ["PAID"],
+  PENDING_REVIEW: ["VERIFYING"],
+  APPROVED: ["PAID"],
+  COMPLETED: ["PAID"],
+  EXPIRED: ["EXPIRED"],
+  CANCELLED: ["CANCELLED"],
+  REJECTED: ["CANCELLED"],
+};
+
+const API_STATUS_TO_DB: Record<OrderApiStatus, OrderStatus> = {
+  draft: "DRAFT",
+  pending_payment: "PENDING_PAYMENT",
+  verifying: "VERIFYING",
+  paid: "PAID",
+  expired: "EXPIRED",
+  cancelled: "CANCELLED",
+};
+
+const ORDER_DOCUMENT_TYPE_TO_API: Record<OrderDocumentType, OrderDocumentApiType> = {
+  INVOICE: "invoice",
+  TAX_INVOICE: "tax_invoice",
+  RECEIPT: "receipt",
+  CREDIT_NOTE: "credit_note",
 };
 
 function toNumber(value: { toNumber(): number } | number) {
   return typeof value === "number" ? value : value.toNumber();
+}
+
+export function serializeLegacyOrderStatus(status: OrderStatus): LegacyOrderStatus {
+  return ORDER_STATUS_TO_LEGACY[status];
+}
+
+export function serializeOrderStatus(status: OrderStatus): OrderApiStatus {
+  return ORDER_STATUS_TO_API[status];
+}
+
+export function parseLegacyOrderStatus(status: string | undefined) {
+  if (!status) return null;
+  return LEGACY_STATUS_TO_DB[status as LegacyOrderStatus] ?? null;
+}
+
+export function parseOrderStatus(status: string | undefined) {
+  if (!status) return null;
+  const mapped = API_STATUS_TO_DB[status as OrderApiStatus];
+  return mapped ? [mapped] : null;
+}
+
+export function isWhtEligible(netAmount: number, customerType: "INDIVIDUAL" | "COMPANY") {
+  return customerType === "COMPANY" && netAmount >= 1000;
+}
+
+export function getOrderExpirationDate(method: "promptpay" | "bank_transfer" = "bank_transfer") {
+  const now = Date.now();
+  const durationMs = method === "promptpay" ? 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
+  return new Date(now + durationMs);
 }
 
 export function calculateOrderAmounts(netAmount: number, hasWht: boolean) {
@@ -138,7 +282,88 @@ export async function upsertDefaultCompanyTaxProfile(
   });
 }
 
-export function serializeOrder(order: OrderRecord) {
+function attachOrderDocuments(
+  payload: Record<string, unknown>,
+  documents: OrderDocumentRecord[] | undefined,
+) {
+  if (!documents?.length) {
+    return payload;
+  }
+
+  const activeDocuments = documents.filter((document) => !document.deletedAt);
+  const taxInvoice = activeDocuments.find((document) => document.type === "TAX_INVOICE");
+  const receipt = activeDocuments.find((document) => document.type === "RECEIPT");
+
+  return {
+    ...payload,
+    tax_invoice_number: taxInvoice?.documentNumber ?? undefined,
+    tax_invoice_url: taxInvoice?.pdfUrl ?? undefined,
+    receipt_number: receipt?.documentNumber ?? undefined,
+    receipt_url: receipt?.pdfUrl ?? undefined,
+    documents: activeDocuments.map(serializeOrderDocument),
+  };
+}
+
+function attachOrderTimeline(
+  payload: Record<string, unknown>,
+  history: OrderHistoryRecord[] | undefined,
+) {
+  if (!history?.length) {
+    return payload;
+  }
+
+  return {
+    ...payload,
+    timeline: history.map((event) => ({
+      status: serializeLegacyOrderStatus(event.toStatus),
+      timestamp: event.createdAt.toISOString(),
+    })),
+  };
+}
+
+export function serializeOrder(order: OrderSerializeInput) {
+  const base = {
+    id: order.id,
+    order_number: order.orderNumber,
+    package_tier_id: order.packageTierId,
+    package_name: order.packageName,
+    sms_count: order.smsCount,
+    customer_type: order.customerType,
+    tax_name: order.taxName,
+    tax_id: order.taxId,
+    tax_address: order.taxAddress,
+    tax_branch_type: order.taxBranchType,
+    tax_branch_number: order.taxBranchNumber ?? undefined,
+    net_amount: toNumber(order.netAmount),
+    vat_amount: toNumber(order.vatAmount),
+    total_amount: toNumber(order.totalAmount),
+    has_wht: order.hasWht,
+    wht_amount: toNumber(order.whtAmount),
+    pay_amount: toNumber(order.payAmount),
+    status: serializeLegacyOrderStatus(order.status),
+    expires_at: order.expiresAt.toISOString(),
+    quotation_number: order.quotationNumber ?? undefined,
+    quotation_url: order.quotationUrl ?? undefined,
+    invoice_number: order.invoiceNumber ?? undefined,
+    invoice_url: order.invoiceUrl ?? undefined,
+    slip_url: order.slipUrl ?? undefined,
+    wht_cert_url: order.whtCertUrl ?? undefined,
+    easyslip_verified: order.easyslipVerified ?? undefined,
+    reject_reason: order.rejectReason ?? undefined,
+    admin_note: order.adminNote ?? undefined,
+    paid_at: order.paidAt?.toISOString(),
+    cancelled_at: order.cancelledAt?.toISOString(),
+    cancellation_reason: order.cancellationReason ?? undefined,
+    created_at: order.createdAt.toISOString(),
+  };
+
+  return attachOrderTimeline(
+    attachOrderDocuments(base, order.documents),
+    order.history,
+  );
+}
+
+export function serializeOrderV2(order: OrderRecord) {
   return {
     id: order.id,
     order_number: order.orderNumber,
@@ -157,7 +382,7 @@ export function serializeOrder(order: OrderRecord) {
     has_wht: order.hasWht,
     wht_amount: toNumber(order.whtAmount),
     pay_amount: toNumber(order.payAmount),
-    status: order.status,
+    status: serializeOrderStatus(order.status),
     expires_at: order.expiresAt.toISOString(),
     quotation_number: order.quotationNumber ?? undefined,
     quotation_url: order.quotationUrl ?? undefined,
@@ -169,6 +394,37 @@ export function serializeOrder(order: OrderRecord) {
     reject_reason: order.rejectReason ?? undefined,
     admin_note: order.adminNote ?? undefined,
     paid_at: order.paidAt?.toISOString(),
+    cancelled_at: order.cancelledAt?.toISOString(),
+    cancellation_reason: order.cancellationReason ?? undefined,
     created_at: order.createdAt.toISOString(),
+  };
+}
+
+export function serializeOrderDocument(document: OrderDocumentRecord) {
+  return {
+    id: document.id,
+    type: ORDER_DOCUMENT_TYPE_TO_API[document.type],
+    document_number: document.documentNumber,
+    issued_at: document.issuedAt.toISOString(),
+    voided_at: document.voidedAt?.toISOString(),
+    void_reason: document.voidReason ?? undefined,
+    replaces_document_id: document.replacesDocumentId ?? undefined,
+    url: document.pdfUrl ?? undefined,
+    pdf_url: document.pdfUrl ?? undefined,
+    deleted_at: document.deletedAt?.toISOString(),
+  };
+}
+
+export function serializeOrderSlip(slip: OrderSlipRecord) {
+  return {
+    id: slip.id,
+    file_url: slip.fileUrl,
+    file_key: slip.fileKey,
+    file_size: slip.fileSize ?? undefined,
+    file_type: slip.fileType ?? undefined,
+    uploaded_at: slip.uploadedAt.toISOString(),
+    verified_at: slip.verifiedAt?.toISOString(),
+    verified_by: slip.verifiedBy ?? undefined,
+    deleted_at: slip.deletedAt?.toISOString(),
   };
 }

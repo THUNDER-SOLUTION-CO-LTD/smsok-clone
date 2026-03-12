@@ -19,7 +19,7 @@ const DASHBOARDS = [
     icon: Radio,
     href: "/admin/operations",
     color: "var(--accent)",
-    bg: "rgba(0,226,181,0.08)",
+    bg: "rgba(var(--accent-rgb),0.08)",
   },
   {
     title: "Finance",
@@ -76,7 +76,7 @@ export default function AdminOverview() {
           const Icon = d.icon;
           return (
             <Link key={d.href} href={d.href}>
-              <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg p-5 hover:border-[rgba(0,226,181,0.15)] transition-all hover:-translate-y-0.5 cursor-pointer">
+              <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg p-5 hover:border-[rgba(var(--accent-rgb),0.15)] transition-all hover:-translate-y-0.5 cursor-pointer">
                 <div className="flex items-start gap-4">
                   <div
                     className="w-10 h-10 rounded-md flex items-center justify-center flex-shrink-0"

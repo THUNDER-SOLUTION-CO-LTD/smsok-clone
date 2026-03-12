@@ -1,19 +1,16 @@
 import { NextRequest } from "next/server";
 import { ApiError, apiResponse, apiError } from "@/lib/api-auth";
 import { getSession } from "@/lib/auth";
+import { COMPANY_BANK_ACCOUNT } from "@/lib/constants/bank-account";
 
 const BANK_ACCOUNTS = [
   {
-    bank: "กสิกรไทย (KBANK)",
-    accountNumber: process.env.KBANK_ACCOUNT || "xxx-x-xxxxx-x",
-    accountName: process.env.BANK_ACCOUNT_NAME || "บจก. เอสเอ็มเอสโอเค",
-    logo: "kbank",
-  },
-  {
-    bank: "ไทยพาณิชย์ (SCB)",
-    accountNumber: process.env.SCB_ACCOUNT || "xxx-xxxxxx-x",
-    accountName: process.env.BANK_ACCOUNT_NAME || "บจก. เอสเอ็มเอสโอเค",
-    logo: "scb",
+    bank: COMPANY_BANK_ACCOUNT.bank,
+    accountNumber: COMPANY_BANK_ACCOUNT.accountNumber,
+    accountName: COMPANY_BANK_ACCOUNT.accountName,
+    accountType: COMPANY_BANK_ACCOUNT.accountType,
+    branch: COMPANY_BANK_ACCOUNT.branch,
+    logo: COMPANY_BANK_ACCOUNT.logo,
   },
 ];
 

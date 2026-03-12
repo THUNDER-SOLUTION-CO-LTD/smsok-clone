@@ -8,13 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import PillTabs from "@/components/ui/PillTabs";
 import {
   Table,
   TableBody,
@@ -115,28 +109,28 @@ export default function MessagesClient({
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <Select value={typeFilter} onValueChange={(v) => v && setTypeFilter(v)}>
-            <SelectTrigger className="w-full sm:w-[140px] h-11 bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] rounded-xl">
-              <SelectValue placeholder="ประเภท" />
-            </SelectTrigger>
-            <SelectContent className="bg-[var(--bg-surface)] border-[var(--border-default)] rounded-xl">
-              <SelectItem value="all" className="text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]">ทุกประเภท</SelectItem>
-              <SelectItem value="SMS" className="text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]">SMS</SelectItem>
-              <SelectItem value="OTP" className="text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]">OTP</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={statusFilter} onValueChange={(v) => v && setStatusFilter(v)}>
-            <SelectTrigger className="w-full sm:w-[160px] h-11 bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] rounded-xl">
-              <SelectValue placeholder="สถานะ" />
-            </SelectTrigger>
-            <SelectContent className="bg-[var(--bg-surface)] border-[var(--border-default)] rounded-xl">
-              <SelectItem value="all" className="text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]">ทุกสถานะ</SelectItem>
-              <SelectItem value="delivered" className="text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]">ส่งสำเร็จ</SelectItem>
-              <SelectItem value="sent" className="text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]">ส่งแล้ว</SelectItem>
-              <SelectItem value="pending" className="text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]">รอส่ง</SelectItem>
-              <SelectItem value="failed" className="text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]">ล้มเหลว</SelectItem>
-            </SelectContent>
-          </Select>
+          <PillTabs
+            value={typeFilter}
+            onChange={setTypeFilter}
+            label="กรองตามประเภทข้อความ"
+            options={[
+              { value: "all", label: "ทั้งหมด" },
+              { value: "SMS", label: "SMS" },
+              { value: "OTP", label: "OTP" },
+            ]}
+          />
+          <PillTabs
+            value={statusFilter}
+            onChange={setStatusFilter}
+            label="กรองตามสถานะ"
+            options={[
+              { value: "all", label: "ทุกสถานะ" },
+              { value: "delivered", label: "สำเร็จ" },
+              { value: "sent", label: "ส่งแล้ว" },
+              { value: "pending", label: "รอส่ง" },
+              { value: "failed", label: "ล้มเหลว" },
+            ]}
+          />
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
@@ -222,7 +216,7 @@ export default function MessagesClient({
                   return (
                     <TableRow
                       key={msg.id}
-                      className={`border-b border-[var(--border-default)] hover:bg-black transition-colors duration-150 h-10 ${i % 2 === 1 ? "bg-[var(--table-alt-row)]" : "bg-transparent"}`}
+                      className={`border-b border-[var(--border-default)] hover:bg-[var(--bg-elevated)] transition-colors duration-150 h-10 ${i % 2 === 1 ? "bg-[var(--table-alt-row)]" : "bg-transparent"}`}
                     >
                       <TableCell className="text-xs text-[var(--text-muted)] whitespace-nowrap py-2">
                         {new Date(msg.createdAt).toLocaleString("th-TH", {

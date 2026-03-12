@@ -177,7 +177,7 @@ function ComparisonTable() {
 
   return (
     <div className="overflow-x-auto rounded-lg border border-[var(--border-default)]">
-      <table className="w-full min-w-[700px] border-collapse text-sm">
+      <table className="w-full border-collapse text-sm">
         <thead>
           <tr className="bg-[var(--table-header)]">
             <th className="sticky left-0 z-10 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider bg-[var(--table-header)] text-[var(--text-body)]">

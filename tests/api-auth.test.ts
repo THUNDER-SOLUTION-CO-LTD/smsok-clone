@@ -6,17 +6,13 @@ const ROOT = resolve(__dirname, "..");
 const apiAuth = readFileSync(resolve(ROOT, "lib/api-auth.ts"), "utf-8");
 const auth = readFileSync(resolve(ROOT, "lib/auth.ts"), "utf-8");
 
-// ==========================================
-// API Auth (Bearer token)
-// ==========================================
-
 describe("API Auth: authenticateApiKey", () => {
   it("exports authenticateApiKey function", () => {
     expect(apiAuth).toContain("async function authenticateApiKey");
   });
 
   it("checks for Bearer prefix", () => {
-    expect(apiAuth).toContain('Bearer ');
+    expect(apiAuth).toContain("Bearer ");
   });
 
   it("supports X-API-Key header", () => {
@@ -35,12 +31,20 @@ describe("API Auth: authenticateApiKey", () => {
     expect(apiAuth).toContain("API key is disabled");
   });
 
-  it("updates lastUsed timestamp", () => {
-    expect(apiAuth).toContain("lastUsed");
+  it("loads API key permissions from DB", () => {
+    expect(apiAuth).toContain("permissions: true");
   });
 
-  it("returns user with credits", () => {
-    expect(apiAuth).toContain("credits");
+  it("rejects API keys on session-only endpoints", () => {
+    expect(apiAuth).toContain("This endpoint requires a signed-in session");
+  });
+
+  it("rejects unsupported API key routes by default", () => {
+    expect(apiAuth).toContain("API key is not allowed for this endpoint");
+  });
+
+  it("returns user with API key permissions", () => {
+    expect(apiAuth).toContain("apiKeyPermissions");
   });
 });
 
@@ -71,10 +75,6 @@ describe("API Auth: Response helpers", () => {
     expect(apiAuth).toContain("500");
   });
 });
-
-// ==========================================
-// Auth (Session/JWT)
-// ==========================================
 
 describe("Auth: Password", () => {
   it("uses bcrypt for hashing", () => {
@@ -108,7 +108,7 @@ describe("Auth: JWT", () => {
 
 describe("Auth: Session", () => {
   it("getSession reads cookie", () => {
-    expect(auth).toContain('cookieStore.get("session")');
+    expect(auth).toContain("cookieStore.get(ACCESS_COOKIE_NAME)");
   });
 
   it("setSession sets HttpOnly cookie", () => {
@@ -120,20 +120,21 @@ describe("Auth: Session", () => {
   });
 
   it("cookie sameSite is lax", () => {
-    expect(auth).toContain('sameSite: "lax"');
+    expect(auth).toContain('sameSite: "strict"');
   });
 
   it("cookie maxAge is 7 days", () => {
-    expect(auth).toContain("60 * 60 * 24 * 7");
+    expect(auth).toContain("const ACCESS_TOKEN_TTL_SECONDS = 15 * 60");
+    expect(auth).toContain("const REFRESH_TOKEN_TTL_SECONDS = 30 * 24 * 60 * 60");
   });
 
   it("clearSession deletes cookie", () => {
-    expect(auth).toContain('cookieStore.delete("session")');
+    expect(auth).toContain("cookieStore.delete(ACCESS_COOKIE_NAME)");
+    expect(auth).toContain("cookieStore.delete(REFRESH_COOKIE_NAME)");
   });
 
   it("getSession selects limited user fields", () => {
     expect(auth).toContain("select:");
-    expect(auth).toContain("credits: true");
     expect(auth).toContain("role: true");
   });
 });

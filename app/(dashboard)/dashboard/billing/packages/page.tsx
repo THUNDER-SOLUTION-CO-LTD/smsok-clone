@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   ChevronDown,
@@ -15,7 +15,6 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   type PackageGroup,
   type PackageTier,
-  PACKAGE_TIERS,
   formatBaht,
   COMPARISON_FEATURES,
 } from "@/types/purchase";
@@ -24,9 +23,10 @@ import {
 
 function getRecommendedTier(
   volume: number,
-  group: PackageGroup
+  group: PackageGroup,
+  allTiers: PackageTier[]
 ): PackageTier | null {
-  const tiers = PACKAGE_TIERS.filter((t) => t.group === group).sort(
+  const tiers = allTiers.filter((t) => t.group === group).sort(
     (a, b) => a.smsCredits - b.smsCredits
   );
   for (const tier of tiers) {
@@ -307,15 +307,17 @@ function AccordionCard({
 
 function VolumeSliderSection({
   group,
+  allTiers,
   onSelectTier,
 }: {
   group: PackageGroup;
+  allTiers: PackageTier[];
   onSelectTier: (tier: PackageTier) => void;
 }) {
   const [volume, setVolume] = useState(5000);
   const recommended = useMemo(
-    () => getRecommendedTier(volume, group),
-    [volume, group]
+    () => getRecommendedTier(volume, group, allTiers),
+    [volume, group, allTiers]
   );
 
   return (
@@ -392,9 +394,9 @@ function VolumeSliderSection({
 
 // ── Comparison Table ──
 
-function ComparisonTable({ group }: { group: PackageGroup }) {
+function ComparisonTable({ group, allTiers }: { group: PackageGroup; allTiers: PackageTier[] }) {
   const [isOpen, setIsOpen] = useState(false);
-  const tiers = PACKAGE_TIERS.filter((t) => t.group === group);
+  const tiers = allTiers.filter((t) => t.group === group);
 
   function getCellValue(tier: PackageTier, key: string): string {
     switch (key) {
@@ -529,8 +531,8 @@ function ComparisonTable({ group }: { group: PackageGroup }) {
 
 function TrustSignals() {
   const banks = [
-    { name: "KBank", label: "กสิกรไทย" },
     { name: "SCB", label: "ไทยพาณิชย์" },
+    { name: "KBank", label: "กสิกรไทย" },
     { name: "BBL", label: "กรุงเทพ" },
     { name: "BAY", label: "กรุงศรี" },
   ];
@@ -613,10 +615,20 @@ export default function PricingPage() {
   );
   const [selectedMobileTier, setSelectedMobileTier] =
     useState<PackageTier | null>(null);
+  const [packageTiers, setPackageTiers] = useState<PackageTier[]>([]);
+  const [tiersLoading, setTiersLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/v1/packages")
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then((data) => setPackageTiers(data.data ?? data.packages ?? []))
+      .catch(() => setPackageTiers([]))
+      .finally(() => setTiersLoading(false));
+  }, []);
 
   const tiers = useMemo(
-    () => PACKAGE_TIERS.filter((t) => t.group === group),
-    [group]
+    () => packageTiers.filter((t) => t.group === group),
+    [group, packageTiers]
   );
 
   const handleSelect = useCallback(
@@ -631,14 +643,45 @@ export default function PricingPage() {
       const newExpanded = expandedAccordion === tierId ? null : tierId;
       setExpandedAccordion(newExpanded);
       if (newExpanded) {
-        const tier = PACKAGE_TIERS.find((t) => t.id === tierId) ?? null;
+        const tier = packageTiers.find((t) => t.id === tierId) ?? null;
         setSelectedMobileTier(tier);
       } else {
         setSelectedMobileTier(null);
       }
     },
-    [expandedAccordion]
+    [expandedAccordion, packageTiers]
   );
+
+  if (tiersLoading) {
+    return (
+      <div className="max-w-5xl mx-auto px-4 py-16 text-center">
+        <div
+          className="w-6 h-6 border-2 rounded-full animate-spin mx-auto mb-3"
+          style={{ borderColor: "var(--border-default)", borderTopColor: "var(--accent)" }}
+        />
+        <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+          กำลังโหลดแพ็กเกจ...
+        </p>
+      </div>
+    );
+  }
+
+  if (packageTiers.length === 0) {
+    return (
+      <div className="max-w-5xl mx-auto px-4 py-16 text-center">
+        <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+          ไม่พบแพ็กเกจ กรุณาลองใหม่อีกครั้ง
+        </p>
+        <button
+          className="mt-4 text-sm font-medium"
+          style={{ color: "var(--accent)" }}
+          onClick={() => window.location.reload()}
+        >
+          โหลดใหม่
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8 pb-24 sm:pb-8">
@@ -738,10 +781,10 @@ export default function PricingPage() {
       </div>
 
       {/* Volume Slider */}
-      <VolumeSliderSection group={group} onSelectTier={handleSelect} />
+      <VolumeSliderSection group={group} allTiers={packageTiers} onSelectTier={handleSelect} />
 
       {/* Comparison Table */}
-      <ComparisonTable group={group} />
+      <ComparisonTable group={group} allTiers={packageTiers} />
 
       {/* Trust Signals */}
       <TrustSignals />

@@ -13,6 +13,6 @@ export default async function SendPage() {
   const senderNames = names.includes("EasySlip") ? names : ["EasySlip", ...names];
 
   return (
-    <SendSmsForm userId={user.id} senderNames={senderNames} />
+    <SendSmsForm senderNames={senderNames} />
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Shield,
   Share2,
@@ -10,6 +10,8 @@ import {
   AlertTriangle,
   History,
   Lock,
+  Loader2,
+  RefreshCw,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import PageLayout, { PageHeader } from "@/components/blocks/PageLayout";
@@ -99,45 +101,6 @@ const CONSENTS: ConsentConfig[] = [
     acceptedDate: "1 มี.ค. 2026",
     policyLink: "/legal/cookies",
     withdrawWarning: "จะลบ analytics cookies",
-  },
-];
-
-const MOCK_HISTORY: HistoryEntry[] = [
-  {
-    date: "1 มี.ค. 2026, 10:30",
-    type: "ข้อกำหนดการใช้งาน",
-    action: "ยินยอม",
-    version: "v1.0",
-  },
-  {
-    date: "1 มี.ค. 2026, 10:30",
-    type: "ส่งข้อมูลให้บุคคลที่สาม",
-    action: "ยินยอม",
-    version: "v1.0",
-  },
-  {
-    date: "1 มี.ค. 2026, 10:30",
-    type: "รับโปรโมชั่น",
-    action: "ยินยอม",
-    version: "v1.0",
-  },
-  {
-    date: "1 มี.ค. 2026, 10:30",
-    type: "Analytics cookies",
-    action: "ยินยอม",
-    version: "v1.0",
-  },
-  {
-    date: "5 มี.ค. 2026, 14:15",
-    type: "รับโปรโมชั่น",
-    action: "ถอนความยินยอม",
-    version: "v1.0",
-  },
-  {
-    date: "8 มี.ค. 2026, 09:00",
-    type: "รับโปรโมชั่น",
-    action: "ยินยอม",
-    version: "v1.0",
   },
 ];
 
@@ -312,6 +275,31 @@ export default function PrivacySettingsPage() {
     cookie: true,
   });
 
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+
+  const fetchHistory = useCallback(async () => {
+    setHistoryLoading(true);
+    setHistoryError(null);
+    try {
+      const res = await fetch("/api/v1/audit-logs?limit=20");
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setHistory(Array.isArray(data) ? data : data.data ?? []);
+    } catch (err) {
+      setHistoryError(
+        err instanceof Error ? err.message : "ไม่สามารถโหลดประวัติได้"
+      );
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
+
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
     type: ConsentType | null;
@@ -400,37 +388,74 @@ export default function PrivacySettingsPage() {
               </tr>
             </thead>
             <tbody>
-              {MOCK_HISTORY.map((entry, i) => (
-                <tr
-                  key={`${entry.date}-${entry.type}-${i}`}
-                  className={cn(
-                    "border-b border-[var(--border-default)] last:border-b-0",
-                    "hover:bg-[rgba(255,255,255,0.02)] transition-colors"
-                  )}
-                >
-                  <td className="px-5 py-3 text-[13px] text-[var(--text-secondary)] whitespace-nowrap">
-                    {entry.date}
-                  </td>
-                  <td className="px-5 py-3 text-[13px] text-[var(--text-primary)]">
-                    {entry.type}
-                  </td>
-                  <td className="px-5 py-3">
-                    <span
-                      className={cn(
-                        "inline-flex text-[11px] font-medium px-2.5 py-1 rounded-full",
-                        entry.action === "ยินยอม"
-                          ? "bg-[rgba(16,185,129,0.08)] text-[var(--success)]"
-                          : "bg-[rgba(239,68,68,0.08)] text-[var(--error)]"
-                      )}
-                    >
-                      {entry.action}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3 text-[13px] text-[var(--text-muted)]">
-                    {entry.version}
+              {historyLoading ? (
+                <tr>
+                  <td colSpan={4} className="px-5 py-10 text-center">
+                    <div className="flex items-center justify-center gap-2 text-[var(--text-muted)]">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="text-[13px]">กำลังโหลดประวัติ...</span>
+                    </div>
                   </td>
                 </tr>
-              ))}
+              ) : historyError ? (
+                <tr>
+                  <td colSpan={4} className="px-5 py-10 text-center">
+                    <div className="flex flex-col items-center gap-2">
+                      <span className="text-[13px] text-[var(--error)]">
+                        {historyError}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={fetchHistory}
+                        className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[var(--accent)] hover:text-[var(--accent)]/80 transition-colors cursor-pointer"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        ลองใหม่
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ) : history.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="px-5 py-10 text-center">
+                    <span className="text-[13px] text-[var(--text-muted)]">
+                      ยังไม่มีประวัติกิจกรรม
+                    </span>
+                  </td>
+                </tr>
+              ) : (
+                history.map((entry, i) => (
+                  <tr
+                    key={`${entry.date}-${entry.type}-${i}`}
+                    className={cn(
+                      "border-b border-[var(--border-default)] last:border-b-0",
+                      "hover:bg-[rgba(255,255,255,0.02)] transition-colors"
+                    )}
+                  >
+                    <td className="px-5 py-3 text-[13px] text-[var(--text-secondary)] whitespace-nowrap">
+                      {entry.date}
+                    </td>
+                    <td className="px-5 py-3 text-[13px] text-[var(--text-primary)]">
+                      {entry.type}
+                    </td>
+                    <td className="px-5 py-3">
+                      <span
+                        className={cn(
+                          "inline-flex text-[11px] font-medium px-2.5 py-1 rounded-full",
+                          entry.action === "ยินยอม"
+                            ? "bg-[rgba(16,185,129,0.08)] text-[var(--success)]"
+                            : "bg-[rgba(239,68,68,0.08)] text-[var(--error)]"
+                        )}
+                      >
+                        {entry.action}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3 text-[13px] text-[var(--text-muted)]">
+                      {entry.version}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

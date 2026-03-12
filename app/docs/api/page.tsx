@@ -443,7 +443,7 @@ const ENDPOINTS: Record<string, Endpoint> = {
     id: "credits-balance",
     method: "GET",
     path: "/credits/balance",
-    description: "Get the current credit balance for your account.",
+    description: "Get the current SMS balance for your account.",
     category: "credits",
     params: [],
     statusCodes: [
@@ -461,7 +461,7 @@ const ENDPOINTS: Record<string, Endpoint> = {
     id: "credits-usage",
     method: "GET",
     path: "/credits/usage",
-    description: "Get credit usage history with optional date range filtering.",
+    description: "Get SMS usage history with optional date range filtering.",
     category: "credits",
     params: [
       { name: "from", type: "string", required: false, description: "Start date in YYYY-MM-DD format." },

@@ -21,10 +21,16 @@ test.describe.serial("Authentication", () => {
 
   // TC-002: Login with invalid password
   test("TC-002: login with invalid password", async ({ page }) => {
-    await page.goto("/login", { waitUntil: "networkidle" });
+    await page.goto("/login", { waitUntil: "domcontentloaded" });
+    await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
     await dismissCookieConsent(page);
-    await page.locator("input").first().fill(TEST_USER.email);
+    await page.locator('input[type="email"]').waitFor({ state: "visible", timeout: 10000 });
+    await page.locator('input[type="email"]').fill(TEST_USER.email);
     await page.locator('input[type="password"]').first().fill("wrongpassword123");
+    await page.waitForFunction(
+      () => !(document.querySelector('button[type="submit"]') as HTMLButtonElement)?.disabled,
+      { timeout: 10000 }
+    ).catch(() => {});
     await page.locator('button[type="submit"]').click();
 
     const errorEl = page.locator('[class*="error"], [class*="alert"], [role="alert"]').first();
@@ -34,7 +40,8 @@ test.describe.serial("Authentication", () => {
 
   // TC-003: Login with empty fields
   test("TC-003: submit button disabled with empty fields", async ({ page }) => {
-    await page.goto("/login", { waitUntil: "networkidle" });
+    await page.goto("/login", { waitUntil: "domcontentloaded" });
+    await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
     await dismissCookieConsent(page);
     const submitBtn = page.locator('button[type="submit"]');
     await expect(submitBtn).toBeVisible();
@@ -77,7 +84,7 @@ test.describe.serial("Authentication", () => {
     const page = await context.newPage();
     const protectedPaths = ["/dashboard", "/dashboard/send", "/dashboard/messages", "/dashboard/settings"];
     for (const path of protectedPaths) {
-      await page.goto(path, { waitUntil: "networkidle" });
+      await page.goto(path, { waitUntil: "domcontentloaded" });
       expect(page.url()).toContain("/login");
     }
     await context.close();
@@ -87,7 +94,7 @@ test.describe.serial("Authentication", () => {
   test("TC-009: packages page redirects to login without auth", async ({ browser }) => {
     const context = await browser.newContext();
     const page = await context.newPage();
-    await page.goto("/dashboard/packages", { waitUntil: "networkidle" });
+    await page.goto("/dashboard/packages", { waitUntil: "domcontentloaded" });
     // /dashboard/* requires auth — should redirect to login
     expect(page.url()).toContain("/login");
     await context.close();
@@ -95,7 +102,7 @@ test.describe.serial("Authentication", () => {
 
   // TC-010: Forgot password page
   test("TC-010: forgot password page loads", async ({ page }) => {
-    await page.goto("/forgot-password", { waitUntil: "networkidle" });
+    await page.goto("/forgot-password", { waitUntil: "domcontentloaded" });
     expect(page.url()).toContain("/forgot-password");
     await expect(page.locator("input").first()).toBeVisible();
   });
