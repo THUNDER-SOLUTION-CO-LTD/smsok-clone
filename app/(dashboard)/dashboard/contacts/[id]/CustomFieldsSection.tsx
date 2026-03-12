@@ -65,7 +65,7 @@ export default function CustomFieldsSection({
       const payload = Object.entries(values)
         .filter(([, v]) => v !== "")
         .map(([fieldId, value]) => ({ fieldId, value }));
-      await setCustomFieldValues(userId, contactId, payload);
+      await setCustomFieldValues(contactId, payload);
       setSuccess(true);
       setTimeout(() => setSuccess(false), 2000);
     } catch (e) {

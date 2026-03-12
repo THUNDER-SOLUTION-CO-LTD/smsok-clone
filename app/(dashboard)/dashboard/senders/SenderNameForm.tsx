@@ -23,7 +23,7 @@ export default function SenderNameForm({ userId }: { userId: string }) {
     setResult(null);
 
     try {
-      await requestSenderName(userId, { name });
+      await requestSenderName({ name });
       setResult({ type: "success", message: "ยื่นคำขอเรียบร้อย! ทีมงานจะตรวจสอบภายใน 1-2 วันทำการ" });
       toast.success("ยื่นคำขอ Sender Name สำเร็จ!");
       setName("");

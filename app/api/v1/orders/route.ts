@@ -117,7 +117,7 @@ export async function GET(req: NextRequest) {
         page: input.page,
         limit: input.limit,
         total,
-        totalPages: Math.max(1, Math.ceil(total / input.limit)),
+        totalPages: total === 0 ? 0 : Math.ceil(total / input.limit),
       },
       stats: {
         total: totalOrders,

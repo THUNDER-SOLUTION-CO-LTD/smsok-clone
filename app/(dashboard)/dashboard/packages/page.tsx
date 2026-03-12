@@ -660,7 +660,7 @@ export default function PricingPage() {
   useEffect(() => {
     fetch("/api/v1/packages")
       .then((res) => (res.ok ? res.json() : Promise.reject()))
-      .then((data) => setPackageTiers(data.data ?? data.packages ?? []))
+      .then((data) => setPackageTiers(data.data ?? data.packages ?? data.tiers ?? []))
       .catch(() => setPackageTiers([]))
       .finally(() => setTiersLoading(false));
   }, []);

@@ -11,11 +11,37 @@ export type ActivityItem = {
 };
 
 export async function getContactActivity(
+  contactId: string,
+  options?: { page?: number; limit?: number; type?: string },
+): Promise<{
+  activities: ActivityItem[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}>;
+export async function getContactActivity(
   userId: string,
   contactId: string,
-  options: { page?: number; limit?: number; type?: string } = {}
+  options?: { page?: number; limit?: number; type?: string },
+): Promise<{
+  activities: ActivityItem[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}>;
+export async function getContactActivity(
+  userIdOrContactId: string,
+  contactIdOrOptions?: string | { page?: number; limit?: number; type?: string },
+  maybeOptions: { page?: number; limit?: number; type?: string } = {},
 ) {
-  userId = await resolveActionUserId(userId);
+  const hasExplicitUserId = typeof contactIdOrOptions === "string";
+  const userId = await resolveActionUserId(hasExplicitUserId ? userIdOrContactId : undefined);
+  const contactId = hasExplicitUserId ? contactIdOrOptions as string : userIdOrContactId;
+  const options = hasExplicitUserId
+    ? maybeOptions
+    : (contactIdOrOptions ?? {});
   // Verify ownership + get phone
   const contact = await prisma.contact.findFirst({
     where: { id: contactId, userId },

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft, Check, X, Gift, Ticket, ChevronDown, ChevronUp, Users, Clock, RotateCcw, Sparkles } from "lucide-react"
@@ -22,7 +22,8 @@ interface Package {
   popular?: boolean
 }
 
-const PACKAGES: Package[] = [
+// Fallback pricing — used only when /api/v1/packages is unavailable (public page, no auth)
+const FALLBACK_PACKAGES: Package[] = [
   { tier: "A", name: "Starter",      sms: 500,       price: 500,       bonusPercent: 0,  senders: 5,    expiryMonths: 6,  refund: false },
   { tier: "B", name: "Basic",        sms: 1_100,     price: 1_000,     bonusPercent: 10, senders: 10,   expiryMonths: 12, refund: false, popular: true },
   { tier: "C", name: "Growth",       sms: 11_500,    price: 10_000,    bonusPercent: 15, senders: 15,   expiryMonths: 24, refund: false },
@@ -32,9 +33,6 @@ const PACKAGES: Package[] = [
   { tier: "G", name: "Corporate",    sms: 700_000,   price: 500_000,   bonusPercent: 40, senders: null, expiryMonths: 36, refund: true },
   { tier: "H", name: "Unlimited",    sms: 1_500_000, price: 1_000_000, bonusPercent: 50, senders: null, expiryMonths: 36, refund: true },
 ]
-
-const TOP_PACKAGES = PACKAGES.slice(0, 3)
-const BOTTOM_PACKAGES = PACKAGES.slice(3)
 
 /* ─── Helpers ─── */
 
@@ -183,7 +181,7 @@ function ComparisonTable() {
             <th className="sticky left-0 z-10 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider bg-[var(--table-header)] text-[var(--text-body)]">
               เปรียบเทียบ
             </th>
-            {PACKAGES.map((pkg) => (
+            {FALLBACK_PACKAGES.map((pkg) => (
               <th
                 key={pkg.tier}
                 className={cn(
@@ -213,7 +211,7 @@ function ComparisonTable() {
               >
                 {row.label}
               </td>
-              {PACKAGES.map((pkg) => {
+              {FALLBACK_PACKAGES.map((pkg) => {
                 const val = row.getValue(pkg)
                 const isAccent = row.label === "Refund" && val === "✓"
                 return (
@@ -243,25 +241,66 @@ function ComparisonTable() {
 type CouponStatus = "idle" | "validating" | "valid" | "invalid"
 
 export default function PackagesPage() {
+  const [packages, setPackages] = useState<Package[]>(FALLBACK_PACKAGES)
   const [couponCode, setCouponCode] = useState("")
   const [couponStatus, setCouponStatus] = useState<CouponStatus>("idle")
   const [couponDiscount, setCouponDiscount] = useState("")
   const [showComparison, setShowComparison] = useState(false)
 
+  // Fetch real pricing from API (public endpoint, fallback to hardcoded if unavailable)
+  useEffect(() => {
+    fetch("/api/v1/packages")
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        const tiers = data?.data ?? data?.tiers ?? data;
+        if (Array.isArray(tiers) && tiers.length > 0) {
+          setPackages(
+            tiers
+              .sort((a: { smsQuota?: number; sms?: number }, b: { smsQuota?: number; sms?: number }) =>
+                (a.smsQuota ?? a.sms ?? 0) - (b.smsQuota ?? b.sms ?? 0)
+              )
+              .map((t: Record<string, unknown>, i: number) => ({
+                tier: (t.tier as string) ?? String.fromCharCode(65 + i),
+                name: (t.name as string) ?? `Tier ${String.fromCharCode(65 + i)}`,
+                sms: (t.smsQuota as number) ?? (t.sms as number) ?? 0,
+                price: (t.price as number) ?? 0,
+                bonusPercent: (t.bonusPercent as number) ?? 0,
+                senders: (t.senderLimit as number) ?? null,
+                expiryMonths: (t.expiryMonths as number) ?? 12,
+                refund: (t.refundable as boolean) ?? false,
+                popular: (t.popular as boolean) ?? i === 1,
+              }))
+          );
+        }
+      })
+      .catch(() => { /* keep fallback */ });
+  }, []);
+
+  const TOP_PACKAGES = packages.slice(0, 3);
+  const BOTTOM_PACKAGES = packages.slice(3);
+
   function handleApplyCoupon() {
     if (!couponCode.trim()) return
     setCouponStatus("validating")
-    // Simulate coupon validation
-    setTimeout(() => {
-      const code = couponCode.trim().toUpperCase()
-      if (code === "SMSOK50" || code === "WELCOME10") {
-        setCouponStatus("valid")
-        setCouponDiscount(code === "SMSOK50" ? "50%" : "10%")
-      } else {
+    fetch("/api/v1/coupons/validate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: couponCode.trim().toUpperCase() }),
+    })
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (data?.valid) {
+          setCouponStatus("valid")
+          setCouponDiscount(data.discount ?? "")
+        } else {
+          setCouponStatus("invalid")
+          setCouponDiscount("")
+        }
+      })
+      .catch(() => {
         setCouponStatus("invalid")
         setCouponDiscount("")
-      }
-    }, 1200)
+      })
   }
 
   function handleRemoveCoupon() {

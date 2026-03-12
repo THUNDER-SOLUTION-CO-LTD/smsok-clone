@@ -95,7 +95,7 @@ export default function TopupContent({
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Real data state
-  const [balanceData, setBalanceData] = useState<BalanceData>({ balance: 0, usedThisMonth: 0, rate: 0.4 });
+  const [balanceData, setBalanceData] = useState<BalanceData>({ balance: 0, usedThisMonth: 0, rate: 0 });
   const [history, setHistory] = useState<TopupHistory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -132,7 +132,7 @@ export default function TopupContent({
           setBalanceData({
             balance: b.remainingCredits ?? 0,
             usedThisMonth: b.usedCredits ?? 0,
-            rate: 0.4,
+            rate: data.rate ?? 0,
           });
         }
         const hist = (data.history ?? [])
@@ -151,7 +151,7 @@ export default function TopupContent({
       // Packages → preset amounts + pricing tiers + full package data
       if (packagesRes.status === "fulfilled" && packagesRes.value.ok) {
         const pkgData = await packagesRes.value.json();
-        const pkgs = pkgData.data ?? pkgData.packages ?? [];
+        const pkgs = pkgData.data ?? pkgData.packages ?? pkgData.tiers ?? [];
         if (Array.isArray(pkgs) && pkgs.length > 0) {
           setAvailablePackages(pkgs.map((p: { id: string; name: string; smsCredits: number; pricePerSms: number; price?: number }) => ({
             id: p.id,

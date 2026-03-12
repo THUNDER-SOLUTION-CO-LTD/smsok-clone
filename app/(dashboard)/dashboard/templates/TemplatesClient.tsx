@@ -280,14 +280,14 @@ export default function TemplatesClient({
     startTransition(async () => {
       try {
         if (editingTemplate) {
-          await updateTemplate(userId, editingTemplate.id, {
+          await updateTemplate(editingTemplate.id, {
             name: data.name.trim(),
             content: data.content,
             category: data.category,
           });
           toast("success", "อัปเดตเทมเพลตสำเร็จ!");
         } else {
-          await createTemplate(userId, {
+          await createTemplate({
             name: data.name.trim(),
             content: data.content,
             category: data.category,
@@ -306,7 +306,7 @@ export default function TemplatesClient({
     if (!deletingTemplate) return;
     startTransition(async () => {
       try {
-        await deleteTemplate(userId, deletingTemplate.id);
+        await deleteTemplate(deletingTemplate.id);
         toast("success", "ลบเทมเพลตสำเร็จ");
         setShowDeleteAlert(false);
         setDeletingTemplate(null);

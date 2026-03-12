@@ -16,9 +16,13 @@ import { resolveActionUserId } from "../action-user";
 // Update profile (name only; phone is immutable after signup)
 // ==========================================
 
-export async function updateProfile(userId: string, data: unknown) {
-  userId = await resolveActionUserId(userId);
-  const input = updateProfileSchema.parse(data);
+export async function updateProfile(data: unknown): Promise<Awaited<ReturnType<typeof db.user.update>>>;
+export async function updateProfile(userId: string, data: unknown): Promise<Awaited<ReturnType<typeof db.user.update>>>;
+export async function updateProfile(userIdOrData: string | unknown, maybeData?: unknown) {
+  const userId = await resolveActionUserId(
+    maybeData === undefined ? undefined : userIdOrData as string,
+  );
+  const input = updateProfileSchema.parse(maybeData === undefined ? userIdOrData : maybeData);
 
   const updated = await db.user.update({
     where: { id: userId },
@@ -105,7 +109,9 @@ export async function changePasswordForSession(data: unknown) {
 // Get profile
 // ==========================================
 
-export async function getProfile(userId: string) {
+export async function getProfile(): Promise<Awaited<ReturnType<typeof db.user.findUniqueOrThrow>>>;
+export async function getProfile(userId: string): Promise<Awaited<ReturnType<typeof db.user.findUniqueOrThrow>>>;
+export async function getProfile(userId?: string) {
   userId = await resolveActionUserId(userId);
   return db.user.findUniqueOrThrow({
     where: { id: userId },
@@ -124,7 +130,17 @@ export async function getProfile(userId: string) {
 // Workspace settings
 // ==========================================
 
-export async function getWorkspaceSettings(userId: string) {
+export async function getWorkspaceSettings(): Promise<Awaited<ReturnType<typeof db.workspaceSettings.findUnique>> | {
+  name: string;
+  timezone: string;
+  language: string;
+}>;
+export async function getWorkspaceSettings(userId: string): Promise<Awaited<ReturnType<typeof db.workspaceSettings.findUnique>> | {
+  name: string;
+  timezone: string;
+  language: string;
+}>;
+export async function getWorkspaceSettings(userId?: string) {
   userId = await resolveActionUserId(userId);
   const settings = await db.workspaceSettings.findUnique({
     where: { userId },
@@ -137,9 +153,13 @@ export async function getWorkspaceSettings(userId: string) {
   };
 }
 
-export async function updateWorkspaceSettings(userId: string, data: unknown) {
-  userId = await resolveActionUserId(userId);
-  const input = updateWorkspaceSchema.parse(data);
+export async function updateWorkspaceSettings(data: unknown): Promise<Awaited<ReturnType<typeof db.workspaceSettings.upsert>>>;
+export async function updateWorkspaceSettings(userId: string, data: unknown): Promise<Awaited<ReturnType<typeof db.workspaceSettings.upsert>>>;
+export async function updateWorkspaceSettings(userIdOrData: string | unknown, maybeData?: unknown) {
+  const userId = await resolveActionUserId(
+    maybeData === undefined ? undefined : userIdOrData as string,
+  );
+  const input = updateWorkspaceSchema.parse(maybeData === undefined ? userIdOrData : maybeData);
 
   const settings = await db.workspaceSettings.upsert({
     where: { userId },
@@ -164,7 +184,27 @@ export async function updateWorkspaceSettings(userId: string, data: unknown) {
 // Notification preferences
 // ==========================================
 
-export async function getNotificationPrefs(userId: string) {
+export async function getNotificationPrefs(): Promise<Awaited<ReturnType<typeof db.notificationPrefs.findUnique>> | {
+  emailCreditLow: boolean;
+  emailCampaignDone: boolean;
+  emailWeeklyReport: boolean;
+  emailPackageExpiry: boolean;
+  emailInvoice: boolean;
+  emailSecurity: boolean;
+  smsCreditLow: boolean;
+  smsCampaignDone: boolean;
+}>;
+export async function getNotificationPrefs(userId: string): Promise<Awaited<ReturnType<typeof db.notificationPrefs.findUnique>> | {
+  emailCreditLow: boolean;
+  emailCampaignDone: boolean;
+  emailWeeklyReport: boolean;
+  emailPackageExpiry: boolean;
+  emailInvoice: boolean;
+  emailSecurity: boolean;
+  smsCreditLow: boolean;
+  smsCampaignDone: boolean;
+}>;
+export async function getNotificationPrefs(userId?: string) {
   userId = await resolveActionUserId(userId);
   const prefs = await db.notificationPrefs.findUnique({
     where: { userId },
@@ -192,9 +232,13 @@ export async function getNotificationPrefs(userId: string) {
   };
 }
 
-export async function updateNotificationPrefs(userId: string, data: unknown) {
-  userId = await resolveActionUserId(userId);
-  const input = updateNotificationPrefsSchema.parse(data);
+export async function updateNotificationPrefs(data: unknown): Promise<Awaited<ReturnType<typeof db.notificationPrefs.upsert>>>;
+export async function updateNotificationPrefs(userId: string, data: unknown): Promise<Awaited<ReturnType<typeof db.notificationPrefs.upsert>>>;
+export async function updateNotificationPrefs(userIdOrData: string | unknown, maybeData?: unknown) {
+  const userId = await resolveActionUserId(
+    maybeData === undefined ? undefined : userIdOrData as string,
+  );
+  const input = updateNotificationPrefsSchema.parse(maybeData === undefined ? userIdOrData : maybeData);
 
   const prefs = await db.notificationPrefs.upsert({
     where: { userId },

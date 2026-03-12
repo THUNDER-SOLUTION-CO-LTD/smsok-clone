@@ -21,7 +21,7 @@ export default function ProfileEditForm({ userId, initialName }: Props) {
     setResult(null);
     startTransition(async () => {
       try {
-        await updateProfile(userId, { name: name.trim() });
+        await updateProfile({ name: name.trim() });
         setResult({ type: "success", message: "บันทึกข้อมูลเรียบร้อยแล้ว" });
         toast.success("บันทึกโปรไฟล์สำเร็จ");
       } catch (err) {

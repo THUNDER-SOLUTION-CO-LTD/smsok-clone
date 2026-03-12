@@ -36,9 +36,13 @@ export async function getTemplates(userId: string) {
 // Create template
 // ==========================================
 
-export async function createTemplate(userId: string, data: unknown) {
-  userId = await resolveActionUserId(userId);
-  const input = templateSchema.parse(data);
+export async function createTemplate(data: unknown): Promise<Awaited<ReturnType<typeof db.messageTemplate.create>>>;
+export async function createTemplate(userId: string, data: unknown): Promise<Awaited<ReturnType<typeof db.messageTemplate.create>>>;
+export async function createTemplate(userIdOrData: string | unknown, maybeData?: unknown) {
+  const userId = await resolveActionUserId(
+    maybeData === undefined ? undefined : userIdOrData as string,
+  );
+  const input = templateSchema.parse(maybeData === undefined ? userIdOrData : maybeData);
 
   const count = await db.messageTemplate.count({ where: { userId, deletedAt: null } });
   if (count >= 50) {
@@ -68,9 +72,13 @@ export async function createTemplate(userId: string, data: unknown) {
 // Update template
 // ==========================================
 
-export async function updateTemplate(userId: string, templateId: string, data: unknown) {
-  userId = await resolveActionUserId(userId);
-  const input = templateSchema.partial().parse(data);
+export async function updateTemplate(templateId: string, data: unknown): Promise<Awaited<ReturnType<typeof db.messageTemplate.update>>>;
+export async function updateTemplate(userId: string, templateId: string, data: unknown): Promise<Awaited<ReturnType<typeof db.messageTemplate.update>>>;
+export async function updateTemplate(userIdOrTemplateId: string, templateIdOrData: string | unknown, maybeData?: unknown) {
+  const hasExplicitUserId = maybeData !== undefined;
+  const userId = await resolveActionUserId(hasExplicitUserId ? userIdOrTemplateId : undefined);
+  const templateId = hasExplicitUserId ? templateIdOrData as string : userIdOrTemplateId;
+  const input = templateSchema.partial().parse(hasExplicitUserId ? maybeData : templateIdOrData);
 
   const existing = await db.messageTemplate.findFirst({
     where: { id: templateId, userId, deletedAt: null },
@@ -103,8 +111,13 @@ export async function updateTemplate(userId: string, templateId: string, data: u
 // Delete template (soft delete)
 // ==========================================
 
-export async function deleteTemplate(userId: string, templateId: string) {
-  userId = await resolveActionUserId(userId);
+export async function deleteTemplate(templateId: string): Promise<void>;
+export async function deleteTemplate(userId: string, templateId: string): Promise<void>;
+export async function deleteTemplate(userIdOrTemplateId: string, maybeTemplateId?: string) {
+  const userId = await resolveActionUserId(
+    maybeTemplateId === undefined ? undefined : userIdOrTemplateId,
+  );
+  const templateId = maybeTemplateId ?? userIdOrTemplateId;
   const existing = await db.messageTemplate.findFirst({
     where: { id: templateId, userId, deletedAt: null },
   });

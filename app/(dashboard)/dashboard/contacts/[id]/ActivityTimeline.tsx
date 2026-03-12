@@ -44,7 +44,7 @@ export default function ActivityTimeline({
     setLoading(true);
     setError(null);
     try {
-      const result = await getContactActivity(userId, contactId, {
+      const result = await getContactActivity(contactId, {
         page,
         limit: 20,
         type: typeFilter || undefined,

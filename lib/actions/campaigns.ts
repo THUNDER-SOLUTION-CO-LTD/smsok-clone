@@ -18,6 +18,24 @@ const campaignFilterSchema = paginationSchema.extend({
   status: z.string().trim().min(1).max(30).optional(),
 });
 
+type ExecuteCampaignResult = {
+  status: string;
+  totalRecipients: number;
+  sentCount: number;
+  failedCount: number;
+  creditUsed: number;
+  creditRefunded: number;
+};
+
+type CampaignProgressResult = {
+  status: string;
+  sentCount: number;
+  failedCount: number;
+  deliveredCount: number;
+  totalRecipients: number;
+  creditUsed: number;
+};
+
 export async function getCampaigns(userId: string, filters?: unknown) {
   userId = await resolveActionUserId(userId);
   const pagination = filters
@@ -56,9 +74,15 @@ export async function getCampaigns(userId: string, filters?: unknown) {
   };
 }
 
-export async function createCampaign(userId: string, data: unknown) {
-  userId = await resolveActionUserId(userId);
-  const payload = data && typeof data === "object" ? (data as Record<string, unknown>) : {};
+export async function createCampaign(data: unknown): Promise<Awaited<ReturnType<typeof db.campaign.create>>>;
+export async function createCampaign(userId: string, data: unknown): Promise<Awaited<ReturnType<typeof db.campaign.create>>>;
+export async function createCampaign(userIdOrData: string | unknown, maybeData?: unknown) {
+  const userId = await resolveActionUserId(
+    maybeData === undefined ? undefined : userIdOrData as string,
+  );
+  const payload = (maybeData === undefined ? userIdOrData : maybeData) && typeof (maybeData === undefined ? userIdOrData : maybeData) === "object"
+    ? (maybeData === undefined ? userIdOrData : maybeData) as Record<string, unknown>
+    : {};
   const input = createCampaignSchema.parse({
     ...payload,
     contactGroupId: payload.contactGroupId || undefined,
@@ -117,8 +141,13 @@ export async function createCampaign(userId: string, data: unknown) {
   return campaign;
 }
 
-export async function executeCampaign(userId: string, campaignId: string, orgId?: string) {
-  userId = await resolveActionUserId(userId);
+export async function executeCampaign(campaignId: string, orgId?: string): Promise<ExecuteCampaignResult>;
+export async function executeCampaign(userId: string, campaignId: string, orgId?: string): Promise<ExecuteCampaignResult>;
+export async function executeCampaign(userIdOrCampaignId: string, campaignIdOrOrgId?: string, maybeOrgId?: string) {
+  const hasExplicitUserId = maybeOrgId !== undefined;
+  const userId = await resolveActionUserId(hasExplicitUserId ? userIdOrCampaignId : undefined);
+  const campaignId = hasExplicitUserId ? campaignIdOrOrgId as string : userIdOrCampaignId;
+  const orgId = hasExplicitUserId ? maybeOrgId : campaignIdOrOrgId;
   // PDPA: Block marketing campaigns outside org-configured hours
   await assertSendingHours(orgId);
 
@@ -288,8 +317,13 @@ export async function executeCampaign(userId: string, campaignId: string, orgId?
   };
 }
 
-export async function getCampaignProgress(userId: string, campaignId: string) {
-  userId = await resolveActionUserId(userId);
+export async function getCampaignProgress(campaignId: string): Promise<CampaignProgressResult>;
+export async function getCampaignProgress(userId: string, campaignId: string): Promise<CampaignProgressResult>;
+export async function getCampaignProgress(userIdOrCampaignId: string, maybeCampaignId?: string) {
+  const userId = await resolveActionUserId(
+    maybeCampaignId === undefined ? undefined : userIdOrCampaignId,
+  );
+  const campaignId = maybeCampaignId ?? userIdOrCampaignId;
   const campaign = await db.campaign.findFirst({
     where: { id: campaignId, userId },
     select: {

@@ -250,7 +250,7 @@ export default function CampaignsClient({
 
     startTransition(async () => {
       try {
-        await createCampaign(userId, {
+        await createCampaign({
           name: parsed.data.name,
           contactGroupId: parsed.data.contactGroupId,
           templateId: parsed.data.templateId,
@@ -283,7 +283,7 @@ export default function CampaignsClient({
 
     startTransition(async () => {
       try {
-        await executeCampaign(userId, campaignId);
+        await executeCampaign(campaignId);
 
         setCampaigns((prev) =>
           prev.map((c) => (c.id === campaignId ? { ...c, status: "running" as CampaignStatus } : c))
@@ -294,7 +294,7 @@ export default function CampaignsClient({
 
         const pollInterval = setInterval(async () => {
           try {
-            const progress = await getCampaignProgress(userId, campaignId);
+            const progress = await getCampaignProgress(campaignId);
             setCampaigns((prev) =>
               prev.map((c) =>
                 c.id === campaignId
@@ -954,4 +954,3 @@ export default function CampaignsClient({
     </PageLayout>
   );
 }
-

@@ -10,9 +10,13 @@ import { resolveActionUserId } from "../action-user";
 // Request new sender name
 // ==========================================
 
-export async function requestSenderName(userId: string, data: unknown) {
-  userId = await resolveActionUserId(userId);
-  const input = requestSenderNameSchema.parse(data);
+export async function requestSenderName(data: unknown): Promise<Awaited<ReturnType<typeof db.senderName.create>>>;
+export async function requestSenderName(userId: string, data: unknown): Promise<Awaited<ReturnType<typeof db.senderName.create>>>;
+export async function requestSenderName(userIdOrData: string | unknown, maybeData?: unknown) {
+  const userId = await resolveActionUserId(
+    maybeData === undefined ? undefined : userIdOrData as string,
+  );
+  const input = requestSenderNameSchema.parse(maybeData === undefined ? userIdOrData : maybeData);
 
   // Validate against กสทช. rules
   const nameCheck = validateSenderName(input.name);
@@ -44,7 +48,9 @@ export async function requestSenderName(userId: string, data: unknown) {
 // Get user's sender names
 // ==========================================
 
-export async function getSenderNames(userId: string) {
+export async function getSenderNames(): Promise<Awaited<ReturnType<typeof db.senderName.findMany>>>;
+export async function getSenderNames(userId: string): Promise<Awaited<ReturnType<typeof db.senderName.findMany>>>;
+export async function getSenderNames(userId?: string) {
   userId = await resolveActionUserId(userId);
   return db.senderName.findMany({
     where: { userId },
@@ -56,7 +62,9 @@ export async function getSenderNames(userId: string) {
 // Get approved sender names (for SMS form dropdown)
 // ==========================================
 
-export async function getApprovedSenderNames(userId: string) {
+export async function getApprovedSenderNames(): Promise<Array<{ name: string }>>;
+export async function getApprovedSenderNames(userId: string): Promise<Array<{ name: string }>>;
+export async function getApprovedSenderNames(userId?: string) {
   userId = await resolveActionUserId(userId);
   return db.senderName.findMany({
     where: { userId, status: "APPROVED" },

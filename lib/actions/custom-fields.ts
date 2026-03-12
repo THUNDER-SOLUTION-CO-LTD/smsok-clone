@@ -102,11 +102,23 @@ export async function getCustomFieldValues(userId: string, contactId: string) {
 
 // ── Set custom field values for a contact (upsert) ───
 export async function setCustomFieldValues(
+  contactId: string,
+  values: Array<{ fieldId: string; value: string }>,
+): Promise<{ success: true }>;
+export async function setCustomFieldValues(
   userId: string,
   contactId: string,
-  values: Array<{ fieldId: string; value: string }>
+  values: Array<{ fieldId: string; value: string }>,
+): Promise<{ success: true }>;
+export async function setCustomFieldValues(
+  userIdOrContactId: string,
+  contactIdOrValues: string | Array<{ fieldId: string; value: string }>,
+  maybeValues?: Array<{ fieldId: string; value: string }>,
 ) {
-  userId = await resolveActionUserId(userId);
+  const hasExplicitUserId = Array.isArray(maybeValues);
+  const userId = await resolveActionUserId(hasExplicitUserId ? userIdOrContactId : undefined);
+  const contactId = hasExplicitUserId ? contactIdOrValues as string : userIdOrContactId;
+  const values = hasExplicitUserId ? maybeValues : contactIdOrValues as Array<{ fieldId: string; value: string }>;
   // Verify contact ownership
   const contact = await prisma.contact.findFirst({
     where: { id: contactId, userId },

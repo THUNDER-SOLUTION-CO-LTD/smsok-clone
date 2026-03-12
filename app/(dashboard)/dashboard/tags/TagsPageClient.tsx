@@ -153,13 +153,13 @@ export default function TagsPageClient({
     startTransition(async () => {
       try {
         if (editingTag) {
-          await updateTag(userId, editingTag.id, {
+          await updateTag(editingTag.id, {
             name: data.name.trim(),
             color: data.color,
           });
           toast("success", "อัปเดตแท็กสำเร็จ!");
         } else {
-          await createTag(userId, {
+          await createTag({
             name: data.name.trim(),
             color: data.color,
           });
@@ -177,7 +177,7 @@ export default function TagsPageClient({
     if (!deletingTag) return;
     startTransition(async () => {
       try {
-        await deleteTag(userId, deletingTag.id);
+        await deleteTag(deletingTag.id);
         toast("success", `ลบแท็ก "${deletingTag.name}" สำเร็จ`);
         setShowDeleteAlert(false);
         setDeletingTag(null);

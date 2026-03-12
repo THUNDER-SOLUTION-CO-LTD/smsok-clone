@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "fs";
 import { resolve } from "path";
-import { createContactSchema } from "@/lib/validations";
+import { createContactSchema, requestSenderNameSchema } from "@/lib/validations";
 import { validateSenderName } from "@/lib/sender-name-validation";
 
 const ROOT = resolve(__dirname, "..");
@@ -57,6 +57,7 @@ describe("Task #2062: logs/contact/sender fixes", () => {
   it("disallows whitespace in sender names", () => {
     expect(validateSenderName("DROP TABLE").valid).toBe(false);
     expect(validateSenderName("EasySlip").valid).toBe(true);
+    expect(() => requestSenderNameSchema.parse({ name: "DROP TABLE" })).toThrow();
   });
 
   it("accepts smsConsent on contact create and persists consent metadata", () => {
