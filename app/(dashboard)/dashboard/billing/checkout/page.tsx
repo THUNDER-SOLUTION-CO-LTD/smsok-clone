@@ -372,23 +372,26 @@ export default function CheckoutPage() {
 
   // Load tax profile — from reorder params or saved profile
   useEffect(() => {
-    // Reorder: populate from query params (order snapshot)
+    // Reorder: populate from sessionStorage (sensitive data not in URL)
     if (isReorder) {
-      const ct = searchParams.get("customerType") as CustomerType | null;
-      if (ct) setCustomerType(ct);
-      const name = searchParams.get("taxName");
-      if (name) setTaxName(name);
-      const tid = searchParams.get("taxId");
-      if (tid) setTaxId(formatTaxId(tid));
-      const addr = searchParams.get("taxAddress");
-      if (addr) setTaxAddress(addr);
-      const bt = searchParams.get("branchType") as BranchType | null;
-      if (bt) setBranchType(bt);
-      const bn = searchParams.get("branchNumber");
-      if (bn) setBranchNumber(bn);
-      if (searchParams.get("hasWht") === "1") setHasWht(true);
-      // Don't overwrite saved tax profile on reorder unless user opts in
-      if (searchParams.get("saveTaxProfile") === "0") setSaveTaxProfile(false);
+      try {
+        const stored = sessionStorage.getItem("smsok_reorder");
+        if (stored) {
+          const data = JSON.parse(stored);
+          if (data.customerType) setCustomerType(data.customerType);
+          if (data.taxName) setTaxName(data.taxName);
+          if (data.taxId) setTaxId(formatTaxId(data.taxId));
+          if (data.taxAddress) setTaxAddress(data.taxAddress);
+          if (data.branchType) setBranchType(data.branchType);
+          if (data.branchNumber) setBranchNumber(data.branchNumber);
+          if (data.hasWht) setHasWht(true);
+          if (data.saveTaxProfile === false) setSaveTaxProfile(false);
+          // Clean up after reading
+          sessionStorage.removeItem("smsok_reorder");
+        }
+      } catch {
+        // sessionStorage unavailable or invalid data
+      }
       return;
     }
 
@@ -417,7 +420,7 @@ export default function CheckoutPage() {
       }
     }
     loadTaxProfile();
-  }, [isReorder, searchParams]);
+  }, [isReorder]);
 
   // Price breakdown
   const breakdown = useMemo(

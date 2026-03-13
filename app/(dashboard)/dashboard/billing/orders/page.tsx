@@ -197,23 +197,24 @@ export default function OrderManagementPage() {
     setPage(1);
   }, [statusFilter, searchQuery, dateFrom, dateTo]);
 
-  // Clone (reorder) — pass full order context (tax snapshot + package) to checkout
+  // Clone (reorder) — store tax data in sessionStorage (not URL) to avoid exposing sensitive info
   function handleReorder(orderId: string) {
     const order = orders.find((o) => o.id === orderId);
     if (!order) return;
-    const params = new URLSearchParams({
-      tier: order.package_tier_id,
-      reorder: "1",
-      taxName: order.tax_name,
-      taxId: order.tax_id,
-      taxAddress: order.tax_address,
-      customerType: order.customer_type,
-      branchType: order.tax_branch_type,
-      saveTaxProfile: "0",
-    });
-    if (order.tax_branch_number) params.set("branchNumber", order.tax_branch_number);
-    if (order.has_wht) params.set("hasWht", "1");
-    router.push(`/dashboard/billing/checkout?${params.toString()}`);
+    sessionStorage.setItem(
+      "smsok_reorder",
+      JSON.stringify({
+        taxName: order.tax_name,
+        taxId: order.tax_id,
+        taxAddress: order.tax_address,
+        customerType: order.customer_type,
+        branchType: order.tax_branch_type,
+        branchNumber: order.tax_branch_number || "",
+        hasWht: order.has_wht,
+        saveTaxProfile: false,
+      }),
+    );
+    router.push(`/dashboard/billing/checkout?tier=${order.package_tier_id}&reorder=1`);
   }
 
   function openOrderDocument(url?: string, fallbackUrl?: string) {

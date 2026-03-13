@@ -1,6 +1,6 @@
 
 import { prisma } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import { resolveActionUserId } from "@/lib/action-user"
 
 const CURRENT_TOS_VERSION = "1.0"
 
@@ -11,9 +11,7 @@ export async function acceptTerms(options?: {
   userAgent?: string
   userId?: string
 }) {
-  const sessionUser = await getSession()
-  const userId = options?.userId ?? sessionUser?.id
-  if (!userId) throw new Error("กรุณาเข้าสู่ระบบ")
+  const userId = await resolveActionUserId(options?.userId)
   const user = { id: userId }
 
   // Check if already accepted this version
@@ -47,9 +45,7 @@ export async function acceptTerms(options?: {
 // ── Get Terms Status ────────────────────────────────────
 
 export async function getTermsStatus(apiUserId?: string) {
-  const sessionUser = await getSession()
-  const userId = apiUserId ?? sessionUser?.id
-  if (!userId) throw new Error("กรุณาเข้าสู่ระบบ")
+  const userId = await resolveActionUserId(apiUserId)
   const user = { id: userId }
 
   const latest = await prisma.termsAcceptance.findFirst({
@@ -76,11 +72,10 @@ export async function getCurrentTermsVersion() {
 // ── Get Acceptance History (audit trail) ─────────────────
 
 export async function getTermsHistory() {
-  const user = await getSession()
-  if (!user) throw new Error("กรุณาเข้าสู่ระบบ")
+  const userId = await resolveActionUserId()
 
   const history = await prisma.termsAcceptance.findMany({
-    where: { userId: user.id },
+    where: { userId },
     orderBy: { acceptedAt: "desc" },
     select: {
       version: true,
