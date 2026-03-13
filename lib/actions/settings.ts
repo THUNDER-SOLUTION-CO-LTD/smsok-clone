@@ -45,10 +45,11 @@ export async function changePassword(userId: string, data: unknown, _currentSess
   userId = await resolveActionUserId(userId);
   const input = changePasswordSchema.parse(data);
 
-  const user = await db.user.findUniqueOrThrow({
+  const user = await db.user.findUnique({
     where: { id: userId },
     select: { password: true },
   });
+  if (!user) throw new Error("ไม่พบบัญชีผู้ใช้");
 
   const isValid = await verifyPassword(input.currentPassword, user.password);
   if (!isValid) {
@@ -109,11 +110,11 @@ export async function changePasswordForSession(data: unknown) {
 // Get profile
 // ==========================================
 
-export async function getProfile(): Promise<Awaited<ReturnType<typeof db.user.findUniqueOrThrow>>>;
-export async function getProfile(userId: string): Promise<Awaited<ReturnType<typeof db.user.findUniqueOrThrow>>>;
+export async function getProfile(): Promise<{ id: string; name: string; email: string; phone: string | null; role: string; createdAt: Date } | null>;
+export async function getProfile(userId: string): Promise<{ id: string; name: string; email: string; phone: string | null; role: string; createdAt: Date } | null>;
 export async function getProfile(userId?: string) {
   userId = await resolveActionUserId(userId);
-  return db.user.findUniqueOrThrow({
+  return db.user.findUnique({
     where: { id: userId },
     select: {
       id: true,

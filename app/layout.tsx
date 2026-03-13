@@ -7,9 +7,38 @@ import { Toaster } from "@/components/ui/sonner";
 import CookieConsentBanner from "@/components/CookieConsentBanner";
 import NavigationProgress from "@/components/NavigationProgress";
 
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://smsok.9phum.me";
+
 export const metadata: Metadata = {
-  title: "SMSOK Clone — SMS Sending Platform",
-  description: "ส่ง SMS ผ่านเว็บและ API ได้ทันที ราคาถูก ส่งเร็ว ทดลองฟรี 500 SMS",
+  metadataBase: new URL(BASE_URL),
+  title: {
+    default: "SMSOK — แพลตฟอร์มส่ง SMS สำหรับธุรกิจ",
+    template: "%s | SMSOK",
+  },
+  description: "ส่ง SMS ผ่านเว็บและ API ได้ทันที ราคาถูกสุด 0.15 บาท/ข้อความ ส่งเร็ว ทดลองฟรี 500 SMS รองรับ OTP, แคมเปญ, และ Sender Name",
+  keywords: ["SMS", "ส่ง SMS", "SMS API", "SMS Thailand", "OTP", "SMS ราคาถูก", "SMS marketing", "แพลตฟอร์ม SMS", "SMSOK"],
+  authors: [{ name: "SMSOK" }],
+  creator: "SMSOK",
+  openGraph: {
+    type: "website",
+    locale: "th_TH",
+    siteName: "SMSOK",
+    title: "SMSOK — แพลตฟอร์มส่ง SMS สำหรับธุรกิจ",
+    description: "ส่ง SMS ผ่านเว็บและ API ได้ทันที ราคาถูก ส่งเร็ว ทดลองฟรี 500 SMS",
+    url: BASE_URL,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "SMSOK — แพลตฟอร์มส่ง SMS สำหรับธุรกิจ",
+    description: "ส่ง SMS ผ่านเว็บและ API ได้ทันที ราคาถูก ส่งเร็ว ทดลองฟรี 500 SMS",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+  alternates: {
+    canonical: BASE_URL,
+  },
 };
 
 export const viewport: Viewport = {

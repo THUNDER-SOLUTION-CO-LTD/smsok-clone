@@ -421,7 +421,7 @@ export async function getDashboardStats(userId?: string) {
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
   const [user, todayStats, monthStats, recentMessages] = await db.$transaction([
-    db.user.findUniqueOrThrow({
+    db.user.findUnique({
       where: { id: resolvedUserId },
       select: { name: true, email: true },
     }),
@@ -451,6 +451,10 @@ export async function getDashboardStats(userId?: string) {
       },
     }),
   ]);
+
+  if (!user) {
+    throw new Error("ไม่พบบัญชีผู้ใช้");
+  }
 
   type StatRow = { status: string; _count: { _all: number } };
   const sumCounts = (stats: StatRow[]) => ({
