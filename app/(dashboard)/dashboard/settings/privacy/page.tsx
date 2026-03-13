@@ -10,6 +10,9 @@ import {
   AlertTriangle,
   History,
   Lock,
+  ChevronDown,
+  Check,
+  X,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import PageLayout, { PageHeader } from "@/components/blocks/PageLayout";
@@ -22,8 +25,8 @@ type ConsentType = "service" | "third_party" | "marketing" | "cookie";
 type ConsentConfig = {
   type: ConsentType;
   icon: typeof Shield;
-  iconColor: string;
-  iconBg: string;
+  accentColor: string;
+  accentRgb: string;
   title: string;
   description: string;
   required: boolean;
@@ -46,8 +49,8 @@ const CONSENTS: ConsentConfig[] = [
   {
     type: "service",
     icon: Shield,
-    iconColor: "var(--accent)",
-    iconBg: "rgba(var(--accent-rgb),0.08)",
+    accentColor: "var(--accent)",
+    accentRgb: "var(--accent-rgb)",
     title: "ข้อกำหนดการใช้งาน",
     description:
       "ยินยอมให้เก็บและประมวลผลข้อมูลที่จำเป็นสำหรับการให้บริการ รวมถึงข้อมูลบัญชี ข้อมูลการใช้งาน และ log การส่ง SMS",
@@ -55,14 +58,13 @@ const CONSENTS: ConsentConfig[] = [
     policyVersion: "v1.0",
     acceptedDate: "1 มี.ค. 2026",
     policyLink: "/legal/terms",
-    withdrawWarning:
-      "ต้องการปิดบัญชี? ติดต่อ support@smsok.com",
+    withdrawWarning: "ต้องการปิดบัญชี? ติดต่อ support@smsok.com",
   },
   {
     type: "third_party",
     icon: Share2,
-    iconColor: "var(--accent-secondary)",
-    iconBg: "rgba(var(--accent-secondary-rgb, 50,152,218),0.08)",
+    accentColor: "var(--accent-blue)",
+    accentRgb: "71,121,255",
     title: "ส่งข้อมูลให้ผู้ให้บริการภายนอก",
     description:
       "ยินยอมให้ส่งข้อมูลไปยัง SMS gateway, ระบบชำระเงิน และผู้ให้บริการอื่นที่จำเป็นสำหรับการส่ง SMS",
@@ -75,8 +77,8 @@ const CONSENTS: ConsentConfig[] = [
   {
     type: "marketing",
     icon: Mail,
-    iconColor: "var(--warning)",
-    iconBg: "rgba(var(--warning-rgb, 245,158,11),0.08)",
+    accentColor: "var(--warning)",
+    accentRgb: "250,205,99",
     title: "รับ SMS/Email โปรโมชั่น",
     description:
       "ยินยอมรับข่าวสาร โปรโมชั่น และข้อเสนอพิเศษผ่าน SMS และ Email",
@@ -89,8 +91,8 @@ const CONSENTS: ConsentConfig[] = [
   {
     type: "cookie",
     icon: Cookie,
-    iconColor: "var(--success)",
-    iconBg: "rgba(var(--success-rgb, 16,185,129),0.08)",
+    accentColor: "var(--accent-purple)",
+    accentRgb: "var(--accent-purple-rgb)",
     title: "Analytics cookies",
     description:
       "ยินยอมให้ใช้ cookies สำหรับวิเคราะห์พฤติกรรมการใช้งาน เพื่อปรับปรุงประสบการณ์",
@@ -120,9 +122,9 @@ function ConfirmDialog({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center animate-fade-in-scale">
       <div
-        className="absolute inset-0 bg-black/60"
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
         onClick={onCancel}
         onKeyDown={(e) => {
           if (e.key === "Escape") onCancel();
@@ -131,28 +133,33 @@ function ConfirmDialog({
         tabIndex={-1}
         aria-label="ปิด"
       />
-      <div className="relative bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl">
-        <div className="flex items-center gap-2 mb-3">
-          <AlertTriangle className="w-5 h-5 text-[var(--warning)]" />
-          <h3 className="text-base font-semibold text-[var(--text-primary)]">
-            {title}
-          </h3>
+      <div className="relative bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-lg p-6 max-w-sm w-full mx-4 shadow-2xl">
+        {/* Warning icon with glow */}
+        <div className="w-12 h-12 rounded-lg bg-[rgba(var(--error-rgb),0.1)] border border-[rgba(var(--error-rgb),0.2)] flex items-center justify-center mx-auto mb-4">
+          <AlertTriangle className="w-6 h-6 text-[var(--error)]" />
         </div>
-        <p className="text-sm text-[var(--text-secondary)] mb-5">{message}</p>
-        <div className="flex items-center justify-end gap-2">
+
+        <h3 className="text-base font-semibold text-[var(--text-primary)] text-center mb-2">
+          {title}
+        </h3>
+        <p className="text-[13px] text-[var(--text-secondary)] text-center mb-6 leading-relaxed">
+          {message}
+        </p>
+
+        <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] rounded-lg border border-[var(--border-default)] transition-colors cursor-pointer"
+            className="flex-1 px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] rounded-lg border border-[var(--border-default)] hover:bg-[var(--bg-surface-hover)] transition-all cursor-pointer"
           >
             ยกเลิก
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className="px-4 py-2 text-sm font-medium text-white bg-[var(--error)] hover:bg-[var(--error)]/90 rounded-lg transition-colors cursor-pointer"
+            className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-[var(--error)] hover:brightness-110 rounded-lg transition-all cursor-pointer shadow-[0_0_16px_rgba(var(--error-rgb),0.3)]"
           >
-            ยืนยัน
+            ยืนยันถอนความยินยอม
           </button>
         </div>
       </div>
@@ -166,97 +173,148 @@ function ConsentCard({
   consent,
   enabled,
   onToggle,
+  index,
 }: {
   consent: ConsentConfig;
   enabled: boolean;
   onToggle: () => void;
+  index: number;
 }) {
   const Icon = consent.icon;
+  const isActive = enabled || consent.required;
 
   return (
-    <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg p-5">
-      <div className="flex items-start gap-4">
-        {/* Icon */}
-        <div
-          className="w-10 h-10 rounded-md flex items-center justify-center flex-shrink-0"
-          style={{ background: consent.iconBg }}
-        >
-          <Icon className="w-5 h-5" style={{ color: consent.iconColor }} />
-        </div>
+    <div
+      className="group relative card-conic bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg overflow-hidden"
+      style={{ animationDelay: `${index * 0.06}s` }}
+    >
+      {/* Top accent line */}
+      <div
+        className="absolute top-0 left-0 right-0 h-[2px] transition-opacity duration-300"
+        style={{
+          background: `linear-gradient(90deg, transparent, ${consent.accentColor}, transparent)`,
+          opacity: isActive ? 0.8 : 0.15,
+        }}
+      />
 
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between gap-3 mb-1">
-            <h3 className="text-base font-semibold text-[var(--text-primary)]">
-              {consent.title}
-            </h3>
-
-            {/* Toggle or Required badge */}
-            {consent.required ? (
-              <span className="flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-full bg-[rgba(var(--accent-rgb),0.08)] text-[var(--accent)] flex-shrink-0">
-                <Lock className="w-3 h-3" />
-                จำเป็น
-              </span>
-            ) : (
-              <Switch
-                checked={enabled}
-                onCheckedChange={onToggle}
-                aria-label={`Toggle ${consent.title}`}
+      <div className="relative p-5">
+        <div className="flex items-start gap-4">
+          {/* Icon with glow ring */}
+          <div className="relative flex-shrink-0">
+            <div
+              className="w-11 h-11 rounded-lg flex items-center justify-center transition-all duration-300"
+              style={{
+                background: `rgba(${consent.accentRgb},${isActive ? 0.12 : 0.06})`,
+                boxShadow: isActive
+                  ? `0 0 20px rgba(${consent.accentRgb},0.08)`
+                  : "none",
+              }}
+            >
+              <Icon
+                className="w-5 h-5 transition-colors duration-300"
+                style={{
+                  color: isActive
+                    ? consent.accentColor
+                    : "var(--text-muted)",
+                }}
               />
+            </div>
+            {/* Status indicator dot */}
+            <div
+              className={cn(
+                "absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[var(--bg-surface)] transition-colors duration-300",
+                isActive ? "bg-[var(--success)]" : "bg-[var(--text-subdued)]"
+              )}
+            />
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-3 mb-1.5">
+              <div className="flex items-center gap-2.5">
+                <h3 className="text-[15px] font-semibold text-[var(--text-primary)]">
+                  {consent.title}
+                </h3>
+
+                {consent.required && (
+                  <span className="flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[rgba(var(--accent-rgb),0.08)] text-[var(--accent)] border border-[rgba(var(--accent-rgb),0.15)] uppercase tracking-wider">
+                    <Lock className="w-2.5 h-2.5" />
+                    จำเป็น
+                  </span>
+                )}
+              </div>
+
+              {/* Toggle */}
+              {!consent.required && (
+                <Switch
+                  checked={enabled}
+                  onCheckedChange={onToggle}
+                  aria-label={`Toggle ${consent.title}`}
+                />
+              )}
+            </div>
+
+            <p className="text-[13px] text-[var(--text-secondary)] mb-3.5 leading-relaxed">
+              {consent.description}
+            </p>
+
+            {/* Meta row */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-1.5 text-[11px] text-[var(--text-muted)]">
+                <span
+                  className="w-1.5 h-1.5 rounded-full"
+                  style={{ background: consent.accentColor }}
+                />
+                <span className="text-[var(--text-secondary)] font-medium">
+                  {consent.policyVersion}
+                </span>
+              </div>
+
+              <span className="text-[var(--border-default)]">|</span>
+
+              <span className="text-[11px] text-[var(--text-muted)]">
+                ยินยอมเมื่อ{" "}
+                <span className="text-[var(--text-secondary)]">
+                  {consent.acceptedDate}
+                </span>
+              </span>
+
+              <span className="text-[var(--border-default)]">|</span>
+
+              <a
+                href={consent.policyLink}
+                className="inline-flex items-center gap-1 text-[11px] font-medium text-[var(--accent-blue)] hover:text-[var(--accent)] transition-colors"
+              >
+                นโยบาย
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+
+            {/* Contextual warnings for required consents */}
+            {consent.required && consent.type === "third_party" && (
+              <div className="mt-3.5 flex items-start gap-2.5 text-[12px] text-[var(--warning)] bg-[rgba(var(--warning-rgb),0.06)] border border-[rgba(var(--warning-rgb),0.12)] rounded-md px-3 py-2.5">
+                <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                <span className="leading-relaxed">
+                  การถอนความยินยอมจะทำให้ไม่สามารถส่ง SMS ได้ — ติดต่อ
+                  support หากต้องการดำเนินการ
+                </span>
+              </div>
+            )}
+            {consent.required && consent.type === "service" && (
+              <div className="mt-3.5 flex items-start gap-2.5 text-[12px] text-[var(--text-muted)] bg-[var(--bg-muted)] border border-[var(--border-default)] rounded-md px-3 py-2.5">
+                <Lock className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                <span className="leading-relaxed">
+                  ต้องการปิดบัญชี? ติดต่อ{" "}
+                  <a
+                    href="mailto:support@smsok.com"
+                    className="text-[var(--accent-blue)] hover:text-[var(--accent)] transition-colors"
+                  >
+                    support@smsok.com
+                  </a>
+                </span>
+              </div>
             )}
           </div>
-
-          <p className="text-[13px] text-[var(--text-secondary)] mb-3 leading-relaxed">
-            {consent.description}
-          </p>
-
-          {/* Meta row */}
-          <div className="flex items-center gap-4 flex-wrap">
-            <span className="text-[11px] text-[var(--text-muted)]">
-              เวอร์ชัน:{" "}
-              <span className="text-[var(--text-secondary)] font-medium">
-                {consent.policyVersion}
-              </span>
-            </span>
-            <span className="text-[11px] text-[var(--text-muted)]">
-              ยินยอมเมื่อ:{" "}
-              <span className="text-[var(--text-secondary)] font-medium">
-                {consent.acceptedDate}
-              </span>
-            </span>
-            <a
-              href={consent.policyLink}
-              className="inline-flex items-center gap-1 text-[11px] font-medium text-[var(--accent)] hover:text-[var(--accent)]/80 transition-colors"
-            >
-              ดูนโยบายฉบับเต็ม
-              <ExternalLink className="w-3 h-3" />
-            </a>
-          </div>
-
-          {/* Warning for required consents */}
-          {consent.required && consent.type === "third_party" && (
-            <div className="mt-3 flex items-start gap-2 text-[12px] text-[var(--warning)] bg-[rgba(245,158,11,0.06)] border border-[rgba(245,158,11,0.15)] rounded-lg px-3 py-2">
-              <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
-              <span>
-                การถอนความยินยอมจะทำให้ไม่สามารถส่ง SMS ได้ —
-                ติดต่อ support หากต้องการดำเนินการ
-              </span>
-            </div>
-          )}
-          {consent.required && consent.type === "service" && (
-            <div className="mt-3 flex items-start gap-2 text-[12px] text-[var(--text-muted)] bg-[rgba(255,255,255,0.02)] border border-[var(--border-default)] rounded-lg px-3 py-2">
-              <Lock className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
-              <span>
-                ต้องการปิดบัญชี? ติดต่อ{" "}
-                <a
-                  href="mailto:support@smsok.com"
-                  className="text-[var(--accent)] hover:underline"
-                >
-                  support@smsok.com
-                </a>
-              </span>
-            </div>
-          )}
         </div>
       </div>
     </div>
@@ -275,6 +333,7 @@ export default function PrivacySettingsPage() {
 
   const [history] = useState<HistoryEntry[]>([]);
   const historyLoading = false;
+  const [historyExpanded, setHistoryExpanded] = useState(true);
 
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
@@ -285,11 +344,8 @@ export default function PrivacySettingsPage() {
 
   const handleToggle = (consent: ConsentConfig) => {
     if (consent.required) return;
-
     const currentlyEnabled = consents[consent.type];
-
     if (currentlyEnabled) {
-      // Withdrawing — show confirmation
       setConfirmDialog({
         open: true,
         type: consent.type,
@@ -297,7 +353,6 @@ export default function PrivacySettingsPage() {
         message: consent.withdrawWarning,
       });
     } else {
-      // Re-consenting — no confirmation needed
       setConsents((prev) => ({ ...prev, [consent.type]: true }));
     }
   };
@@ -316,6 +371,10 @@ export default function PrivacySettingsPage() {
     setConfirmDialog({ open: false, type: null, title: "", message: "" });
   };
 
+  // Summary counts
+  const activeCount = Object.values(consents).filter(Boolean).length;
+  const totalCount = CONSENTS.length;
+
   return (
     <PageLayout>
       <PageHeader
@@ -323,98 +382,148 @@ export default function PrivacySettingsPage() {
         description="จัดการความยินยอมและการใช้ข้อมูลส่วนบุคคลของคุณ"
       />
 
-      {/* ─── Current Consents ─── */}
-      <div className="space-y-4 mb-8">
-        {CONSENTS.map((consent) => (
+      {/* ─── Summary Bar ─── */}
+      <div className="flex items-center gap-4 mb-6 p-4 bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-[var(--success)] animate-pulse-dot" />
+          <span className="text-[13px] text-[var(--text-secondary)]">
+            ความยินยอมที่เปิดใช้งาน
+          </span>
+        </div>
+        <span className="text-[15px] font-bold text-[var(--text-primary)] tabular-nums">
+          {activeCount}
+          <span className="text-[var(--text-muted)] font-normal">
+            /{totalCount}
+          </span>
+        </span>
+        <div className="flex-1" />
+        <div className="flex gap-1">
+          {CONSENTS.map((c) => (
+            <div
+              key={c.type}
+              className="w-8 h-1.5 rounded-full transition-colors duration-300"
+              style={{
+                background: consents[c.type]
+                  ? c.accentColor
+                  : "var(--bg-muted)",
+                opacity: consents[c.type] ? 1 : 0.4,
+              }}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* ─── Consent Cards ─── */}
+      <div className="space-y-3 mb-8 stagger-children">
+        {CONSENTS.map((consent, i) => (
           <ConsentCard
             key={consent.type}
             consent={consent}
             enabled={consents[consent.type]}
             onToggle={() => handleToggle(consent)}
+            index={i}
           />
         ))}
       </div>
 
       {/* ─── Consent History ─── */}
       <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg overflow-hidden">
-        <div className="flex items-center gap-2 px-5 py-4 border-b border-[var(--border-default)]">
-          <History className="w-5 h-5 text-[var(--text-secondary)]" />
-          <h3 className="text-base font-semibold text-[var(--text-primary)]">
-            ประวัติการยินยอม
-          </h3>
-        </div>
+        <button
+          type="button"
+          onClick={() => setHistoryExpanded(!historyExpanded)}
+          className="w-full flex items-center justify-between px-5 py-4 border-b border-[var(--border-default)] hover:bg-[var(--bg-surface-hover)] transition-colors cursor-pointer"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-md bg-[var(--bg-muted)] flex items-center justify-center">
+              <History className="w-4 h-4 text-[var(--text-secondary)]" />
+            </div>
+            <div className="text-left">
+              <h3 className="text-[14px] font-semibold text-[var(--text-primary)]">
+                ประวัติการยินยอม
+              </h3>
+              <p className="text-[11px] text-[var(--text-muted)]">
+                บันทึกทุกการเปลี่ยนแปลงสิทธิ์
+              </p>
+            </div>
+          </div>
+          <ChevronDown
+            className={cn(
+              "w-4 h-4 text-[var(--text-muted)] transition-transform duration-300",
+              historyExpanded ? "rotate-0" : "-rotate-90"
+            )}
+          />
+        </button>
 
-        {/* Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="border-b border-[var(--border-default)]">
-                <th className="px-5 py-3 text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">
-                  วันที่
-                </th>
-                <th className="px-5 py-3 text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">
-                  ประเภท
-                </th>
-                <th className="px-5 py-3 text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">
-                  การกระทำ
-                </th>
-                <th className="px-5 py-3 text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">
-                  เวอร์ชัน
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {historyLoading ? (
+        <div
+          className={cn(
+            "expand-content",
+            historyExpanded && "open"
+          )}
+        >
+          <div>
+            {/* Table */}
+            <table className="nansen-table w-full">
+              <thead>
                 <tr>
-                  <td colSpan={4} className="px-5 py-10 text-center">
-                    <span className="text-[13px] text-[var(--text-muted)]">
-                      กำลังโหลดประวัติ...
-                    </span>
-                  </td>
+                  <th className="text-left">วันที่</th>
+                  <th className="text-left">ประเภท</th>
+                  <th className="text-left">การกระทำ</th>
+                  <th className="text-left">เวอร์ชัน</th>
                 </tr>
-              ) : history.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="px-5 py-10 text-center">
-                    <span className="text-[13px] text-[var(--text-muted)]">
-                      ยังไม่มีประวัติกิจกรรม
-                    </span>
-                  </td>
-                </tr>
-              ) : (
-                history.map((entry, i) => (
-                  <tr
-                    key={`${entry.date}-${entry.type}-${i}`}
-                    className={cn(
-                      "border-b border-[var(--border-default)] last:border-b-0",
-                      "hover:bg-[rgba(255,255,255,0.02)] transition-colors"
-                    )}
-                  >
-                    <td className="px-5 py-3 text-[13px] text-[var(--text-secondary)] whitespace-nowrap">
-                      {entry.date}
-                    </td>
-                    <td className="px-5 py-3 text-[13px] text-[var(--text-primary)]">
-                      {entry.type}
-                    </td>
-                    <td className="px-5 py-3">
-                      <span
-                        className={cn(
-                          "inline-flex text-[11px] font-medium px-2.5 py-1 rounded-full",
-                          entry.action === "ยินยอม"
-                            ? "bg-[rgba(16,185,129,0.08)] text-[var(--success)]"
-                            : "bg-[rgba(239,68,68,0.08)] text-[var(--error)]"
-                        )}
-                      >
-                        {entry.action}
+              </thead>
+              <tbody>
+                {historyLoading ? (
+                  <tr>
+                    <td colSpan={4} className="!text-center !py-10">
+                      <span className="text-[13px] text-[var(--text-muted)]">
+                        กำลังโหลดประวัติ...
                       </span>
                     </td>
-                    <td className="px-5 py-3 text-[13px] text-[var(--text-muted)]">
-                      {entry.version}
+                  </tr>
+                ) : history.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="!text-center !py-12">
+                      <div className="flex flex-col items-center gap-2">
+                        <History className="w-8 h-8 text-[var(--border-default)]" />
+                        <span className="text-[13px] text-[var(--text-muted)]">
+                          ยังไม่มีประวัติกิจกรรม
+                        </span>
+                      </div>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  history.map((entry, i) => (
+                    <tr key={`${entry.date}-${entry.type}-${i}`}>
+                      <td className="text-[var(--text-secondary)] !text-[13px] whitespace-nowrap">
+                        {entry.date}
+                      </td>
+                      <td className="!text-[13px]">{entry.type}</td>
+                      <td>
+                        <span
+                          className={cn(
+                            "inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full",
+                            entry.action === "ยินยอม"
+                              ? "bg-[rgba(var(--success-rgb),0.1)] text-[var(--success)] border border-[rgba(var(--success-rgb),0.15)]"
+                              : "bg-[rgba(var(--error-rgb),0.1)] text-[var(--error)] border border-[rgba(var(--error-rgb),0.15)]"
+                          )}
+                        >
+                          {entry.action === "ยินยอม" ? (
+                            <Check className="w-3 h-3" />
+                          ) : (
+                            <X className="w-3 h-3" />
+                          )}
+                          {entry.action}
+                        </span>
+                      </td>
+                      <td className="text-[var(--text-muted)] !text-[13px]">
+                        {entry.version}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
