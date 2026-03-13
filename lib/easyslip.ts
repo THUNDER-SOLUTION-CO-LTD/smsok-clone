@@ -29,15 +29,21 @@ export async function verifySlipByUrl(imageUrl: string): Promise<SlipVerifyResul
     return { success: false, error: "EasySlip API key not configured" };
   }
 
-  const res = await fetch(`${EASYSLIP_API_URL}/verify`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${EASYSLIP_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ url: imageUrl }),
-    signal: AbortSignal.timeout(10_000),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${EASYSLIP_API_URL}/verify`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${EASYSLIP_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ url: imageUrl }),
+      signal: AbortSignal.timeout(10_000),
+    });
+  } catch (error) {
+    console.error("[easyslip] verify request failed:", error);
+    return { success: false, error: "EasySlip unavailable" };
+  }
 
   if (!res.ok) {
     const body = await res.text();
@@ -80,15 +86,21 @@ export async function verifySlipByBase64(base64Image: string): Promise<SlipVerif
     return { success: false, error: "EasySlip API key not configured" };
   }
 
-  const res = await fetch(`${EASYSLIP_API_URL}/verify`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${EASYSLIP_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ payload: base64Image }),
-    signal: AbortSignal.timeout(10_000),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${EASYSLIP_API_URL}/verify`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${EASYSLIP_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ payload: base64Image }),
+      signal: AbortSignal.timeout(10_000),
+    });
+  } catch (error) {
+    console.error("[easyslip] verify request failed:", error);
+    return { success: false, error: "EasySlip unavailable" };
+  }
 
   if (!res.ok) {
     const body = await res.text();

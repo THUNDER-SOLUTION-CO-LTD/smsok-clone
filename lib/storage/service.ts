@@ -1,0 +1,140 @@
+import type { UploadedFileLike } from "@/lib/uploaded-file";
+import {
+  bufferFromBase64Payload,
+  bufferToDataUrl,
+  buildStoredFileKey,
+  extractStoredFileKey,
+  toStoredFileRef,
+} from "@/lib/storage/files";
+import {
+  deleteFileFromR2,
+  downloadFileFromR2,
+  uploadFileToR2,
+} from "@/lib/storage/r2";
+
+type StoredFileScope = "orders" | "payments";
+type StoredFileKind = "slips" | "wht";
+
+type StoreFileInput = {
+  userId: string;
+  scope: StoredFileScope;
+  resourceId: string;
+  kind: StoredFileKind;
+  body: Buffer;
+  contentType: string;
+  fileName?: string | null;
+};
+
+export class StorageUploadError extends Error {
+  constructor(message = "R2 upload failed") {
+    super(message);
+  }
+}
+
+export async function storeBufferInR2(input: StoreFileInput) {
+  const key = buildStoredFileKey({
+    userId: input.userId,
+    scope: input.scope,
+    resourceId: input.resourceId,
+    kind: input.kind,
+    fileName: input.fileName,
+    contentType: input.contentType,
+  });
+
+  try {
+    await uploadFileToR2({
+      key,
+      body: input.body,
+      contentType: input.contentType,
+    });
+  } catch (error) {
+    console.error("[storage] R2 upload failed:", error);
+    throw new StorageUploadError("R2 upload failed");
+  }
+
+  return {
+    key,
+    ref: toStoredFileRef(key),
+    storage: "r2" as const,
+  };
+}
+
+export async function storeUploadedFile(input: {
+  userId: string;
+  scope: StoredFileScope;
+  resourceId: string;
+  kind: StoredFileKind;
+  file: UploadedFileLike;
+}) {
+  const body = Buffer.from(await input.file.arrayBuffer());
+  const contentType = input.file.type || "application/octet-stream";
+  const stored = await storeBufferInR2({
+    userId: input.userId,
+    scope: input.scope,
+    resourceId: input.resourceId,
+    kind: input.kind,
+    body,
+    contentType,
+    fileName: input.file.name,
+  });
+
+  return {
+    ...stored,
+    body,
+    contentType,
+  };
+}
+
+export async function storeBase64File(input: {
+  userId: string;
+  scope: StoredFileScope;
+  resourceId: string;
+  kind: StoredFileKind;
+  payload: string;
+  contentType: string;
+  fileName?: string | null;
+}) {
+  const body = bufferFromBase64Payload(input.payload);
+  const stored = await storeBufferInR2({
+    userId: input.userId,
+    scope: input.scope,
+    resourceId: input.resourceId,
+    kind: input.kind,
+    body,
+    contentType: input.contentType,
+    fileName: input.fileName,
+  });
+
+  return {
+    ...stored,
+    body,
+  };
+}
+
+export async function resolveStoredFileVerificationPayload(value: string) {
+  const key = extractStoredFileKey(value);
+  if (!key) {
+    return value;
+  }
+
+  const file = await downloadFileFromR2(key);
+  return bufferToDataUrl(file.contentType, file.body);
+}
+
+export async function readStoredFile(value: string) {
+  const key = extractStoredFileKey(value);
+  if (!key) {
+    throw new Error("Stored file key missing");
+  }
+
+  return downloadFileFromR2(key);
+}
+
+export async function removeStoredFile(value: string | null | undefined) {
+  const key = extractStoredFileKey(value ?? "");
+  if (!key) {
+    return;
+  }
+
+  await deleteFileFromR2(key);
+}

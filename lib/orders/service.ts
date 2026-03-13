@@ -4,6 +4,7 @@ import {
   type PrismaClient,
 } from "@prisma/client";
 import { prisma as db } from "@/lib/db";
+import { resolveStoredFileUrl } from "@/lib/storage/files";
 
 type TxClient = Parameters<Parameters<typeof db.$transaction>[0]>[0];
 type DbClient = PrismaClient | TxClient;
@@ -185,9 +186,11 @@ export function getOrderExpirationDate(method: "promptpay" | "bank_transfer" = "
   return new Date(now + durationMs);
 }
 
-export function calculateOrderAmounts(netAmount: number, hasWht: boolean) {
-  const vatAmount = Math.round(netAmount * 0.07 * 100) / 100;
-  const totalAmount = Math.round((netAmount + vatAmount) * 100) / 100;
+export function calculateOrderAmounts(priceIncVat: number, hasWht: boolean) {
+  // Price from package tier is VAT-inclusive — extract VAT from total
+  const totalAmount = Math.round(priceIncVat * 100) / 100;
+  const netAmount = Math.round((totalAmount / 1.07) * 100) / 100;
+  const vatAmount = Math.round((totalAmount - netAmount) * 100) / 100;
   const whtAmount = hasWht ? Math.round(netAmount * 0.03 * 100) / 100 : 0;
   const payAmount = Math.round((totalAmount - whtAmount) * 100) / 100;
 
@@ -291,11 +294,16 @@ function attachOrderDocuments(
   }
 
   const activeDocuments = documents.filter((document) => !document.deletedAt);
+  const invoice = activeDocuments.find((document) => document.type === "INVOICE");
   const taxInvoice = activeDocuments.find((document) => document.type === "TAX_INVOICE");
   const receipt = activeDocuments.find((document) => document.type === "RECEIPT");
 
   return {
     ...payload,
+    // Populate invoice fields from INVOICE document if not already set on order
+    ...(invoice && !payload.invoice_number
+      ? { invoice_number: invoice.documentNumber, invoice_url: invoice.pdfUrl }
+      : {}),
     tax_invoice_number: taxInvoice?.documentNumber ?? undefined,
     tax_invoice_url: taxInvoice?.pdfUrl ?? undefined,
     receipt_number: receipt?.documentNumber ?? undefined,
@@ -349,8 +357,8 @@ export function serializeOrder(order: OrderSerializeInput) {
     quotation_url: order.quotationUrl ?? undefined,
     invoice_number: order.invoiceNumber ?? undefined,
     invoice_url: order.invoiceUrl ?? undefined,
-    slip_url: order.slipUrl ?? undefined,
-    wht_cert_url: order.whtCertUrl ?? undefined,
+    slip_url: resolveStoredFileUrl(order.slipUrl) ?? undefined,
+    wht_cert_url: resolveStoredFileUrl(order.whtCertUrl) ?? undefined,
     easyslip_verified: order.easyslipVerified ?? undefined,
     reject_reason: order.rejectReason ?? undefined,
     admin_note: order.adminNote ?? undefined,
@@ -394,8 +402,8 @@ export function serializeOrderV2(order: OrderRecord) {
     quotation_url: order.quotationUrl ?? undefined,
     invoice_number: order.invoiceNumber ?? undefined,
     invoice_url: order.invoiceUrl ?? undefined,
-    slip_url: order.slipUrl ?? undefined,
-    wht_cert_url: order.whtCertUrl ?? undefined,
+    slip_url: resolveStoredFileUrl(order.slipUrl) ?? undefined,
+    wht_cert_url: resolveStoredFileUrl(order.whtCertUrl) ?? undefined,
     easyslip_verified: order.easyslipVerified ?? undefined,
     reject_reason: order.rejectReason ?? undefined,
     admin_note: order.adminNote ?? undefined,
@@ -424,7 +432,7 @@ export function serializeOrderDocument(document: OrderDocumentRecord) {
 export function serializeOrderSlip(slip: OrderSlipRecord) {
   return {
     id: slip.id,
-    file_url: slip.fileUrl,
+    file_url: resolveStoredFileUrl(slip.fileUrl) ?? slip.fileUrl,
     file_key: slip.fileKey,
     file_size: slip.fileSize ?? undefined,
     file_type: slip.fileType ?? undefined,

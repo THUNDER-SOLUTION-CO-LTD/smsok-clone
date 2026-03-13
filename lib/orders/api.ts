@@ -4,6 +4,7 @@ import {
 } from "@prisma/client";
 import { prisma as db } from "@/lib/db";
 import { generateOrderDocumentNumber } from "@/lib/orders/numbering";
+import type { UploadedFileLike } from "@/lib/uploaded-file";
 
 type TxClient = Parameters<Parameters<typeof db.$transaction>[0]>[0];
 type DbClient = PrismaClient | TxClient;
@@ -128,11 +129,11 @@ const ORDER_DOCUMENT_KIND: Record<
   CREDIT_NOTE: "credit-note",
 };
 
-export function buildSlipDataUrl(file: File, mimeType: string, buffer: Buffer) {
+export function buildSlipDataUrl(mimeType: string, buffer: Buffer) {
   return `data:${mimeType};base64,${buffer.toString("base64")}`;
 }
 
-export function buildSlipFileKey(orderId: string, file: File, now = new Date()) {
+export function buildSlipFileKey(orderId: string, file: UploadedFileLike, now = new Date()) {
   const extFromType = file.type.split("/")[1]?.toLowerCase() || "";
   const extFromName = file.name.split(".").pop()?.toLowerCase() || "";
   const ext = extFromType || extFromName || "bin";
@@ -144,11 +145,11 @@ export function documentTypeToApiPath(type: OrderDocumentType) {
     case "INVOICE":
       return "invoice";
     case "TAX_INVOICE":
-      return "tax_invoice";
+      return "tax-invoice";
     case "RECEIPT":
       return "receipt";
     case "CREDIT_NOTE":
-      return "credit_note";
+      return "credit-note";
   }
 }
 
@@ -169,13 +170,20 @@ export async function activateOrderPurchase(
 
   if (existing) return existing;
 
+  const tier = await client.packageTier.findUnique({
+    where: { id: order.packageTierId },
+    select: { expiryMonths: true },
+  });
+  const expiresAt = new Date();
+  expiresAt.setMonth(expiresAt.getMonth() + (tier?.expiryMonths ?? 12));
+
   return client.packagePurchase.create({
     data: {
       userId: order.userId,
       organizationId: order.organizationId,
       tierId: order.packageTierId,
       smsTotal: order.smsCount,
-      expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+      expiresAt,
       isActive: true,
       transactionId: order.id,
     },
@@ -213,11 +221,22 @@ export async function ensureOrderDocument(
     },
   });
 
-  const pdfUrl = `/api/orders/${order.id}/documents/${created.id}/pdf`;
+  const apiTypePath = ORDER_DOCUMENT_KIND[type];
+  const pdfUrl = `/api/v1/orders/${order.id}/documents/${apiTypePath}`;
   const updated = await client.orderDocument.update({
     where: { id: created.id },
     data: { pdfUrl },
   });
+
+  if (type === "INVOICE") {
+    await client.order.update({
+      where: { id: order.id },
+      data: {
+        invoiceNumber: updated.documentNumber,
+        invoiceUrl: updated.pdfUrl,
+      },
+    });
+  }
 
   if (type === "TAX_INVOICE" && !order.invoiceNumber) {
     await client.order.update({
