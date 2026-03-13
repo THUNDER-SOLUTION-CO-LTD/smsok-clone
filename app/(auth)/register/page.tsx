@@ -46,6 +46,11 @@ const formSchema = registerSchema.extend({
 
 type FormValues = z.infer<typeof formSchema>;
 type Step = "form" | "otp";
+type AvailabilityStatus = "idle" | "checking" | "available" | "taken";
+type AvailabilityState = {
+  status: AvailabilityStatus;
+  message: string;
+};
 
 const RESEND_COOLDOWN = 60;
 const OTP_EXPIRY = 5 * 60;
@@ -66,6 +71,8 @@ export default function RegisterPage() {
   const [resendCooldown, setResendCooldown] = useState(0);
   const [otpPending, setOtpPending] = useState(false);
   const [debugCode, setDebugCode] = useState<string | null>(null);
+  const [emailAvailability, setEmailAvailability] = useState<AvailabilityState>({ status: "idle", message: "" });
+  const [phoneAvailability, setPhoneAvailability] = useState<AvailabilityState>({ status: "idle", message: "" });
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -84,10 +91,15 @@ export default function RegisterPage() {
   });
 
   const password = form.watch("password");
+  const confirmPassword = form.watch("confirmPassword");
+  const email = form.watch("email");
+  const phone = form.watch("phone") ?? "";
   const consentService = form.watch("consentService");
   const consentThirdParty = form.watch("consentThirdParty");
   const isSubmitting = form.formState.isSubmitting;
   const termsAccepted = consentService === true && consentThirdParty === true;
+  const passwordsMatch = confirmPassword.length === 0 || password === confirmPassword;
+  const hasBlockingDuplicate = emailAvailability.status === "taken" || phoneAvailability.status === "taken";
 
   // Countdown timer for OTP
   useEffect(() => {
@@ -98,6 +110,68 @@ export default function RegisterPage() {
     }, 1000);
     return () => clearInterval(t);
   }, [step, otpRef]);
+
+  useEffect(() => {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail || !trimmedEmail.includes("@")) {
+      setEmailAvailability({ status: "idle", message: "" });
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setEmailAvailability({ status: "checking", message: "กำลังตรวจสอบอีเมล..." });
+      try {
+        const res = await fetch(`/api/auth/check-duplicate?email=${encodeURIComponent(trimmedEmail)}`, {
+          signal: controller.signal,
+        });
+        const data = await res.json();
+        setEmailAvailability({
+          status: data.available ? "available" : "taken",
+          message: data.message ?? (data.available ? "อีเมลนี้ใช้ได้" : "อีเมลนี้ถูกใช้แล้ว"),
+        });
+      } catch (error) {
+        if ((error as Error).name === "AbortError") return;
+        setEmailAvailability({ status: "idle", message: "" });
+      }
+    }, 500);
+
+    return () => {
+      controller.abort();
+      window.clearTimeout(timer);
+    };
+  }, [email]);
+
+  useEffect(() => {
+    const trimmedPhone = phone.trim();
+    if (!trimmedPhone || trimmedPhone.length < 9) {
+      setPhoneAvailability({ status: "idle", message: "" });
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setPhoneAvailability({ status: "checking", message: "กำลังตรวจสอบเบอร์..." });
+      try {
+        const res = await fetch(`/api/auth/check-duplicate?phone=${encodeURIComponent(trimmedPhone)}`, {
+          signal: controller.signal,
+        });
+        const data = await res.json();
+        setPhoneAvailability({
+          status: data.available ? "available" : "taken",
+          message: data.message ?? (data.available ? "เบอร์นี้ใช้ได้" : "เบอร์นี้ถูกใช้แล้ว"),
+        });
+      } catch (error) {
+        if ((error as Error).name === "AbortError") return;
+        setPhoneAvailability({ status: "idle", message: "" });
+      }
+    }, 500);
+
+    return () => {
+      controller.abort();
+      window.clearTimeout(timer);
+    };
+  }, [phone]);
 
   const passwordChecks = [
     { label: "8 ตัวอักษรขึ้นไป", pass: password.length >= 8 },
@@ -280,6 +354,18 @@ export default function RegisterPage() {
                             <Input type="email" placeholder="you@example.com" onKeyDown={blockThai} className="h-11 bg-[var(--bg-base)] border-[var(--border-subtle)] text-white placeholder:text-[var(--text-muted)] rounded-lg focus:border-[rgba(var(--accent-rgb),0.6)] focus:ring-[rgba(0,255,167,0.12)]" {...field} />
                           </FormControl>
                           <FormMessage />
+                          {emailAvailability.status !== "idle" && (
+                            <p className={`text-[11px] ${
+                              emailAvailability.status === "available"
+                                ? "text-[var(--success)]"
+                                : emailAvailability.status === "taken"
+                                ? "text-[var(--error)]"
+                                : "text-[var(--text-muted)]"
+                            }`}>
+                              {emailAvailability.status === "available" ? "✓ " : emailAvailability.status === "taken" ? "✕ " : ""}
+                              {emailAvailability.message}
+                            </p>
+                          )}
                         </FormItem>
                       )}
                     />
@@ -296,6 +382,18 @@ export default function RegisterPage() {
                             <Input type="tel" inputMode="numeric" maxLength={10} placeholder="0891234567" onKeyDown={blockNonNumeric} className="h-11 bg-[var(--bg-base)] border-[var(--border-subtle)] text-white placeholder:text-[var(--text-muted)] rounded-lg focus:border-[rgba(var(--accent-rgb),0.6)] focus:ring-[rgba(0,255,167,0.12)]" {...field} />
                           </FormControl>
                           <FormMessage />
+                          {phoneAvailability.status !== "idle" && (
+                            <p className={`text-[11px] ${
+                              phoneAvailability.status === "available"
+                                ? "text-[var(--success)]"
+                                : phoneAvailability.status === "taken"
+                                ? "text-[var(--error)]"
+                                : "text-[var(--text-muted)]"
+                            }`}>
+                              {phoneAvailability.status === "available" ? "✓ " : phoneAvailability.status === "taken" ? "✕ " : ""}
+                              {phoneAvailability.message}
+                            </p>
+                          )}
                         </FormItem>
                       )}
                     />
@@ -389,6 +487,11 @@ export default function RegisterPage() {
                             </p>
                           )}
                           <FormMessage />
+                          {confirmPassword.length > 0 && (
+                            <p className={`text-[11px] ${passwordsMatch ? "text-[var(--success)]" : "text-[var(--error)]"}`}>
+                              {passwordsMatch ? "✓ รหัสผ่านตรงกัน" : "✕ รหัสผ่านไม่ตรงกัน"}
+                            </p>
+                          )}
                         </FormItem>
                       )}
                     />
@@ -498,7 +601,7 @@ export default function RegisterPage() {
 
                     <Button
                       type="submit"
-                      disabled={isSubmitting || !termsAccepted}
+                      disabled={isSubmitting || !termsAccepted || !passwordsMatch || hasBlockingDuplicate}
                       className="w-full h-11 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--bg-base)] rounded-xl text-[15px] font-semibold transition-all duration-200 hover:shadow-[0_4px_16px_rgba(0,255,167,0.25)] group disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isSubmitting ? (

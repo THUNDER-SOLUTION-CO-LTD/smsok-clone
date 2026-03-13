@@ -11,6 +11,6 @@ describe("Task #2805: register consent uses disable-only gating", () => {
     expect(registerPageSource).not.toContain("กรุณายอมรับข้อกำหนดการใช้งาน");
     expect(registerPageSource).not.toContain("กรุณายอมรับการส่งข้อมูลให้ผู้ให้บริการภายนอก");
     expect(registerPageSource).toContain("if (!data.consentService || !data.consentThirdParty) {");
-    expect(registerPageSource).toContain("disabled={isSubmitting || !termsAccepted}");
+    expect(registerPageSource).toContain("disabled={isSubmitting || !termsAccepted || !passwordsMatch || hasBlockingDuplicate}");
   });
 });
