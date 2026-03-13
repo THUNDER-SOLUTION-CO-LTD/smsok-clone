@@ -51,11 +51,12 @@ describe("P0: topup compatibility flow", () => {
   });
 
   it("verifies slips with EasySlip and persists through Payment + PaymentHistory", () => {
-    expect(verifySlipRoute).toContain("verifySlipByBase64");
+    expect(verifySlipRoute).toContain("verifySlipByUrl");
+    expect(verifySlipRoute).toContain("resolveStoredFileVerificationUrl(storedSlip.ref)");
     expect(verifySlipRoute).toContain("tx.payment.create");
     expect(verifySlipRoute).toContain("tx.paymentHistory.create");
     expect(verifySlipRoute).toContain("tx.packagePurchase.create");
-    expect(verifySlipRoute).not.toContain("verifyTopupSlip");
+    expect(verifySlipRoute).not.toContain("return verifyTopupSlip");
     expect(verifySlipRoute).not.toContain("transaction.create");
   });
 });

@@ -2,8 +2,13 @@
 import { prisma as db } from "../db";
 import { revalidatePath } from "next/cache";
 import { idSchema } from "../validations";
-import { verifySlipByBase64, verifySlipByUrl } from "../easyslip";
+import { verifySlipByUrl } from "../easyslip";
 import { isObviouslyInternalUrl } from "../url-safety";
+import {
+  removeStoredFile,
+  resolveStoredFileVerificationUrl,
+  storeBase64File,
+} from "../storage/service";
 
 // ==========================================
 // Get active package tiers from DB (for pricing page)
@@ -181,10 +186,28 @@ export async function adminGetPendingTransactions() {
 
 export async function verifyPackagePurchaseSlip(userId: string, payload: string) {
   if (!payload || typeof payload !== "string") {
-    throw new Error("กรุณาแนบสลิปแบบ base64");
+    throw new Error("กรุณาแนบสลิป");
   }
 
-  const slipResult = await verifySlipByBase64(payload);
+  const storedSlip = await storeBase64File({
+    userId,
+    scope: "payments",
+    resourceId: `legacy-topup-${Date.now()}`,
+    kind: "slips",
+    payload,
+    contentType: "image/jpeg",
+    fileName: "slip-base64",
+  });
+
+  let slipResult;
+  try {
+    const verificationUrl = await resolveStoredFileVerificationUrl(storedSlip.ref);
+    slipResult = await verifySlipByUrl(verificationUrl);
+  } catch (error) {
+    await removeStoredFile(storedSlip.ref);
+    throw error;
+  }
+
   if (!slipResult.success || !slipResult.data) {
     throw new Error(slipResult.error || "ตรวจสอบสลิปไม่สำเร็จ");
   }
@@ -209,46 +232,53 @@ export async function verifyPackagePurchaseSlip(userId: string, payload: string)
     orderBy: { totalSms: "desc" },
   });
 
-  const result = await db.$transaction(async (tx) => {
-    const purchaseTransaction = await tx.transaction.create({
-      data: {
-        userId,
-        packageId: matchedTier?.id ?? null,
-        amount: amountSatang,
-        credits: 0, // legacy field
-        method: "slip_verify",
-        status: "verified",
-        reference: slipData.transRef,
-        verifiedAt: new Date(),
-        verifiedBy: "easyslip-api",
-        expiresAt: new Date(),
-      },
-    });
-
-    // Create package purchase if matched
-    if (matchedTier) {
-      const expiresAt = new Date();
-      expiresAt.setMonth(expiresAt.getMonth() + matchedTier.expiryMonths);
-      await tx.packagePurchase.create({
+  let result;
+  try {
+    result = await db.$transaction(async (tx) => {
+      const purchaseTransaction = await tx.transaction.create({
         data: {
           userId,
-          tierId: matchedTier.id,
-          smsTotal: matchedTier.totalSms,
-          smsUsed: 0,
-          expiresAt,
-          isActive: true,
+          packageId: matchedTier?.id ?? null,
+          amount: amountSatang,
+          credits: 0, // legacy field
+          method: "slip_verify",
+          status: "verified",
+          slipUrl: storedSlip.ref,
+          reference: slipData.transRef,
+          verifiedAt: new Date(),
+          verifiedBy: "easyslip-api",
+          expiresAt: new Date(),
         },
       });
-    }
 
-    return {
-      transactionId: purchaseTransaction.id,
-      reference: slipData.transRef,
-      amount: slipData.amount,
-      matchedPackage: matchedTier?.name ?? null,
-      smsAdded: matchedTier?.totalSms ?? 0,
-    };
-  });
+      // Create package purchase if matched
+      if (matchedTier) {
+        const expiresAt = new Date();
+        expiresAt.setMonth(expiresAt.getMonth() + matchedTier.expiryMonths);
+        await tx.packagePurchase.create({
+          data: {
+            userId,
+            tierId: matchedTier.id,
+            smsTotal: matchedTier.totalSms,
+            smsUsed: 0,
+            expiresAt,
+            isActive: true,
+          },
+        });
+      }
+
+      return {
+        transactionId: purchaseTransaction.id,
+        reference: slipData.transRef,
+        amount: slipData.amount,
+        matchedPackage: matchedTier?.name ?? null,
+        smsAdded: matchedTier?.totalSms ?? 0,
+      };
+    });
+  } catch (error) {
+    await removeStoredFile(storedSlip.ref);
+    throw error;
+  }
 
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/topup");

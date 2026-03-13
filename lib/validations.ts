@@ -483,7 +483,7 @@ export const adminVerifyTransactionSchema = z.object({
 
 export const verifyTopupSlipSchema = z
   .object({
-    payload: z.string().trim().min(1, "กรุณาแนบสลิปแบบ base64"),
+    payload: z.string().trim().min(1, "กรุณาแนบสลิป"),
     mimeType: z.string().trim().optional(),
   })
   .superRefine((value, ctx) => {

@@ -4,6 +4,7 @@ import {
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { env } from "@/lib/env";
 
 type R2Config = {
@@ -93,6 +94,23 @@ export async function downloadFileFromR2(key: string) {
     etag: result.ETag ?? undefined,
     lastModified: result.LastModified ?? undefined,
   };
+}
+
+export async function getSignedDownloadUrlFromR2(
+  key: string,
+  options?: { expiresIn?: number },
+) {
+  const config = getR2Config();
+  const r2 = getR2Client();
+
+  return getSignedUrl(
+    r2,
+    new GetObjectCommand({
+      Bucket: config.bucket,
+      Key: key,
+    }),
+    { expiresIn: options?.expiresIn ?? 300 },
+  );
 }
 
 export async function deleteFileFromR2(key: string) {

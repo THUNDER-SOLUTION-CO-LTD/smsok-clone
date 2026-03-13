@@ -78,63 +78,6 @@ export async function verifySlipByUrl(imageUrl: string): Promise<SlipVerifyResul
 }
 
 // ==========================================
-// Verify slip by base64 image data
-// ==========================================
-
-export async function verifySlipByBase64(base64Image: string): Promise<SlipVerifyResult> {
-  if (!EASYSLIP_API_KEY) {
-    return { success: false, error: "EasySlip API key not configured" };
-  }
-
-  let res: Response;
-  try {
-    res = await fetch(`${EASYSLIP_API_URL}/verify`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${EASYSLIP_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ payload: base64Image }),
-      signal: AbortSignal.timeout(10_000),
-    });
-  } catch (error) {
-    console.error("[easyslip] verify request failed:", error);
-    return { success: false, error: "EasySlip unavailable" };
-  }
-
-  if (!res.ok) {
-    const body = await res.text();
-    console.error("[easyslip] verify failed:", res.status, body);
-    return { success: false, error: "ตรวจสอบสลิปไม่สำเร็จ กรุณาลองใหม่" };
-  }
-
-  const data = await res.json();
-
-  if (data.status !== 200 && data.status !== "success") {
-    return { success: false, error: data.message || "Verification failed" };
-  }
-
-  return {
-    success: true,
-    data: {
-      transRef: data.data?.transRef || "",
-      date: data.data?.date || "",
-      amount: parseFloat(data.data?.amount?.amount || "0"),
-      sender: {
-        name: data.data?.sender?.displayName || "",
-        bank: data.data?.sender?.bank?.short || "",
-        account: data.data?.sender?.account?.value || "",
-      },
-      receiver: {
-        name: data.data?.receiver?.displayName || "",
-        bank: data.data?.receiver?.bank?.short || "",
-        account: data.data?.receiver?.account?.value || "",
-      },
-    },
-  };
-}
-
-// ==========================================
 // Get API quota info
 // ==========================================
 

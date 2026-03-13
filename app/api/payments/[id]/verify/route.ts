@@ -3,10 +3,10 @@ import { NextRequest } from "next/server";
 import { ApiError, apiError, apiResponse } from "@/lib/api-auth";
 import { getSession } from "@/lib/auth";
 import { prisma as db } from "@/lib/db";
-import { verifySlipByBase64, verifySlipByUrl } from "@/lib/easyslip";
+import { verifySlipByUrl } from "@/lib/easyslip";
 import { ensurePaymentDocumentNumber } from "@/lib/payments/documents";
 import { applyRateLimit } from "@/lib/rate-limit";
-import { resolveStoredFileVerificationPayload } from "@/lib/storage/service";
+import { resolveStoredFileVerificationUrl } from "@/lib/storage/service";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -181,10 +181,8 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     });
 
     try {
-      const verificationSource = await resolveStoredFileVerificationPayload(payment.slipUrl);
-      const result = verificationSource.startsWith("data:")
-        ? await verifySlipByBase64(verificationSource)
-        : await verifySlipByUrl(verificationSource);
+      const verificationSource = await resolveStoredFileVerificationUrl(payment.slipUrl);
+      const result = await verifySlipByUrl(verificationSource);
 
       const easyslipData: Prisma.PaymentUpdateInput = {
         easyslipVerified: result.success,

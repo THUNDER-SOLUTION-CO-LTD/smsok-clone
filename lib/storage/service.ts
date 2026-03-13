@@ -1,7 +1,6 @@
 import type { UploadedFileLike } from "@/lib/uploaded-file";
 import {
   bufferFromBase64Payload,
-  bufferToDataUrl,
   buildStoredFileKey,
   extractStoredFileKey,
   toStoredFileRef,
@@ -9,6 +8,7 @@ import {
 import {
   deleteFileFromR2,
   downloadFileFromR2,
+  getSignedDownloadUrlFromR2,
   uploadFileToR2,
 } from "@/lib/storage/r2";
 
@@ -111,14 +111,13 @@ export async function storeBase64File(input: {
   };
 }
 
-export async function resolveStoredFileVerificationPayload(value: string) {
+export async function resolveStoredFileVerificationUrl(value: string) {
   const key = extractStoredFileKey(value);
   if (!key) {
     return value;
   }
 
-  const file = await downloadFileFromR2(key);
-  return bufferToDataUrl(file.contentType, file.body);
+  return getSignedDownloadUrlFromR2(key, { expiresIn: 300 });
 }
 
 export async function readStoredFile(value: string) {

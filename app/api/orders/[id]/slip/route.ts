@@ -1,5 +1,5 @@
 import { Prisma } from "@prisma/client";
-import { type SlipVerifyResult, verifySlipByBase64 } from "@/lib/easyslip";
+import { type SlipVerifyResult, verifySlipByUrl } from "@/lib/easyslip";
 import { ApiError, apiError, apiResponse } from "@/lib/api-auth";
 import { getSession } from "@/lib/auth";
 import { prisma as db } from "@/lib/db";
@@ -10,8 +10,12 @@ import {
 } from "@/lib/orders/api";
 import { createOrderHistory, serializeOrderSlip, serializeOrderV2 } from "@/lib/orders/service";
 import { applyRateLimit } from "@/lib/rate-limit";
-import { bufferToDataUrl } from "@/lib/storage/files";
-import { removeStoredFile, StorageUploadError, storeUploadedFile } from "@/lib/storage/service";
+import {
+  removeStoredFile,
+  resolveStoredFileVerificationUrl,
+  StorageUploadError,
+  storeUploadedFile,
+} from "@/lib/storage/service";
 import { coerceUploadedFile } from "@/lib/uploaded-file";
 
 type RouteContext = {
@@ -101,7 +105,7 @@ export async function POST(req: Request, ctx: RouteContext) {
     });
     const slipUrl = uploadedSlip.ref;
     const slipKey = uploadedSlip.key;
-    const verificationPayload = bufferToDataUrl(uploadedSlip.contentType, uploadedSlip.body);
+    const verificationUrl = await resolveStoredFileVerificationUrl(slipUrl);
 
     let uploadedWhtCert: { ref: string } | null = null;
     let whtCertUrl: string | null = order.whtCertUrl;
@@ -116,7 +120,7 @@ export async function POST(req: Request, ctx: RouteContext) {
       whtCertUrl = uploadedWhtCert.ref;
     }
 
-    const verification = await verifySlipByBase64(verificationPayload);
+    const verification = await verifySlipByUrl(verificationUrl);
     const amountMatch =
       verification.success && verification.data
         ? Math.abs(verification.data.amount - Number(order.payAmount)) <= 1

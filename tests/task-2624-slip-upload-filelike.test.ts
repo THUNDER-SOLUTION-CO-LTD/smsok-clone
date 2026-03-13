@@ -9,11 +9,12 @@ const mocks = vi.hoisted(() => ({
   transaction: vi.fn(),
   orderSlipCreate: vi.fn(),
   orderUpdate: vi.fn(),
-  verifySlipByBase64: vi.fn(),
+  verifySlipByUrl: vi.fn(),
   createOrderHistory: vi.fn(),
   storeUploadedFile: vi.fn(),
   removeStoredFile: vi.fn(),
   applyRateLimit: vi.fn(),
+  resolveStoredFileVerificationUrl: vi.fn(),
 }));
 
 vi.mock("@/lib/auth", () => ({
@@ -30,7 +31,7 @@ vi.mock("@/lib/db", () => ({
 }));
 
 vi.mock("@/lib/easyslip", () => ({
-  verifySlipByBase64: mocks.verifySlipByBase64,
+  verifySlipByUrl: mocks.verifySlipByUrl,
 }));
 
 vi.mock("@/lib/orders/service", () => ({
@@ -43,6 +44,7 @@ vi.mock("@/lib/orders/service", () => ({
 vi.mock("@/lib/storage/service", () => ({
   storeUploadedFile: mocks.storeUploadedFile,
   removeStoredFile: mocks.removeStoredFile,
+  resolveStoredFileVerificationUrl: mocks.resolveStoredFileVerificationUrl,
 }));
 
 vi.mock("@/lib/rate-limit", () => ({
@@ -114,7 +116,7 @@ const verifyingOrder = {
   quotationUrl: null,
   invoiceNumber: null,
   invoiceUrl: null,
-  slipUrl: "data:image/jpeg;base64,fixture",
+  slipUrl: "r2:users/user_1/orders/order_1/slips/fixture.jpg",
   whtCertUrl: null,
   easyslipVerified: false,
   rejectReason: null,
@@ -153,11 +155,12 @@ describe("Task #2624: slip upload accepts file-like multipart entries", () => {
       }));
     mocks.orderSlipCreate.mockResolvedValue(createdSlip);
     mocks.orderUpdate.mockResolvedValue(verifyingOrder);
-    mocks.verifySlipByBase64.mockResolvedValue({
+    mocks.verifySlipByUrl.mockResolvedValue({
       success: false,
       error: "EasySlip API key not configured",
     });
     mocks.applyRateLimit.mockResolvedValue({ blocked: null, headers: {} });
+    mocks.resolveStoredFileVerificationUrl.mockResolvedValue("https://signed.example/slip.jpg");
     mocks.storeUploadedFile.mockResolvedValue({
       key: "users/user_1/orders/order_1/slips/fixture.jpg",
       ref: "r2:users/user_1/orders/order_1/slips/fixture.jpg",
@@ -198,7 +201,7 @@ describe("Task #2624: slip upload accepts file-like multipart entries", () => {
         id: "slip_1",
       },
     });
-    expect(mocks.verifySlipByBase64).toHaveBeenCalledTimes(1);
+    expect(mocks.verifySlipByUrl).toHaveBeenCalledTimes(1);
     expect(mocks.orderSlipCreate).toHaveBeenCalledTimes(1);
     expect(mocks.orderUpdate).toHaveBeenCalledTimes(1);
     expect(mocks.storeUploadedFile).toHaveBeenCalledWith(
@@ -217,7 +220,10 @@ describe("Task #2624: slip upload accepts file-like multipart entries", () => {
         note: "EasySlip: EasySlip API key not configured",
       }),
     );
-    expect(mocks.verifySlipByBase64.mock.calls[0]?.[0]).toContain("data:image/jpeg;base64,");
+    expect(mocks.resolveStoredFileVerificationUrl).toHaveBeenCalledWith(
+      "r2:users/user_1/orders/order_1/slips/fixture.jpg",
+    );
+    expect(mocks.verifySlipByUrl).toHaveBeenCalledWith("https://signed.example/slip.jpg");
   });
 
   it("stores the slip and returns VERIFYING on the canonical route when EasySlip is unavailable", async () => {
@@ -235,8 +241,8 @@ describe("Task #2624: slip upload accepts file-like multipart entries", () => {
         id: "slip_1",
       },
     });
-    expect(mocks.verifySlipByBase64).toHaveBeenCalledTimes(1);
-    expect(mocks.verifySlipByBase64.mock.calls[0]?.[0]).toContain("data:image/jpeg;base64,");
+    expect(mocks.verifySlipByUrl).toHaveBeenCalledTimes(1);
+    expect(mocks.verifySlipByUrl).toHaveBeenCalledWith("https://signed.example/slip.jpg");
     expect(mocks.storeUploadedFile).toHaveBeenCalledTimes(1);
     expect(mocks.applyRateLimit).toHaveBeenCalledWith("user_1", "slip");
   });

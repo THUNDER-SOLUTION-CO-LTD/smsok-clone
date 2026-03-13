@@ -2,15 +2,19 @@ import { NextRequest } from "next/server";
 import { ApiError, apiResponse, apiError } from "@/lib/api-auth";
 import { getSession } from "@/lib/auth";
 import { prisma as db } from "@/lib/db";
-import { verifySlipByBase64 } from "@/lib/easyslip";
+import { verifySlipByUrl } from "@/lib/easyslip";
 import { COMPANY_ACCOUNT_DIGITS } from "@/lib/constants/bank-account";
 import {
   calculatePaymentAmounts,
   generatePaymentDocumentNumber,
   getUserPrimaryOrganizationId,
 } from "@/lib/payments/documents";
-import { bufferToDataUrl } from "@/lib/storage/files";
-import { removeStoredFile, StorageUploadError, storeBufferInR2 } from "@/lib/storage/service";
+import {
+  removeStoredFile,
+  resolveStoredFileVerificationUrl,
+  StorageUploadError,
+  storeBufferInR2,
+} from "@/lib/storage/service";
 import { coerceUploadedFile } from "@/lib/uploaded-file";
 import { verifyTopupSlipSchema } from "@/lib/validations";
 import { z } from "zod";
@@ -58,7 +62,6 @@ type TierRecord = {
 async function readUpload(req: NextRequest): Promise<{
   body: Buffer;
   contentType: string;
-  verificationPayload: string;
   fileName: string | null;
   fileSize: number | null;
   input: PackagePurchaseInput;
@@ -88,7 +91,6 @@ async function readUpload(req: NextRequest): Promise<{
     return {
       body,
       contentType: file.type || "application/octet-stream",
-      verificationPayload: bufferToDataUrl(file.type || "application/octet-stream", body),
       fileName: file.name,
       fileSize: file.size,
       input,
@@ -113,7 +115,6 @@ async function readUpload(req: NextRequest): Promise<{
   return {
     body: bodyBuffer,
     contentType: resolvedContentType,
-    verificationPayload: bufferToDataUrl(resolvedContentType, bodyBuffer),
     fileName: "slip-base64",
     fileSize: approxBytes,
     input,
@@ -261,62 +262,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const verification = await verifySlipByBase64(upload.verificationPayload);
-    const duplicateRef = verification.success && verification.data?.transRef
-      ? await Promise.all([
-          db.payment.findFirst({
-            where: { idempotencyKey: verification.data.transRef },
-            select: { id: true },
-          }),
-          db.transaction.findFirst({
-            where: {
-              reference: verification.data.transRef,
-              status: { in: ["verified", "VERIFIED"] },
-            },
-            select: { id: true },
-          }),
-        ])
-      : [null, null] as const;
-
-    const duplicateId = duplicateRef[0]?.id ?? duplicateRef[1]?.id ?? null;
-    const receiverCheck = verification.success
-      ? checkReceiverAccount(verification.data?.receiver.account)
-      : { matches: false, error: null, note: null };
-    const detectedSatang = verification.success && verification.data
-      ? Math.round(verification.data.amount * 100)
-      : null;
-    const amountMatch = detectedSatang != null
-      ? Math.abs(detectedSatang - totals.totalAmount) <= 100
-      : false;
-
-    const status: (typeof PURCHASE_VERIFICATION_STATUSES)[number] =
-      verification.success && verification.data
-        ? duplicateId
-          ? "PENDING_REVIEW"
-          : amountMatch && receiverCheck.matches
-            ? "COMPLETED"
-            : "PENDING_REVIEW"
-        : verification.error === "fake"
-          ? "FAILED"
-          : "PENDING_REVIEW";
-
-    const organizationId = await getUserPrimaryOrganizationId(session.id);
-    const now = new Date();
-    const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-    const preInvoiceNumber = await generatePaymentDocumentNumber("pre-invoice");
-    const invoiceNumber = status === "COMPLETED"
-      ? await generatePaymentDocumentNumber("invoice")
-      : null;
-    const historyNote =
-      status === "COMPLETED"
-        ? "EasySlip verified from package purchase flow"
-        : duplicateId
-          ? `Duplicate slip reference already used by ${duplicateId}`
-          : verification.success && verification.data
-            ? amountMatch
-              ? receiverCheck.note ?? "Receiver account verification failed"
-              : `Amount mismatch: expected ${totals.totalAmount}, got ${detectedSatang}`
-            : `EasySlip: ${verification.error ?? "verification pending manual review"}`;
     const storedSlip = await storeBufferInR2({
       userId: session.id,
       scope: "payments",
@@ -329,120 +274,177 @@ export async function POST(req: NextRequest) {
 
     let payment;
     try {
+      const verificationUrl = await resolveStoredFileVerificationUrl(storedSlip.ref);
+      const verification = await verifySlipByUrl(verificationUrl);
+      const duplicateRef = verification.success && verification.data?.transRef
+        ? await Promise.all([
+            db.payment.findFirst({
+              where: { idempotencyKey: verification.data.transRef },
+              select: { id: true },
+            }),
+            db.transaction.findFirst({
+              where: {
+                reference: verification.data.transRef,
+                status: { in: ["verified", "VERIFIED"] },
+              },
+              select: { id: true },
+            }),
+          ])
+        : [null, null] as const;
+
+      const duplicateId = duplicateRef[0]?.id ?? duplicateRef[1]?.id ?? null;
+      const receiverCheck = verification.success
+        ? checkReceiverAccount(verification.data?.receiver.account)
+        : { matches: false, error: null, note: null };
+      const detectedSatang = verification.success && verification.data
+        ? Math.round(verification.data.amount * 100)
+        : null;
+      const amountMatch = detectedSatang != null
+        ? Math.abs(detectedSatang - totals.totalAmount) <= 100
+        : false;
+
+      const status: (typeof PURCHASE_VERIFICATION_STATUSES)[number] =
+        verification.success && verification.data
+          ? duplicateId
+            ? "PENDING_REVIEW"
+            : amountMatch && receiverCheck.matches
+              ? "COMPLETED"
+              : "PENDING_REVIEW"
+          : verification.error === "fake"
+            ? "FAILED"
+            : "PENDING_REVIEW";
+
+      const organizationId = await getUserPrimaryOrganizationId(session.id);
+      const now = new Date();
+      const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      const preInvoiceNumber = await generatePaymentDocumentNumber("pre-invoice");
+      const invoiceNumber = status === "COMPLETED"
+        ? await generatePaymentDocumentNumber("invoice")
+        : null;
+      const historyNote =
+        status === "COMPLETED"
+          ? "EasySlip verified from package purchase flow"
+          : duplicateId
+            ? `Duplicate slip reference already used by ${duplicateId}`
+            : verification.success && verification.data
+              ? amountMatch
+                ? receiverCheck.note ?? "Receiver account verification failed"
+                : `Amount mismatch: expected ${totals.totalAmount}, got ${detectedSatang}`
+              : `EasySlip: ${verification.error ?? "verification pending manual review"}`;
       payment = await db.$transaction(async (tx) => {
-      const created = await tx.payment.create({
-        data: {
-          userId: session.id,
-          organizationId,
-          packageTierId: tier.id,
-          amount: totals.amountSatang,
-          vatAmount: totals.vatAmount,
-          totalAmount: totals.totalAmount,
-          method: "BANK_TRANSFER",
-          status,
-          slipUrl: storedSlip.ref,
-          slipFileName: upload.fileName,
-          slipFileSize: upload.fileSize,
-          easyslipVerified: verification.success,
-          easyslipResponse: verification as never,
-          easyslipAmount: detectedSatang,
-          easyslipBank: verification.data?.receiver.bank ?? null,
-          easyslipDate: verification.data?.date ? new Date(verification.data.date) : null,
-          hasWht: false,
-          whtAmount: 0,
-          netPayAmount: totals.totalAmount,
-          expiresAt,
-          preInvoiceNumber,
-          invoiceNumber,
-          paidAt: status === "COMPLETED" ? now : null,
-          creditsAdded: tier.totalSms,
-          idempotencyKey: duplicateId ? null : (verification.data?.transRef ?? null),
-          metadata: {
-            source: "package-purchase-v1",
-            submittedDate: upload.input.date ?? null,
-            submittedTime: upload.input.time ?? null,
-            note: upload.input.note ?? null,
-            duplicateReferenceId: duplicateId,
-          },
-        },
-        select: {
-          id: true,
-          status: true,
-          invoiceNumber: true,
-          invoiceUrl: true,
-          packageTier: {
-            select: {
-              name: true,
-              tierCode: true,
-              totalSms: true,
-            },
-          },
-        },
-      });
-
-      const preInvoiceUrl = `/api/payments/${created.id}/pre-invoice?download=1`;
-      const invoiceUrl =
-        status === "COMPLETED" && invoiceNumber
-          ? `/api/payments/${created.id}/invoice?download=1`
-          : null;
-
-      const updated = await tx.payment.update({
-        where: { id: created.id },
-        data: {
-          preInvoiceUrl,
-          ...(invoiceUrl ? { invoiceUrl } : {}),
-        },
-        select: {
-          id: true,
-          status: true,
-          invoiceNumber: true,
-          invoiceUrl: true,
-          packageTier: {
-            select: {
-              name: true,
-              tierCode: true,
-              totalSms: true,
-            },
-          },
-        },
-      });
-
-      await tx.paymentHistory.create({
-        data: {
-          paymentId: created.id,
-          toStatus: "PENDING",
-          changedBy: "system",
-          note: "Package purchase slip verification created payment record",
-        },
-      });
-
-      await tx.paymentHistory.create({
-        data: {
-          paymentId: created.id,
-          fromStatus: "PENDING",
-          toStatus: status,
-          changedBy: "system",
-          note: historyNote,
-        },
-      });
-
-      if (status === "COMPLETED") {
-        const purchaseExpiresAt = new Date(now);
-        purchaseExpiresAt.setMonth(purchaseExpiresAt.getMonth() + tier.expiryMonths);
-
-        await tx.packagePurchase.create({
+        const created = await tx.payment.create({
           data: {
             userId: session.id,
             organizationId,
-            tierId: tier.id,
-            smsTotal: tier.totalSms,
-            smsUsed: 0,
-            expiresAt: purchaseExpiresAt,
-            isActive: true,
-            transactionId: created.id,
+            packageTierId: tier.id,
+            amount: totals.amountSatang,
+            vatAmount: totals.vatAmount,
+            totalAmount: totals.totalAmount,
+            method: "BANK_TRANSFER",
+            status,
+            slipUrl: storedSlip.ref,
+            slipFileName: upload.fileName,
+            slipFileSize: upload.fileSize,
+            easyslipVerified: verification.success,
+            easyslipResponse: verification as never,
+            easyslipAmount: detectedSatang,
+            easyslipBank: verification.data?.receiver.bank ?? null,
+            easyslipDate: verification.data?.date ? new Date(verification.data.date) : null,
+            hasWht: false,
+            whtAmount: 0,
+            netPayAmount: totals.totalAmount,
+            expiresAt,
+            preInvoiceNumber,
+            invoiceNumber,
+            paidAt: status === "COMPLETED" ? now : null,
+            creditsAdded: tier.totalSms,
+            idempotencyKey: duplicateId ? null : (verification.data?.transRef ?? null),
+            metadata: {
+              source: "package-purchase-v1",
+              submittedDate: upload.input.date ?? null,
+              submittedTime: upload.input.time ?? null,
+              note: upload.input.note ?? null,
+              duplicateReferenceId: duplicateId,
+            },
+          },
+          select: {
+            id: true,
+            status: true,
+            invoiceNumber: true,
+            invoiceUrl: true,
+            packageTier: {
+              select: {
+                name: true,
+                tierCode: true,
+                totalSms: true,
+              },
+            },
           },
         });
-      }
+
+        const preInvoiceUrl = `/api/payments/${created.id}/pre-invoice?download=1`;
+        const invoiceUrl =
+          status === "COMPLETED" && invoiceNumber
+            ? `/api/payments/${created.id}/invoice?download=1`
+            : null;
+
+        const updated = await tx.payment.update({
+          where: { id: created.id },
+          data: {
+            preInvoiceUrl,
+            ...(invoiceUrl ? { invoiceUrl } : {}),
+          },
+          select: {
+            id: true,
+            status: true,
+            invoiceNumber: true,
+            invoiceUrl: true,
+            packageTier: {
+              select: {
+                name: true,
+                tierCode: true,
+                totalSms: true,
+              },
+            },
+          },
+        });
+
+        await tx.paymentHistory.create({
+          data: {
+            paymentId: created.id,
+            toStatus: "PENDING",
+            changedBy: "system",
+            note: "Package purchase slip verification created payment record",
+          },
+        });
+
+        await tx.paymentHistory.create({
+          data: {
+            paymentId: created.id,
+            fromStatus: "PENDING",
+            toStatus: status,
+            changedBy: "system",
+            note: historyNote,
+          },
+        });
+
+        if (status === "COMPLETED") {
+          const purchaseExpiresAt = new Date(now);
+          purchaseExpiresAt.setMonth(purchaseExpiresAt.getMonth() + tier.expiryMonths);
+
+          await tx.packagePurchase.create({
+            data: {
+              userId: session.id,
+              organizationId,
+              tierId: tier.id,
+              smsTotal: tier.totalSms,
+              smsUsed: 0,
+              expiresAt: purchaseExpiresAt,
+              isActive: true,
+              transactionId: created.id,
+            },
+          });
+        }
 
         return updated;
       });

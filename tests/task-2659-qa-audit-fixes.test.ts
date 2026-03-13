@@ -58,12 +58,10 @@ const ordersApi = readFileSync(
 );
 
 describe("Task #2659: QA audit bug fixes", () => {
-  it("verifies payment slips with base64 payloads instead of verifySlipByUrl", () => {
-    expect(paymentVerifyRoute).toContain("verifySlipByBase64");
-    expect(paymentVerifyRoute).toContain("resolveStoredFileVerificationPayload(payment.slipUrl)");
-    expect(paymentVerifyRoute).toContain('verificationSource.startsWith("data:")');
-    expect(paymentVerifyRoute).toContain("? await verifySlipByBase64(verificationSource)");
-    expect(paymentVerifyRoute).toContain(": await verifySlipByUrl(verificationSource)");
+  it("verifies payment slips through signed stored-file URLs", () => {
+    expect(paymentVerifyRoute).toContain("resolveStoredFileVerificationUrl(payment.slipUrl)");
+    expect(paymentVerifyRoute).toContain("await verifySlipByUrl(verificationSource)");
+    expect(paymentVerifyRoute).not.toContain("verifySlipByBase64");
   });
 
   it("uses authenticateRequest for campaign analytics and schedule endpoints", () => {

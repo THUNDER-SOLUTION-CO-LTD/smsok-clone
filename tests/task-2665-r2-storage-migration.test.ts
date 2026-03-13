@@ -28,7 +28,8 @@ describe("Task #2665: R2 storage migration", () => {
     expect(storageFilesSource).toContain('const STORAGE_PROXY_PREFIX = "/api/storage"');
     expect(storageServiceSource).toContain("storeUploadedFile");
     expect(storageServiceSource).toContain("storeBufferInR2");
-    expect(storageServiceSource).toContain("resolveStoredFileVerificationPayload");
+    expect(storageServiceSource).toContain("resolveStoredFileVerificationUrl");
+    expect(r2Source).toContain("getSignedDownloadUrlFromR2");
     expect(r2Source).toContain("forcePathStyle: true");
   });
 
@@ -49,7 +50,8 @@ describe("Task #2665: R2 storage migration", () => {
   });
 
   it("reads stored files back for verification and proxy delivery", () => {
-    expect(paymentVerifyRoute).toContain("resolveStoredFileVerificationPayload(payment.slipUrl)");
+    expect(paymentVerifyRoute).toContain("resolveStoredFileVerificationUrl(payment.slipUrl)");
+    expect(paymentVerifyRoute).toContain("verifySlipByUrl(verificationSource)");
     expect(storageRouteSource).toContain("readStoredFile");
     expect(storageRouteSource).toContain("authenticateAdmin(req)");
     expect(storageRouteSource).toContain("getStoredFileOwnerId(key)");

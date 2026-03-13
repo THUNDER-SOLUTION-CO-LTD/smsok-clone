@@ -59,12 +59,12 @@ describe("Task #2715: slip upload fail-soft", () => {
     ).rejects.toThrow("R2 upload failed");
   });
 
-  it("returns a fail-soft result when EasySlip requests throw", async () => {
+  it("returns a fail-soft result when EasySlip URL requests throw", async () => {
     vi.resetModules();
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
-    const { verifySlipByBase64 } = await import("@/lib/easyslip");
+    const { verifySlipByUrl } = await import("@/lib/easyslip");
 
-    const result = await verifySlipByBase64("data:image/jpeg;base64,fixture");
+    const result = await verifySlipByUrl("https://signed.example/slip.jpg");
 
     expect(result).toEqual({
       success: false,
