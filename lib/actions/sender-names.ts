@@ -2,6 +2,8 @@
 
 import { prisma as db } from "../db";
 import { revalidatePath } from "next/cache";
+import { ApiError } from "../api-auth";
+import { getRemainingQuota } from "../package/quota";
 import { requestSenderNameSchema, approveSenderNameSchema } from "../validations";
 import { validateSenderName } from "../sender-name-validation";
 import { resolveActionUserId } from "../action-user";
@@ -34,6 +36,20 @@ export async function requestSenderName(userIdOrData: string | unknown, maybeDat
       throw new Error("ชื่อผู้ส่งนี้ถูกปฏิเสธแล้ว กรุณาใช้ชื่ออื่น");
     }
     throw new Error("ชื่อผู้ส่งนี้มีอยู่แล้ว");
+  }
+
+  const [quota, used] = await Promise.all([
+    getRemainingQuota(userId),
+    db.senderName.count({
+      where: {
+        userId,
+        status: { in: ["APPROVED", "PENDING"] },
+      },
+    }),
+  ]);
+
+  if (quota.senderNameLimit !== null && used >= quota.senderNameLimit) {
+    throw new ApiError(400, "เกินจำนวน Sender Name ที่อนุญาต");
   }
 
   const senderName = await db.senderName.create({

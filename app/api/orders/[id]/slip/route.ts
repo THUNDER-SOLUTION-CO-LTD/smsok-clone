@@ -38,7 +38,12 @@ export async function POST(req: Request, ctx: RouteContext) {
       throw new ApiError(400, "คำสั่งซื้อนี้ไม่สามารถแนบสลิปได้");
     }
 
-    const formData = await req.formData();
+    let formData: FormData;
+    try {
+      formData = await req.formData();
+    } catch {
+      throw new ApiError(400, "กรุณาแนบสลิป");
+    }
     const slip = formData.get("slip");
     const whtCert = formData.get("wht_cert");
 

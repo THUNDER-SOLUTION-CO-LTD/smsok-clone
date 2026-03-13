@@ -14,6 +14,7 @@ const ACCESS_TOKEN_EXPIRES_IN = "15m";
 const REFRESH_TOKEN_EXPIRES_IN = "30d";
 const ACCESS_COOKIE_NAME = "session";
 const REFRESH_COOKIE_NAME = "refresh_token";
+const MAX_CONCURRENT_SESSIONS = 5;
 
 type TokenKind = "access" | "refresh";
 
@@ -256,6 +257,26 @@ async function persistSessionRecord(record: SessionRecord) {
       },
     }),
   ]);
+
+  const existingSessions = await prisma.userSession.findMany({
+    where: { userId: record.userId },
+    orderBy: [
+      { createdAt: "asc" },
+      { lastActiveAt: "asc" },
+    ],
+    select: { id: true },
+  });
+
+  const sessionsToPrune = existingSessions.slice(
+    0,
+    Math.max(0, existingSessions.length - MAX_CONCURRENT_SESSIONS),
+  );
+
+  if (sessionsToPrune.length > 0) {
+    await Promise.all(
+      sessionsToPrune.map((session) => deleteSessionRecord(record.userId, session.id)),
+    );
+  }
 }
 
 async function readSessionRecord(userId: string, sessionId: string) {
