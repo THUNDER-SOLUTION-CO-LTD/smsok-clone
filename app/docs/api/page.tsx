@@ -442,19 +442,19 @@ const ENDPOINTS: Record<string, Endpoint> = {
   "credits-balance": {
     id: "credits-balance",
     method: "GET",
-    path: "/credits/balance",
+    path: "/sms/remaining",
     description: "Get the current SMS quota for your account.",
     category: "credits",
     params: [],
     statusCodes: [
-      { code: "200", label: "OK", response: `{\n  "balance": 1500,\n  "currency": "sms",\n  "last_updated": "2026-01-15T10:00:00Z"\n}` },
+      { code: "200", label: "OK", response: `{\n  "smsRemaining": 1500,\n  "currency": "sms",\n  "last_updated": "2026-01-15T10:00:00Z"\n}` },
       { code: "401", label: "Unauthorized", response: `{\n  "error": "unauthorized",\n  "message": "Invalid or missing API key."\n}` },
     ],
     examples: [
-      { lang: "cURL", code: `curl https://api.smsok.io/v1/credits/balance \\\n  -H "Authorization: Bearer sk_live_your_key_here"` },
-      { lang: "Node.js", code: `const res = await fetch('https://api.smsok.io/v1/credits/balance', {\n  headers: { 'Authorization': 'Bearer sk_live_your_key_here' },\n});\nconst data = await res.json();` },
-      { lang: "Python", code: `import requests\nres = requests.get('https://api.smsok.io/v1/credits/balance',\n  headers={'Authorization':'Bearer sk_live_your_key_here'})\nprint(res.json())` },
-      { lang: "PHP", code: `<?php\n$ch = curl_init('https://api.smsok.io/v1/credits/balance');\ncurl_setopt($ch, CURLOPT_RETURNTRANSFER, true);\ncurl_setopt($ch, CURLOPT_HTTPHEADER, ['Authorization: Bearer sk_live_your_key_here']);\necho curl_exec($ch);` },
+      { lang: "cURL", code: `curl https://api.smsok.io/v1/sms/remaining \\\n  -H "Authorization: Bearer sk_live_your_key_here"` },
+      { lang: "Node.js", code: `const res = await fetch('https://api.smsok.io/v1/sms/remaining', {\n  headers: { 'Authorization': 'Bearer sk_live_your_key_here' },\n});\nconst data = await res.json();` },
+      { lang: "Python", code: `import requests\nres = requests.get('https://api.smsok.io/v1/sms/remaining',\n  headers={'Authorization':'Bearer sk_live_your_key_here'})\nprint(res.json())` },
+      { lang: "PHP", code: `<?php\n$ch = curl_init('https://api.smsok.io/v1/sms/remaining');\ncurl_setopt($ch, CURLOPT_RETURNTRANSFER, true);\ncurl_setopt($ch, CURLOPT_HTTPHEADER, ['Authorization: Bearer sk_live_your_key_here']);\necho curl_exec($ch);` },
     ],
   },
   "credits-usage": {

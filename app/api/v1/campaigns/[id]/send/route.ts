@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { apiError, apiResponse } from "@/lib/api-auth";
-import { authenticatePublicApiKey } from "@/lib/api-key-auth";
+import { authenticateRequest } from "@/lib/api-auth";
 import { requireApiPermission } from "@/lib/rbac";
 import { executeCampaign } from "@/lib/actions/campaigns";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
@@ -11,7 +11,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await authenticatePublicApiKey(req);
+    const user = await authenticateRequest(req);
 
     const denied = await requireApiPermission(user.id, "create", "campaign");
     if (denied) return denied;

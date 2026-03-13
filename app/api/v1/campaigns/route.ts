@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { apiError, apiResponse } from "@/lib/api-auth";
-import { authenticatePublicApiKey } from "@/lib/api-key-auth";
+import { authenticateRequest } from "@/lib/api-auth";
 import { requireApiPermission } from "@/lib/rbac";
 import { createCampaign, getCampaigns } from "@/lib/actions/campaigns";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
@@ -8,7 +8,7 @@ import { createCampaignSchema } from "@/lib/validations";
 
 export async function GET(req: NextRequest) {
   try {
-    const user = await authenticatePublicApiKey(req);
+    const user = await authenticateRequest(req);
 
     const denied = await requireApiPermission(user.id, "read", "campaign");
     if (denied) return denied;
@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await authenticatePublicApiKey(req);
+    const user = await authenticateRequest(req);
 
     const denied = await requireApiPermission(user.id, "create", "campaign");
     if (denied) return denied;

@@ -1,9 +1,21 @@
 import { NextRequest } from "next/server"
 import { authenticateRequest, ApiError, apiError, apiResponse } from "@/lib/api-auth"
-import { updateWebhook, deleteWebhook } from "@/lib/actions/webhooks"
+import { getWebhook, updateWebhook, deleteWebhook } from "@/lib/actions/webhooks"
 import { updateWebhookSchema } from "@/lib/validations"
 
 type Params = { params: Promise<{ id: string }> }
+
+// GET /api/v1/webhooks/:id — Get webhook detail
+export async function GET(req: NextRequest, { params }: Params) {
+  try {
+    const user = await authenticateRequest(req)
+    const { id } = await params
+    const webhook = await getWebhook(id, user.id)
+    return apiResponse({ webhook })
+  } catch (error) {
+    return apiError(error)
+  }
+}
 
 async function handleUpdateWebhook(req: NextRequest, params: Params) {
   const user = await authenticateRequest(req)

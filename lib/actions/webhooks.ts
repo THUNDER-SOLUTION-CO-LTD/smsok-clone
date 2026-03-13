@@ -1,6 +1,6 @@
 
 import { prisma } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import { resolveActionUserId } from "@/lib/action-user"
 import { generateWebhookSecret, signPayload, type WebhookEvent } from "@/lib/webhook-dispatch"
 import { isObviouslyInternalUrl, safeFetch } from "@/lib/url-safety"
 import { encryptSecret, decryptSecret } from "@/lib/two-factor"
@@ -21,10 +21,15 @@ const VALID_EVENTS: WebhookEvent[] = [
 ]
 
 async function resolveWebhookUserId(apiUserId?: string) {
-  const sessionUser = await getSession()
-  const userId = apiUserId ?? sessionUser?.id
-  if (!userId) throw new Error("กรุณาเข้าสู่ระบบ")
-  return userId
+  return resolveActionUserId(apiUserId)
+}
+
+function maskWebhookSecret(secret: string) {
+  if (secret.length <= 4) {
+    return "••••"
+  }
+
+  return `••••••••${secret.slice(-4)}`
 }
 
 // ── List webhooks ───────────────────────────────────────
@@ -49,6 +54,48 @@ export async function listWebhooks(apiUserId?: string) {
   })
 
   return webhooks
+}
+
+// ── Get webhook detail ──────────────────────────────────
+
+export async function getWebhook(id: string, apiUserId?: string) {
+  const userId = await resolveWebhookUserId(apiUserId)
+  const user = { id: userId }
+
+  const webhook = await prisma.webhook.findFirst({
+    where: { id, userId: user.id },
+    select: {
+      id: true,
+      url: true,
+      events: true,
+      secret: true,
+      active: true,
+      failCount: true,
+      createdAt: true,
+      updatedAt: true,
+      _count: { select: { logs: true } },
+    },
+  })
+  if (!webhook) throw new Error("ไม่พบ webhook")
+
+  let plaintextSecret: string
+  try {
+    plaintextSecret = decryptSecret(webhook.secret)
+  } catch {
+    plaintextSecret = webhook.secret
+  }
+
+  return {
+    id: webhook.id,
+    url: webhook.url,
+    events: webhook.events,
+    status: webhook.active ? "active" : "disabled",
+    secret: maskWebhookSecret(plaintextSecret),
+    failCount: webhook.failCount,
+    deliveryCount: webhook._count.logs,
+    createdAt: webhook.createdAt,
+    updatedAt: webhook.updatedAt,
+  }
 }
 
 // ── Create webhook ──────────────────────────────────────
