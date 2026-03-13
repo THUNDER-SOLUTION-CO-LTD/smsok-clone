@@ -4,7 +4,7 @@ import {
   createApiKeyForUser,
   listApiKeysForUser,
 } from "@/lib/api-keys/service";
-import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { applyRateLimit } from "@/lib/rate-limit";
 import { createApiKeySchema } from "@/lib/validations";
 
 export async function GET(req: NextRequest) {
@@ -21,8 +21,8 @@ export async function POST(req: NextRequest) {
   try {
     const user = await authenticateRequest(req);
 
-    const limit = await checkRateLimit(user.id, "apikey");
-    if (!limit.allowed) return rateLimitResponse(limit.resetIn);
+    const rl = await applyRateLimit(user.id, "apikey");
+    if (rl.blocked) return rl.blocked;
 
     const body = await req.json();
     const input = createApiKeySchema.parse(body);

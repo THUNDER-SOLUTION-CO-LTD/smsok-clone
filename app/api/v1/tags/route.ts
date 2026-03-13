@@ -1,13 +1,12 @@
 import { NextRequest } from "next/server";
-import { apiError, apiResponse } from "@/lib/api-auth";
-import { authenticatePublicApiKey } from "@/lib/api-key-auth";
+import { apiError, apiResponse, authenticateRequest } from "@/lib/api-auth";
 import { createTag, getTags } from "@/lib/actions/tags";
-import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { applyRateLimit } from "@/lib/rate-limit";
 import { createTagSchema } from "@/lib/validations";
 
 export async function GET(req: NextRequest) {
   try {
-    const user = await authenticatePublicApiKey(req);
+    const user = await authenticateRequest(req);
     const tags = await getTags(user.id);
     return apiResponse({ tags });
   } catch (error) {
@@ -17,9 +16,9 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await authenticatePublicApiKey(req);
-    const limit = await checkRateLimit(user.id, "api");
-    if (!limit.allowed) return rateLimitResponse(limit.resetIn);
+    const user = await authenticateRequest(req);
+    const rl = await applyRateLimit(user.id, "api");
+    if (rl.blocked) return rl.blocked;
 
     const body = await req.json();
     const input = createTagSchema.parse(body);

@@ -1,9 +1,13 @@
+import { NextRequest } from "next/server"
+import { authenticateAdmin } from "@/lib/admin-auth"
 import { allQueues } from "@/lib/queue/queues"
 import type { QueueHealthInfo, QueuesHealthResponse } from "@/lib/queue/types"
 
 // GET /api/health/queues — Queue health check
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    await authenticateAdmin(req)
+
     const queueInfos: QueueHealthInfo[] = await Promise.all(
       allQueues.map(async (queue) => {
         try {
@@ -54,6 +58,10 @@ export async function GET() {
       status: hasErrors ? 503 : 200,
     })
   } catch (error) {
+    if (error instanceof Error && error.message.includes("Admin")) {
+      return Response.json({ error: "Admin authentication required" }, { status: 401 })
+    }
+
     const response: QueuesHealthResponse = {
       status: "down",
       redis: "disconnected",

@@ -6,6 +6,24 @@ import {
   updateApiKeyNameForUser,
 } from "@/lib/api-keys/service";
 
+async function readJsonBody(req: NextRequest, required: boolean) {
+  const rawBody = await req.text();
+
+  if (!rawBody.trim()) {
+    if (required) {
+      throw new ApiError(400, "กรุณาส่งข้อมูล JSON");
+    }
+
+    return null;
+  }
+
+  try {
+    return JSON.parse(rawBody) as unknown;
+  } catch {
+    throw new ApiError(400, "กรุณาส่งข้อมูล JSON");
+  }
+}
+
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -13,6 +31,13 @@ export async function PATCH(
   try {
     const user = await authenticateRequest(req);
     const { id } = await params;
+    const body = await readJsonBody(req, false);
+
+    if (body && typeof body === "object" && "name" in body) {
+      const result = await updateApiKeyNameForUser(user.id, id, body);
+      return apiResponse(result);
+    }
+
     const result = await toggleApiKeyForUser(user.id, id);
     return apiResponse(result);
   } catch (error) {
@@ -28,12 +53,7 @@ export async function PUT(
   try {
     const user = await authenticateRequest(req);
     const { id } = await params;
-    let body: unknown;
-    try {
-      body = await req.json();
-    } catch {
-      throw new ApiError(400, "กรุณาส่งข้อมูล JSON");
-    }
+    const body = await readJsonBody(req, true);
     const result = await updateApiKeyNameForUser(user.id, id, body);
     return apiResponse(result);
   } catch (error) {

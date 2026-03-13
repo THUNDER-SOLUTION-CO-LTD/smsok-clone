@@ -1,9 +1,258 @@
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { join, relative, sep } from "node:path";
+
 /**
  * OpenAPI 3.0.3 Spec Generator for SMSOK API
  *
  * Static specification covering all v1 endpoints.
  * Served at GET /api/v1/docs/openapi.json
  */
+
+const API_V1_ROOT = join(process.cwd(), "app", "api", "v1");
+const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"] as const;
+
+type HttpMethod = Lowercase<(typeof HTTP_METHODS)[number]>;
+type OpenApiOperation = Record<string, unknown>;
+type OpenApiPathItem = Partial<Record<HttpMethod, OpenApiOperation>>;
+
+let cachedAutoDiscoveredPaths: Record<string, OpenApiPathItem> | null = null;
+
+function walkRouteFiles(dir: string): string[] {
+  return readdirSync(dir).flatMap((entry) => {
+    const fullPath = join(dir, entry);
+    if (statSync(fullPath).isDirectory()) {
+      return walkRouteFiles(fullPath);
+    }
+
+    return entry === "route.ts" ? [fullPath] : [];
+  });
+}
+
+function extractHttpMethods(source: string): HttpMethod[] {
+  const methods = new Set<HttpMethod>();
+
+  for (const method of HTTP_METHODS) {
+    const patterns = [
+      new RegExp(`export\\s+(?:async\\s+)?function\\s+${method}\\b`),
+      new RegExp(`export\\s+const\\s+${method}\\b`),
+      new RegExp(`export\\s*\\{[^}]*\\b${method}\\b[^}]*\\}`),
+    ];
+
+    if (patterns.some((pattern) => pattern.test(source))) {
+      methods.add(method.toLowerCase() as HttpMethod);
+    }
+  }
+
+  return [...methods];
+}
+
+function toOpenApiPath(routeFile: string): string {
+  const normalizedRelativePath = relative(API_V1_ROOT, routeFile).split(sep).join("/");
+  const routePath = normalizedRelativePath
+    .replace(/\/route\.ts$/, "")
+    .replace(/\[(.+?)\]/g, "{$1}");
+
+  return routePath ? `/${routePath}` : "/";
+}
+
+function titleCase(value: string): string {
+  return value
+    .replace(/[{}]/g, "")
+    .replace(/-/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function inferTag(pathKey: string): string {
+  const [, firstSegment = "", secondSegment = ""] = pathKey.split("/");
+
+  if (firstSegment === "admin") {
+    switch (secondSegment) {
+      case "auth":
+        return "Admin - Auth";
+      case "finance":
+      case "payments":
+        return "Admin - Finance";
+      case "support":
+        return "Admin - Support";
+      case "ceo":
+        return "Admin - CEO";
+      case "cto":
+        return "Admin - CTO";
+      case "marketing":
+        return "Admin - Marketing";
+      default:
+        return "Admin - Ops";
+    }
+  }
+
+  const topLevelTags: Record<string, string> = {
+    account: "Account",
+    "api-keys": "API Keys",
+    analytics: "Analytics",
+    "audit-logs": "Organizations",
+    "bank-accounts": "Billing",
+    campaigns: "Campaigns",
+    consent: "PDPA",
+    contacts: "Contacts",
+    credits: "Account",
+    "custom-fields": "Custom Fields",
+    docs: "Settings",
+    groups: "Groups",
+    invoices: "Billing",
+    kb: "Admin - Support",
+    links: "Analytics",
+    logs: "Logs",
+    messages: "SMS",
+    onboarding: "Onboarding",
+    orders: "Billing",
+    organizations: "Organizations",
+    otp: "OTP",
+    packages: "Billing",
+    payment: "Billing",
+    payments: "Billing",
+    pdpa: "PDPA",
+    permissions: "Organizations",
+    quotations: "Billing",
+    senders: "Sender Names",
+    "sending-hours": "Settings",
+    settings: "Settings",
+    sms: "SMS",
+    tags: "Tags",
+    team: "Organizations",
+    templates: "Templates",
+    tickets: "Admin - Support",
+    topup: "Billing",
+    tos: "Onboarding",
+    transactions: "Billing",
+    webhooks: "Webhooks",
+  };
+
+  return topLevelTags[firstSegment] ?? titleCase(firstSegment || "General");
+}
+
+function inferSummary(method: HttpMethod, pathKey: string): string {
+  const segments = pathKey.split("/").filter(Boolean);
+  const placeholders = segments.filter((segment) => segment.startsWith("{"));
+  const nouns = segments.filter((segment) => !segment.startsWith("{"));
+  const tail = nouns.at(-1) ?? "resource";
+  const parent = nouns.at(-2) ?? tail;
+  const isAction = Boolean(placeholders.length) && tail !== parent;
+
+  switch (method) {
+    case "get":
+      return placeholders.length > 0 && !isAction
+        ? `Get ${titleCase(tail)} details`
+        : `List ${titleCase(tail)}`;
+    case "post":
+      return isAction ? `${titleCase(tail)} ${titleCase(parent)}` : `Create ${titleCase(tail)}`;
+    case "put":
+      return `Replace ${titleCase(tail)}`;
+    case "patch":
+      return `Update ${titleCase(tail)}`;
+    case "delete":
+      return `Delete ${titleCase(tail)}`;
+  }
+}
+
+function buildPathParameters(pathKey: string) {
+  return [...pathKey.matchAll(/\{([^}]+)\}/g)].map(([, name]) => ({
+    name,
+    in: "path",
+    required: true,
+    schema: { type: "string" },
+  }));
+}
+
+function buildRequestBody(method: HttpMethod) {
+  if (!["post", "put", "patch"].includes(method)) {
+    return undefined;
+  }
+
+  return {
+    required: method === "post",
+    content: {
+      "application/json": {
+        schema: {
+          type: "object",
+          additionalProperties: true,
+        },
+      },
+    },
+  };
+}
+
+function buildResponses(method: HttpMethod) {
+  const successStatus = method === "post" ? "201" : "200";
+  const successDescription =
+    method === "delete"
+      ? "Resource deleted"
+      : method === "post"
+        ? "Request completed successfully"
+        : "Request completed successfully";
+
+  return {
+    [successStatus]: { description: successDescription },
+    "400": { $ref: "#/components/responses/BadRequest" },
+    "401": { $ref: "#/components/responses/Unauthorized" },
+    "404": { $ref: "#/components/responses/NotFound" },
+    "500": { $ref: "#/components/responses/ServerError" },
+  };
+}
+
+function buildSecurity(pathKey: string) {
+  if (pathKey.startsWith("/docs")) {
+    return [];
+  }
+
+  if (pathKey.startsWith("/admin/")) {
+    return [{ AdminAuth: [] }];
+  }
+
+  return [{ BearerAuth: [] }];
+}
+
+function buildAutoDiscoveredPaths(): Record<string, OpenApiPathItem> {
+  if (cachedAutoDiscoveredPaths) {
+    return cachedAutoDiscoveredPaths;
+  }
+
+  if (!existsSync(API_V1_ROOT)) {
+    return {};
+  }
+
+  const autoPaths: Record<string, OpenApiPathItem> = {};
+
+  for (const routeFile of walkRouteFiles(API_V1_ROOT)) {
+    const pathKey = toOpenApiPath(routeFile);
+    const source = readFileSync(routeFile, "utf-8");
+    const methods = extractHttpMethods(source);
+
+    if (methods.length === 0) {
+      continue;
+    }
+
+    const parameters = buildPathParameters(pathKey);
+
+    autoPaths[pathKey] = Object.fromEntries(
+      methods.map((method) => [
+        method,
+        {
+          tags: [inferTag(pathKey)],
+          summary: inferSummary(method, pathKey),
+          description: `Auto-generated baseline documentation for ${pathKey}. Replace with a manual entry when request or response schemas need endpoint-specific detail.`,
+          security: buildSecurity(pathKey),
+          ...(parameters.length > 0 ? { parameters } : {}),
+          ...(buildRequestBody(method) ? { requestBody: buildRequestBody(method) } : {}),
+          responses: buildResponses(method),
+        },
+      ]),
+    ) as OpenApiPathItem;
+  }
+
+  cachedAutoDiscoveredPaths = autoPaths;
+
+  return autoPaths;
+}
 
 export function generateOpenAPISpec() {
   return {
@@ -288,6 +537,7 @@ export function generateOpenAPISpec() {
     },
 
     paths: {
+      ...buildAutoDiscoveredPaths(),
       // ===================== AUTH =====================
       "/auth/register": {
         post: {
@@ -301,13 +551,29 @@ export function generateOpenAPISpec() {
               "application/json": {
                 schema: {
                   type: "object",
-                  required: ["firstName", "lastName", "email", "password"],
+                  required: [
+                    "firstName",
+                    "lastName",
+                    "email",
+                    "phone",
+                    "password",
+                    "otpRef",
+                    "otpCode",
+                    "consentService",
+                    "consentThirdParty",
+                  ],
                   properties: {
                     firstName: { type: "string", example: "John" },
                     lastName: { type: "string", example: "Doe" },
                     email: { type: "string", format: "email", example: "john@example.com" },
                     phone: { type: "string", example: "0891234567" },
                     password: { type: "string", minLength: 8, example: "StrongP@ss1" },
+                    otpRef: { type: "string", example: "OTP_REF_123456" },
+                    otpCode: { type: "string", example: "123456" },
+                    acceptTerms: { type: "boolean", example: true },
+                    consentService: { type: "boolean", example: true },
+                    consentThirdParty: { type: "boolean", example: true },
+                    consentMarketing: { type: "boolean", example: false },
                   },
                 },
               },

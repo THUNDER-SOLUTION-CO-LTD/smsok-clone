@@ -3,16 +3,13 @@ import { ApiError, apiResponse, apiError } from "@/lib/api-auth";
 import { getSession } from "@/lib/auth";
 import { prisma as db } from "@/lib/db";
 import { applyRateLimit } from "@/lib/rate-limit";
+import { resolveStoredFileUrl } from "@/lib/storage/files";
+import { removeStoredFile, StorageUploadError, storeUploadedFile } from "@/lib/storage/service";
+import { coerceUploadedFile } from "@/lib/uploaded-file";
 
 type Ctx = { params: Promise<{ id: string }> };
 
 const allowedTypes = ["image/jpeg", "image/png", "application/pdf"];
-
-async function fileToDataUrl(file: File) {
-  const buffer = await file.arrayBuffer();
-  const base64 = Buffer.from(buffer).toString("base64");
-  return `data:${file.type};base64,${base64}`;
-}
 
 async function handleUpload(req: NextRequest, ctx: Ctx) {
   try {
@@ -62,11 +59,11 @@ async function handleUpload(req: NextRequest, ctx: Ctx) {
     if (payment.status !== "PENDING") throw new ApiError(400, "สถานะไม่อนุญาตให้อัปโหลดสลิป");
 
     const formData = await req.formData();
-    const file = formData.get("slip") as File | null;
+    const file = coerceUploadedFile(formData.get("slip"));
     const whtFile =
-      (formData.get("whtCert") as File | null) ||
-      (formData.get("whtCertificate") as File | null) ||
-      (formData.get("withholdingCert") as File | null);
+      coerceUploadedFile(formData.get("whtCert")) ||
+      coerceUploadedFile(formData.get("whtCertificate")) ||
+      coerceUploadedFile(formData.get("withholdingCert"));
     if (!file) throw new ApiError(400, "กรุณาแนบไฟล์สลิป");
 
     if (!allowedTypes.includes(file.type)) throw new ApiError(400, "รองรับเฉพาะ JPG, PNG, PDF");
@@ -85,30 +82,53 @@ async function handleUpload(req: NextRequest, ctx: Ctx) {
       throw new ApiError(400, "กรุณาแนบไฟล์หนังสือรับรองหักภาษี ณ ที่จ่าย (50 ทวิ)");
     }
 
-    const slipUrl = await fileToDataUrl(file);
-    const whtCertUrl = whtFile ? await fileToDataUrl(whtFile) : null;
-
-    const updated = await db.payment.update({
-      where: { id },
-      data: {
-        slipUrl,
-        slipFileName: file.name,
-        slipFileSize: file.size,
-        ...(whtCertUrl
-          ? {
-              whtCertUrl,
-              whtCertVerified: false,
-            }
-          : {}),
-      },
-      select: {
-        id: true,
-        slipFileName: true,
-        slipFileSize: true,
-        whtCertVerified: true,
-        status: true,
-      },
+    const uploadedSlip = await storeUploadedFile({
+      userId: session.id,
+      scope: "payments",
+      resourceId: id,
+      kind: "slips",
+      file,
     });
+    const uploadedWht = whtFile
+      ? await storeUploadedFile({
+          userId: session.id,
+          scope: "payments",
+          resourceId: id,
+          kind: "wht",
+          file: whtFile,
+        })
+      : null;
+
+    let updated;
+    try {
+      updated = await db.payment.update({
+        where: { id },
+        data: {
+          slipUrl: uploadedSlip.ref,
+          slipFileName: file.name,
+          slipFileSize: file.size,
+          ...(uploadedWht
+            ? {
+                whtCertUrl: uploadedWht.ref,
+                whtCertVerified: false,
+              }
+            : {}),
+        },
+        select: {
+          id: true,
+          slipFileName: true,
+          slipFileSize: true,
+          whtCertVerified: true,
+          status: true,
+        },
+      });
+    } catch (error) {
+      await Promise.allSettled([
+        removeStoredFile(uploadedSlip.ref),
+        uploadedWht ? removeStoredFile(uploadedWht.ref) : Promise.resolve(),
+      ]);
+      throw error;
+    }
 
     return apiResponse({
       id: updated.id,
@@ -119,8 +139,13 @@ async function handleUpload(req: NextRequest, ctx: Ctx) {
       slipFileSize: updated.slipFileSize,
       hasWhtCert: Boolean(whtFile || payment.whtCertUrl),
       whtCertVerified: updated.whtCertVerified,
+      slipUrl: resolveStoredFileUrl(uploadedSlip.ref),
+      whtCertUrl: uploadedWht ? resolveStoredFileUrl(uploadedWht.ref) : resolveStoredFileUrl(payment.whtCertUrl),
     });
   } catch (error) {
+    if (error instanceof StorageUploadError) {
+      return apiError(new ApiError(503, "ระบบอัปโหลดไฟล์ยังไม่พร้อม กรุณาลองใหม่"));
+    }
     return apiError(error);
   }
 }

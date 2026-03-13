@@ -52,9 +52,23 @@ export function parseUserAgent(ua: string | null): {
  * Get client IP from request headers
  */
 export function getClientIp(headers: Headers): string {
+  const forwardedFor = headers.get("x-forwarded-for");
+  if (forwardedFor) {
+    const forwardedChain = forwardedFor
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean);
+
+    if (forwardedChain.length > 0) {
+      return forwardedChain[forwardedChain.length - 1];
+    }
+  }
+
   return (
-    headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    headers.get("x-real-ip") ||
+    headers.get("x-real-ip")?.trim() ||
+    headers.get("cf-connecting-ip")?.trim() ||
+    headers.get("fly-client-ip")?.trim() ||
+    headers.get("true-client-ip")?.trim() ||
     "unknown"
   );
 }

@@ -24,7 +24,7 @@ const PREFIX_BY_KIND: Record<OrderDocumentKind, string> = {
 };
 
 function toYearMonth(now = new Date()) {
-  return `${String(now.getFullYear()).slice(-2)}${String(now.getMonth() + 1).padStart(2, "0")}`;
+  return `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
 export function formatOrderDocumentNumber(prefix: string, sequence: number, now = new Date()) {

@@ -5,7 +5,7 @@ import { randomUUID } from "node:crypto";
 
 // ── Zod Schemas ─────────────────────────────────────────
 
-const scheduleCampaignSchema = z
+export const scheduleCampaignInputSchema = z
   .object({
     name: z.string().min(1).max(200),
     recipients: z.array(z.string()).min(1).optional(),
@@ -24,6 +24,10 @@ const scheduleCampaignSchema = z
   .refine((data) => data.recipients || data.groupId, {
     message: "ต้องระบุ recipients หรือ groupId อย่างน้อยหนึ่งอย่าง",
   });
+
+export const rescheduleCampaignInputSchema = z.object({
+  scheduledAt: z.string().trim().min(1, "กรุณาระบุ scheduledAt"),
+});
 
 // ── Helpers ─────────────────────────────────────────────
 
@@ -62,7 +66,7 @@ async function getCampaignQueue() {
 // ── Schedule Campaign ───────────────────────────────────
 
 export async function scheduleCampaign(userId: string, data: unknown) {
-  const input = scheduleCampaignSchema.parse(data);
+  const input = scheduleCampaignInputSchema.parse(data);
   const scheduledAt = parseFutureDate(input.scheduledAt);
 
   // Resolve recipients from group if groupId provided

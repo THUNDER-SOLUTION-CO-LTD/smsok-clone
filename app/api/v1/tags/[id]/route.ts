@@ -1,6 +1,5 @@
 import { NextRequest } from "next/server";
-import { apiError, apiResponse } from "@/lib/api-auth";
-import { authenticatePublicApiKey } from "@/lib/api-key-auth";
+import { apiError, apiResponse, authenticateRequest } from "@/lib/api-auth";
 import { deleteTag, updateTag } from "@/lib/actions/tags";
 import { updateTagSchema } from "@/lib/validations";
 
@@ -9,7 +8,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await authenticatePublicApiKey(req);
+    const user = await authenticateRequest(req);
     const body = await req.json();
     const input = updateTagSchema.parse(body);
     const { id } = await params;
@@ -25,7 +24,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await authenticatePublicApiKey(req);
+    const user = await authenticateRequest(req);
     const { id } = await params;
     await deleteTag(user.id, id);
     return apiResponse({ success: true });

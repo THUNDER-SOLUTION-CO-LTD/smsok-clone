@@ -17,8 +17,6 @@ const RECOVERABLE_PRISMA_ERROR_NAMES = new Set([
   "PrismaClientKnownRequestError",
   "PrismaClientUnknownRequestError",
   "PrismaClientInitializationError",
-  "PrismaClientRustPanicError",
-  "PrismaClientValidationError",
 ]);
 
 type CampaignPageStatus =
@@ -90,9 +88,9 @@ export function normalizeCampaignStatus(status: string | null | undefined): Camp
     return STATUS_ALIASES[normalized];
   }
 
-  // Unknown status — log and fallback to draft
+  // Unknown status — log and surface as failed so UI shows error state
   logger.warn?.("Unknown campaign status", { status });
-  return "draft";
+  return "failed";
 }
 
 export function isRecoverableCampaignsPageError(error: unknown): error is Error {

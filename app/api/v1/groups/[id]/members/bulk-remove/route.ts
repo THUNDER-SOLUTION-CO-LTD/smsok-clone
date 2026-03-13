@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { authenticateRequest, apiResponse, apiError } from "@/lib/api-auth";
+import { authenticateRequest, apiResponse, apiError, ApiError } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
 
@@ -22,7 +22,7 @@ export async function POST(
     const group = await prisma.contactGroup.findFirst({
       where: { id: groupId, userId: user.id },
     });
-    if (!group) throw new Error("ไม่พบกลุ่ม");
+    if (!group) throw new ApiError(404, "ไม่พบกลุ่ม");
 
     const result = await prisma.contactGroupMember.deleteMany({
       where: {

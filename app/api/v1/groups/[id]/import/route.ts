@@ -1,8 +1,28 @@
 import { NextRequest } from "next/server";
-import { authenticateRequest, apiResponse, apiError } from "@/lib/api-auth";
-import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { authenticateRequest, apiResponse, apiError, ApiError } from "@/lib/api-auth";
+import { applyRateLimit } from "@/lib/rate-limit";
 import { prisma } from "@/lib/db";
 import { normalizePhone } from "@/lib/validations";
+import { z } from "zod";
+
+const MAX_TEXT_IMPORT_BYTES = 1024 * 1024;
+const MAX_IMPORT_ROWS = 5000;
+const CSV_TEXT_MIME_TYPES = new Set([
+  "text/csv",
+  "application/csv",
+  "text/plain",
+  "application/vnd.ms-excel",
+]);
+const contactsArraySchema = z.array(
+  z.object({
+    name: z.string().optional(),
+    phone: z.string(),
+  }),
+);
+
+function isCsvTextFile(file: File) {
+  return file.name.match(/\.(csv|txt)$/i) || CSV_TEXT_MIME_TYPES.has(file.type);
+}
 
 // POST /api/v1/groups/:id/import — Import CSV directly into a group
 export async function POST(
@@ -12,14 +32,14 @@ export async function POST(
   try {
     const user = await authenticateRequest(req);
     const { id: groupId } = await params;
-    const limit = await checkRateLimit(user.id, "import");
-    if (!limit.allowed) return rateLimitResponse(limit.resetIn);
+    const rl = await applyRateLimit(user.id, "import");
+    if (rl.blocked) return rl.blocked;
 
     // Verify group ownership
     const group = await prisma.contactGroup.findFirst({
       where: { id: groupId, userId: user.id },
     });
-    if (!group) throw new Error("ไม่พบกลุ่ม");
+    if (!group) throw new ApiError(404, "ไม่พบกลุ่ม");
 
     let rows: { name?: string; phone: string }[] = [];
     const contentType = req.headers.get("content-type") || "";
@@ -27,21 +47,33 @@ export async function POST(
     if (contentType.includes("multipart/form-data")) {
       const formData = await req.formData();
       const file = formData.get("file") as File | null;
-      if (!file) throw new Error("กรุณาอัพโหลดไฟล์");
+      if (!file) throw new ApiError(400, "กรุณาอัพโหลดไฟล์");
+      if (!isCsvTextFile(file)) {
+        throw new ApiError(400, "รองรับเฉพาะไฟล์ CSV หรือ TXT");
+      }
+      if (file.size > MAX_TEXT_IMPORT_BYTES) {
+        throw new ApiError(400, "ไฟล์ CSV/TXT ต้องไม่เกิน 1MB");
+      }
       rows = parseCsv(await file.text());
     } else {
       const body = await req.json();
       if (typeof body.data === "string") {
+        if (Buffer.byteLength(body.data, "utf8") > MAX_TEXT_IMPORT_BYTES) {
+          throw new ApiError(400, "ข้อมูล CSV/TXT ต้องไม่เกิน 1MB");
+        }
         rows = parseCsv(body.data);
       } else if (Array.isArray(body.contacts)) {
-        rows = body.contacts;
+        if (body.contacts.length > MAX_IMPORT_ROWS) {
+          throw new ApiError(400, "นำเข้าได้สูงสุด 5,000 รายชื่อต่อครั้ง");
+        }
+        rows = contactsArraySchema.parse(body.contacts);
       } else {
-        throw new Error("กรุณาส่ง contacts array หรือ data string");
+        throw new ApiError(400, "กรุณาส่ง contacts array หรือ data string");
       }
     }
 
-    if (rows.length === 0) throw new Error("ไม่มีรายชื่อที่จะนำเข้า");
-    if (rows.length > 10000) throw new Error("นำเข้าได้สูงสุด 10,000 รายชื่อต่อครั้ง");
+    if (rows.length === 0) throw new ApiError(400, "ไม่มีรายชื่อที่จะนำเข้า");
+    if (rows.length > MAX_IMPORT_ROWS) throw new ApiError(400, "นำเข้าได้สูงสุด 5,000 รายชื่อต่อครั้ง");
 
     let imported = 0;
     let duplicates = 0;
@@ -107,6 +139,9 @@ function parseCsv(text: string): { name?: string; phone: string }[] {
   const firstLine = lines[0].toLowerCase();
   const hasHeader = firstLine.includes("name") || firstLine.includes("phone") || firstLine.includes("เบอร์");
   const dataLines = hasHeader ? lines.slice(1) : lines;
+  if (dataLines.length > MAX_IMPORT_ROWS) {
+    throw new ApiError(400, "นำเข้าได้สูงสุด 5,000 รายชื่อต่อครั้ง");
+  }
 
   return dataLines.map((line) => {
     const parts = line.split(/[,\t]/).map((p) => p.trim().replace(/^["']|["']$/g, ""));

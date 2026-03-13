@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { authenticateRequest, ApiError, apiResponse, apiError } from "@/lib/api-auth";
 import { requireApiPermission } from "@/lib/rbac";
 import { sendSms } from "@/lib/actions/sms";
-import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { applyRateLimit } from "@/lib/rate-limit";
 import { sendSmsApiSchema } from "@/lib/validations";
 import { getRemainingQuota } from "@/lib/package/quota";
 
@@ -13,8 +13,8 @@ export async function POST(req: NextRequest) {
     const denied = await requireApiPermission(user.id, "create", "sms");
     if (denied) return denied;
 
-    const limit = await checkRateLimit(user.id, "sms");
-    if (!limit.allowed) return rateLimitResponse(limit.resetIn);
+    const rl = await applyRateLimit(user.id, "sms");
+    if (rl.blocked) return rl.blocked;
 
     let body: unknown;
     try {

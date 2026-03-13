@@ -3,9 +3,10 @@ import { NextRequest } from "next/server";
 import { ApiError, apiError, apiResponse } from "@/lib/api-auth";
 import { getSession } from "@/lib/auth";
 import { prisma as db } from "@/lib/db";
-import { verifySlipByUrl } from "@/lib/easyslip";
+import { verifySlipByBase64, verifySlipByUrl } from "@/lib/easyslip";
 import { ensurePaymentDocumentNumber } from "@/lib/payments/documents";
 import { applyRateLimit } from "@/lib/rate-limit";
+import { resolveStoredFileVerificationPayload } from "@/lib/storage/service";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -85,6 +86,29 @@ function buildVerifyResponse(data: {
   };
 }
 
+async function rollbackProcessingPayment(paymentId: string, note: string) {
+  try {
+    const rollback = await db.payment.updateMany({
+      where: { id: paymentId, status: "PROCESSING" },
+      data: { status: "PENDING" },
+    });
+
+    if (rollback.count > 0) {
+      await db.paymentHistory.create({
+        data: {
+          paymentId,
+          fromStatus: "PROCESSING",
+          toStatus: "PENDING",
+          changedBy: "system",
+          note,
+        },
+      });
+    }
+  } catch (rollbackError) {
+    console.error("[payments/verify rollback]", rollbackError);
+  }
+}
+
 // POST /api/payments/:id/verify — trigger EasySlip verification
 export async function POST(req: NextRequest, ctx: Ctx) {
   try {
@@ -156,37 +180,162 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       },
     });
 
-    const result = await verifySlipByUrl(payment.slipUrl);
+    try {
+      const verificationSource = await resolveStoredFileVerificationPayload(payment.slipUrl);
+      const result = verificationSource.startsWith("data:")
+        ? await verifySlipByBase64(verificationSource)
+        : await verifySlipByUrl(verificationSource);
 
-    const easyslipData: Prisma.PaymentUpdateInput = {
-      easyslipVerified: result.success,
-      easyslipResponse: result as unknown as Prisma.InputJsonValue,
-      easyslipAmount: result.data ? Math.round(result.data.amount * 100) : null,
-      easyslipBank: result.data?.receiver?.bank ?? null,
-      easyslipDate: result.data?.date ? new Date(result.data.date) : null,
-    };
+      const easyslipData: Prisma.PaymentUpdateInput = {
+        easyslipVerified: result.success,
+        easyslipResponse: result as unknown as Prisma.InputJsonValue,
+        easyslipAmount: result.data ? Math.round(result.data.amount * 100) : null,
+        easyslipBank: result.data?.receiver?.bank ?? null,
+        easyslipDate: result.data?.date ? new Date(result.data.date) : null,
+      };
 
-    if (result.success && result.data) {
-      const slipData = result.data;
-      const detectedSatang = Math.round(slipData.amount * 100);
-      const expectedSatang = payment.netPayAmount ?? payment.totalAmount ?? 0;
-      const amountMatch = Math.abs(detectedSatang - expectedSatang) <= 100;
-      const receiverCheck = checkReceiverAccount(slipData.receiver.account);
-      const duplicateSlip = await db.payment.findFirst({
-        where: {
-          id: { not: id },
-          idempotencyKey: slipData.transRef,
-        },
-        select: { id: true },
-      });
+      if (result.success && result.data) {
+        const slipData = result.data;
+        const detectedSatang = Math.round(slipData.amount * 100);
+        const expectedSatang = payment.netPayAmount ?? payment.totalAmount ?? 0;
+        const amountMatch = Math.abs(detectedSatang - expectedSatang) <= 100;
+        const receiverCheck = checkReceiverAccount(slipData.receiver.account);
+        const duplicateSlip = await db.payment.findFirst({
+          where: {
+            id: { not: id },
+            idempotencyKey: slipData.transRef,
+          },
+          select: { id: true },
+        });
 
-      if (duplicateSlip) {
+        if (duplicateSlip) {
+          const updated = await db.payment.update({
+            where: { id },
+            data: {
+              ...easyslipData,
+              status: "PENDING_REVIEW",
+            },
+            select: {
+              id: true,
+              status: true,
+              easyslipAmount: true,
+              easyslipBank: true,
+              easyslipDate: true,
+            },
+          });
+
+          await db.paymentHistory.create({
+            data: {
+              paymentId: id,
+              fromStatus: "PROCESSING",
+              toStatus: "PENDING_REVIEW",
+              changedBy: "system",
+              note: `Duplicate slip reference: ${slipData.transRef} already used by ${duplicateSlip.id}`,
+            },
+          });
+
+          return apiResponse(
+            buildVerifyResponse({
+              id: updated.id,
+              status: updated.status,
+              verified: false,
+              error: "duplicate_reference",
+              amount: updated.easyslipAmount,
+              bank: updated.easyslipBank,
+              date: updated.easyslipDate,
+            }),
+          );
+        }
+
+        if (amountMatch && receiverCheck.matches) {
+          const updated = await db.$transaction(async (tx) => {
+            const invoiceNumber =
+              payment.invoiceNumber ?? (await ensurePaymentDocumentNumber(id, "invoice", tx));
+            const invoiceUrl = `/api/payments/${id}/invoice?download=1`;
+
+            const paymentUpdated = await tx.payment.update({
+              where: { id },
+              data: {
+                ...easyslipData,
+                status: "COMPLETED",
+                paidAt: new Date(),
+                idempotencyKey: slipData.transRef,
+                invoiceNumber,
+                invoiceUrl,
+              },
+              select: {
+                id: true,
+                status: true,
+                paidAt: true,
+                easyslipAmount: true,
+                easyslipBank: true,
+                easyslipDate: true,
+                invoiceNumber: true,
+                invoiceUrl: true,
+              },
+            });
+
+            await tx.paymentHistory.create({
+              data: {
+                paymentId: id,
+                fromStatus: "PROCESSING",
+                toStatus: "COMPLETED",
+                changedBy: "system",
+                note: "EasySlip verified — amount and receiver matched",
+              },
+            });
+
+            if (payment.packageTierId) {
+              const tier = await tx.packageTier.findUnique({
+                where: { id: payment.packageTierId },
+                select: { totalSms: true, expiryMonths: true },
+              });
+
+              if (tier) {
+                const expiresAt = new Date();
+                expiresAt.setMonth(expiresAt.getMonth() + tier.expiryMonths);
+                await tx.packagePurchase.create({
+                  data: {
+                    userId: payment.userId,
+                    organizationId: payment.organizationId,
+                    tierId: payment.packageTierId,
+                    smsTotal: tier.totalSms,
+                    expiresAt,
+                    isActive: true,
+                    transactionId: payment.id,
+                  },
+                });
+              }
+            }
+
+            return paymentUpdated;
+          });
+
+          return apiResponse(
+            buildVerifyResponse({
+              ...updated,
+              verified: true,
+              error: null,
+              amount: updated.easyslipAmount,
+              bank: updated.easyslipBank,
+              date: updated.easyslipDate,
+              invoiceNumber: updated.invoiceNumber,
+              invoiceUrl: updated.invoiceUrl,
+            }),
+          );
+        }
+
+        const reviewError = amountMatch ? receiverCheck.error : "amount_mismatch";
+        const reviewNote = amountMatch
+          ? receiverCheck.note ?? "Receiver account verification failed"
+          : `Amount mismatch: expected ${expectedSatang}, got ${detectedSatang}`;
+
         const updated = await db.payment.update({
           where: { id },
           data: {
             ...easyslipData,
             status: "PENDING_REVIEW",
-            idempotencyKey: slipData.transRef,
+            ...(duplicateSlip ? {} : { idempotencyKey: slipData.transRef }),
           },
           select: {
             id: true,
@@ -203,7 +352,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
             fromStatus: "PROCESSING",
             toStatus: "PENDING_REVIEW",
             changedBy: "system",
-            note: `Duplicate slip reference: ${slipData.transRef} already used by ${duplicateSlip.id}`,
+            note: reviewNote,
           },
         });
 
@@ -212,7 +361,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
             id: updated.id,
             status: updated.status,
             verified: false,
-            error: "duplicate_reference",
+            error: reviewError,
             amount: updated.easyslipAmount,
             bank: updated.easyslipBank,
             date: updated.easyslipDate,
@@ -220,112 +369,21 @@ export async function POST(req: NextRequest, ctx: Ctx) {
         );
       }
 
-      if (amountMatch && receiverCheck.matches) {
-        const updated = await db.$transaction(async (tx) => {
-          const invoiceNumber =
-            payment.invoiceNumber ?? (await ensurePaymentDocumentNumber(id, "invoice", tx));
-          const invoiceUrl = `/api/payments/${id}/invoice?download=1`;
-
-          const paymentUpdated = await tx.payment.update({
-            where: { id },
-            data: {
-              ...easyslipData,
-              status: "COMPLETED",
-              paidAt: new Date(),
-              idempotencyKey: slipData.transRef,
-              invoiceNumber,
-              invoiceUrl,
-            },
-            select: {
-              id: true,
-              status: true,
-              paidAt: true,
-              easyslipAmount: true,
-              easyslipBank: true,
-              easyslipDate: true,
-              invoiceNumber: true,
-              invoiceUrl: true,
-            },
-          });
-
-          await tx.paymentHistory.create({
-            data: {
-              paymentId: id,
-              fromStatus: "PROCESSING",
-              toStatus: "COMPLETED",
-              changedBy: "system",
-              note: "EasySlip verified — amount and receiver matched",
-            },
-          });
-
-          if (payment.packageTierId) {
-            const tier = await tx.packageTier.findUnique({
-              where: { id: payment.packageTierId },
-              select: { totalSms: true, expiryMonths: true },
-            });
-
-            if (tier) {
-              const expiresAt = new Date();
-              expiresAt.setMonth(expiresAt.getMonth() + tier.expiryMonths);
-              await tx.packagePurchase.create({
-                data: {
-                  userId: payment.userId,
-                  organizationId: payment.organizationId,
-                  tierId: payment.packageTierId,
-                  smsTotal: tier.totalSms,
-                  expiresAt,
-                  isActive: true,
-                  transactionId: payment.id,
-                },
-              });
-            }
-          }
-
-          return paymentUpdated;
-        });
-
-        return apiResponse(
-          buildVerifyResponse({
-            ...updated,
-            verified: true,
-            error: null,
-            amount: updated.easyslipAmount,
-            bank: updated.easyslipBank,
-            date: updated.easyslipDate,
-            invoiceNumber: updated.invoiceNumber,
-            invoiceUrl: updated.invoiceUrl,
-          }),
-        );
-      }
-
-      const reviewError = amountMatch ? receiverCheck.error : "amount_mismatch";
-      const reviewNote = amountMatch
-        ? receiverCheck.note ?? "Receiver account verification failed"
-        : `Amount mismatch: expected ${expectedSatang}, got ${detectedSatang}`;
-
+      const newStatus: "FAILED" | "PENDING_REVIEW" =
+        result.error === "fake" ? "FAILED" : "PENDING_REVIEW";
       const updated = await db.payment.update({
         where: { id },
-        data: {
-          ...easyslipData,
-          status: "PENDING_REVIEW",
-          idempotencyKey: slipData.transRef,
-        },
-        select: {
-          id: true,
-          status: true,
-          easyslipAmount: true,
-          easyslipBank: true,
-          easyslipDate: true,
-        },
+        data: { ...easyslipData, status: newStatus },
+        select: { id: true, status: true },
       });
 
       await db.paymentHistory.create({
         data: {
           paymentId: id,
           fromStatus: "PROCESSING",
-          toStatus: "PENDING_REVIEW",
+          toStatus: newStatus,
           changedBy: "system",
-          note: reviewNote,
+          note: `EasySlip: ${result.error ?? "verification failed"}`,
         },
       });
 
@@ -334,40 +392,17 @@ export async function POST(req: NextRequest, ctx: Ctx) {
           id: updated.id,
           status: updated.status,
           verified: false,
-          error: reviewError,
-          amount: updated.easyslipAmount,
-          bank: updated.easyslipBank,
-          date: updated.easyslipDate,
+          error: result.error ?? "unreadable",
         }),
       );
+    } catch (error) {
+      const note =
+        error instanceof Error
+          ? `EasySlip verification failed unexpectedly: ${error.message}`
+          : "EasySlip verification failed unexpectedly";
+      await rollbackProcessingPayment(id, note);
+      throw error;
     }
-
-    const newStatus: "FAILED" | "PENDING_REVIEW" =
-      result.error === "fake" ? "FAILED" : "PENDING_REVIEW";
-    const updated = await db.payment.update({
-      where: { id },
-      data: { ...easyslipData, status: newStatus },
-      select: { id: true, status: true },
-    });
-
-    await db.paymentHistory.create({
-      data: {
-        paymentId: id,
-        fromStatus: "PROCESSING",
-        toStatus: newStatus,
-        changedBy: "system",
-        note: `EasySlip: ${result.error ?? "verification failed"}`,
-      },
-    });
-
-    return apiResponse(
-      buildVerifyResponse({
-        id: updated.id,
-        status: updated.status,
-        verified: false,
-        error: result.error ?? "unreadable",
-      }),
-    );
   } catch (error) {
     return apiError(error);
   }

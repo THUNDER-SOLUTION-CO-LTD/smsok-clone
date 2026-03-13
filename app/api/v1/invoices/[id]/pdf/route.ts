@@ -1,28 +1,91 @@
 import { NextRequest } from "next/server";
-import { ApiError, apiError } from "@/lib/api-auth";
-import { getSession } from "@/lib/auth";
+import { ApiError, apiError, authenticateRequest } from "@/lib/api-auth";
+import { prisma as db } from "@/lib/db";
+import {
+  ensurePaymentDocumentNumber,
+  renderPaymentDocumentPdf,
+  type PaymentDocumentRecord,
+} from "@/lib/payments/documents";
+import { applyRateLimit } from "@/lib/rate-limit";
 
 type Ctx = { params: Promise<{ id: string }> };
 
 // GET /api/v1/invoices/:id/pdf — generate and download PDF
 export async function GET(req: NextRequest, ctx: Ctx) {
   try {
-    const session = await getSession();
-    if (!session?.id) throw new ApiError(401, "กรุณาเข้าสู่ระบบ");
+    const user = await authenticateRequest(req);
+
+    const rl = await applyRateLimit(user.id, "invoice_pdf");
+    if (rl.blocked) return rl.blocked;
 
     const { id } = await ctx.params;
-    const target = new URL(`/api/invoices/${id}/pdf`, req.url);
-    const response = await fetch(target, {
-      headers: {
-        cookie: req.headers.get("cookie") || "",
-        accept: "application/pdf",
+    const payment = await db.payment.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        userId: true,
+        status: true,
+        expiresAt: true,
+        hasWht: true,
+        amount: true,
+        vatAmount: true,
+        totalAmount: true,
+        whtAmount: true,
+        netPayAmount: true,
+        refundedAt: true,
+        invoiceNumber: true,
+        invoiceUrl: true,
+        preInvoiceNumber: true,
+        creditNoteNumber: true,
+        paidAt: true,
+        user: {
+          select: {
+            name: true,
+            email: true,
+            phone: true,
+          },
+        },
+        taxProfile: {
+          select: {
+            companyName: true,
+            taxId: true,
+            address: true,
+            branchType: true,
+            branchNumber: true,
+          },
+        },
+        packageTier: { select: { name: true, tierCode: true, totalSms: true } },
+        createdAt: true,
       },
-      cache: "no-store",
     });
 
-    return new Response(response.body, {
-      status: response.status,
-      headers: new Headers(response.headers),
+    if (!payment) throw new ApiError(404, "ไม่พบรายการชำระเงิน");
+    if (payment.userId !== user.id) throw new ApiError(403, "ไม่มีสิทธิ์เข้าถึง");
+    if (payment.status !== "COMPLETED") {
+      throw new ApiError(400, "ใบกำกับภาษีจะออกได้เมื่อชำระเงินสำเร็จ");
+    }
+
+    const invoiceNumber =
+      payment.invoiceNumber ?? (await ensurePaymentDocumentNumber(id, "invoice"));
+    const pdfBuffer = await renderPaymentDocumentPdf(
+      {
+        ...(payment as PaymentDocumentRecord),
+        invoiceNumber,
+      },
+      "invoice",
+      invoiceNumber,
+    );
+    const download = req.nextUrl.searchParams.get("download") === "1";
+
+    return new Response(new Uint8Array(pdfBuffer), {
+      status: 200,
+      headers: {
+        ...rl.headers,
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `${download ? "attachment" : "inline"}; filename="${invoiceNumber}.pdf"`,
+        "Content-Length": String(pdfBuffer.length),
+        "Cache-Control": "private, max-age=300",
+      },
     });
   } catch (error) {
     return apiError(error);

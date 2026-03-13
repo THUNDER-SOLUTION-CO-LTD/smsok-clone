@@ -1,6 +1,5 @@
 import { NextRequest } from "next/server";
-import { ApiError, apiResponse, apiError } from "@/lib/api-auth";
-import { getSession } from "@/lib/auth";
+import { ApiError, apiResponse, apiError, authenticateRequest } from "@/lib/api-auth";
 import { prisma as db } from "@/lib/db";
 import { z } from "zod";
 
@@ -34,18 +33,17 @@ const whtCertSchema = z.object({
 // POST /api/v1/invoices/:id/wht-cert — upload 50 ทวิ (WHT certificate)
 export async function POST(req: NextRequest, ctx: Ctx) {
   try {
-    const session = await getSession();
-    if (!session?.id) throw new ApiError(401, "กรุณาเข้าสู่ระบบ");
+    const user = await authenticateRequest(req);
 
     const { applyRateLimit } = await import("@/lib/rate-limit");
-    const rl = await applyRateLimit(session.id, "wht_upload");
+    const rl = await applyRateLimit(user.id, "wht_upload");
     if (rl.blocked) return rl.blocked;
 
     const { id: invoiceId } = await ctx.params;
 
     // Verify invoice ownership
     const invoice = await db.invoice.findFirst({
-      where: { id: invoiceId, userId: session.id },
+      where: { id: invoiceId, userId: user.id },
       select: {
         id: true,
         subtotal: true,
@@ -69,7 +67,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     // Create WHT certificate record
     const cert = await db.whtCertificate.create({
       data: {
-        userId: session.id,
+        userId: user.id,
         transactionId: invoice.transactionId,
         payerName: input.payerName,
         payerTaxId: input.payerTaxId,
@@ -99,20 +97,19 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 // GET /api/v1/invoices/:id/wht-cert — get WHT certificate for invoice
 export async function GET(req: NextRequest, ctx: Ctx) {
   try {
-    const session = await getSession();
-    if (!session?.id) throw new ApiError(401, "กรุณาเข้าสู่ระบบ");
+    const user = await authenticateRequest(req);
 
     const { id: invoiceId } = await ctx.params;
 
     const invoice = await db.invoice.findFirst({
-      where: { id: invoiceId, userId: session.id },
+      where: { id: invoiceId, userId: user.id },
       select: { transactionId: true },
     });
     if (!invoice) throw new ApiError(404, "ไม่พบใบแจ้งหนี้");
 
     const certs = await db.whtCertificate.findMany({
       where: {
-        userId: session.id,
+        userId: user.id,
         transactionId: invoice.transactionId,
       },
       orderBy: { createdAt: "desc" },

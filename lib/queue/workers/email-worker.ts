@@ -83,8 +83,8 @@ function renderTemplate(template: string, data: Record<string, unknown>): EmailC
     case "purchase_confirmation":
       return {
         subject: "ยืนยันการซื้อสำเร็จ — SMSOK",
-        html: `<p>สวัสดี ${name},</p><p>การซื้อแพ็กเกจ ${data.packageName} จำนวน ${data.credits} SMS สำเร็จแล้ว (${data.amount} บาท)</p>`,
-        text: `ซื้อ ${data.packageName} ${data.credits} SMS สำเร็จ (${data.amount} บาท)`,
+        html: `<p>สวัสดี ${name},</p><p>การซื้อแพ็กเกจ ${data.packageName} จำนวน ${data.credits} ข้อความ สำเร็จแล้ว</p>`,
+        text: `ซื้อ ${data.packageName} ${data.credits} ข้อความ สำเร็จ`,
       }
 
     default:

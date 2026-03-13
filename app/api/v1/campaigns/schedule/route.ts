@@ -1,14 +1,16 @@
 import { NextRequest } from "next/server";
-import { ApiError, apiError, apiResponse } from "@/lib/api-auth";
-import { getSession } from "@/lib/auth";
+import { ApiError, apiError, apiResponse, authenticateRequest } from "@/lib/api-auth";
 import { requireApiPermission } from "@/lib/rbac";
-import { scheduleCampaign, getScheduledCampaigns } from "@/lib/actions/scheduling";
+import {
+  getScheduledCampaigns,
+  scheduleCampaign,
+  scheduleCampaignInputSchema,
+} from "@/lib/actions/scheduling";
 
 // GET /api/v1/campaigns/schedule — list scheduled campaigns
 export async function GET(req: NextRequest) {
   try {
-    const session = await getSession();
-    if (!session) throw new ApiError(401, "กรุณาเข้าสู่ระบบ");
+    const session = await authenticateRequest(req);
 
     const denied = await requireApiPermission(session.id, "read", "campaign");
     if (denied) return denied;
@@ -27,14 +29,18 @@ export async function GET(req: NextRequest) {
 // POST /api/v1/campaigns/schedule — schedule a new campaign
 export async function POST(req: NextRequest) {
   try {
-    const session = await getSession();
-    if (!session) throw new ApiError(401, "กรุณาเข้าสู่ระบบ");
+    const session = await authenticateRequest(req);
 
     const denied = await requireApiPermission(session.id, "create", "campaign");
     if (denied) return denied;
 
     const body = await req.json();
-    const result = await scheduleCampaign(session.id, body);
+    const parsed = scheduleCampaignInputSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new ApiError(400, parsed.error.issues[0]?.message || "ข้อมูลไม่ถูกต้อง");
+    }
+
+    const result = await scheduleCampaign(session.id, parsed.data);
     return apiResponse(result, 201);
   } catch (error) {
     return apiError(error);

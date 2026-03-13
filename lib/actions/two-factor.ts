@@ -1,6 +1,8 @@
 
 import { prisma } from "@/lib/db"
 import { getSession, verifyPassword } from "@/lib/auth"
+import { DEFAULT_ORGANIZATION_ID, resolveOrganizationIdForUser } from "@/lib/organizations/resolve"
+import { requireOrgRole } from "@/lib/actions/organizations"
 import {
   generateTotpSecret,
   generateQrCodeDataUrl,
@@ -182,7 +184,7 @@ export async function disable2FA(password: string) {
   })
 
   // Clear rate limit on disable
-  reset2FARateLimit(user.id)
+  await reset2FARateLimit(user.id)
 
   return { success: true }
 }
@@ -195,7 +197,7 @@ export async function verify2FAChallenge(userId: string, code: string) {
   }
 
   // Rate limit check: 5 attempts / 15 min
-  const rateCheck = check2FARateLimit(userId)
+  const rateCheck = await check2FARateLimit(userId)
   if (!rateCheck.allowed) {
     const minutes = Math.ceil(rateCheck.retryAfterMs / 60000)
     throw new Error(`ลองรหัส 2FA มากเกินไป กรุณารอ ${minutes} นาที`)
@@ -226,7 +228,7 @@ export async function verify2FAChallenge(userId: string, code: string) {
   }
 
   // Success — reset rate limit
-  reset2FARateLimit(userId)
+  await reset2FARateLimit(userId)
 
   return { success: true }
 }
@@ -237,7 +239,7 @@ export async function useRecoveryCode(userId: string, code: string) {
   if (!code) throw new Error("กรุณากรอก Recovery Code")
 
   // Rate limit check: shares same limit as TOTP verify
-  const rateCheck = check2FARateLimit(userId)
+  const rateCheck = await check2FARateLimit(userId)
   if (!rateCheck.allowed) {
     const minutes = Math.ceil(rateCheck.retryAfterMs / 60000)
     throw new Error(`ลองรหัสมากเกินไป กรุณารอ ${minutes} นาที`)
@@ -263,7 +265,7 @@ export async function useRecoveryCode(userId: string, code: string) {
   }
 
   // Success — reset rate limit
-  reset2FARateLimit(userId)
+  await reset2FARateLimit(userId)
 
   // Mark code as used by replacing with empty string (can't be reused)
   const updatedCodes = [...tfa.recoveryCodes]
@@ -531,4 +533,73 @@ export async function isOrg2FARequired(organizationId: string): Promise<boolean>
     select: { require2fa: true },
   })
   return org?.require2fa ?? false
+}
+
+export async function getDefaultOrgSecurityPolicy(userId: string) {
+  const organizationId = await resolveOrganizationIdForUser(userId, DEFAULT_ORGANIZATION_ID)
+  await requireOrgRole(userId, organizationId, ["OWNER", "ADMIN", "MEMBER", "VIEWER"])
+
+  return {
+    organizationId,
+    require2FA: await isOrg2FARequired(organizationId),
+  }
+}
+
+export async function updateDefaultOrgSecurityPolicy(userId: string, enforce: boolean) {
+  const organizationId = await resolveOrganizationIdForUser(userId, DEFAULT_ORGANIZATION_ID)
+  await enforceOrg2FA(userId, organizationId, enforce)
+
+  return {
+    success: true,
+    organizationId,
+    require2FA: enforce,
+  }
+}
+
+export async function getDefaultOrgMember2FAStatuses(userId: string) {
+  const organizationId = await resolveOrganizationIdForUser(userId, DEFAULT_ORGANIZATION_ID)
+  await requireOrgRole(userId, organizationId, ["OWNER", "ADMIN"])
+
+  const memberships = await prisma.membership.findMany({
+    where: { organizationId },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+    },
+    orderBy: { createdAt: "asc" },
+  })
+
+  const memberIds = memberships.map((membership) => membership.userId)
+  const twoFactorRecords = await prisma.twoFactorAuth.findMany({
+    where: { userId: { in: memberIds } },
+    select: {
+      userId: true,
+      enabled: true,
+      createdAt: true,
+    },
+  })
+
+  const twoFactorByUserId = new Map(
+    twoFactorRecords.map((record) => [record.userId, record])
+  )
+
+  return {
+    organizationId,
+    members: memberships.map((membership) => {
+      const twoFactor = twoFactorByUserId.get(membership.userId)
+      return {
+        userId: membership.user.id,
+        name: membership.user.name,
+        email: membership.user.email,
+        role: membership.role,
+        enabled: twoFactor?.enabled ?? false,
+        setupAt: twoFactor?.createdAt ?? null,
+      }
+    }),
+  }
 }

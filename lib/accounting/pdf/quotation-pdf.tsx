@@ -14,15 +14,22 @@ import {
 } from "@react-pdf/renderer";
 
 // ── Register Thai Font (IBM Plex Sans Thai) ─────────────
+import path from "path";
+import fs from "fs";
+
+const fontsDir = path.join(process.cwd(), "public", "fonts");
+const regularFontPath = path.join(fontsDir, "ibm-plex-sans-thai-regular.ttf");
+const boldFontPath = path.join(fontsDir, "ibm-plex-sans-thai-bold.ttf");
+
 Font.register({
   family: "IBMPlexSansThai",
   fonts: [
     {
-      src: "https://fonts.gstatic.com/s/ibmplexsansthai/v10/m8JNje1VVIzcq1HzJq2AEdo2Tj_qvLqEatYlR8ZKUqcX.ttf",
+      src: fs.existsSync(regularFontPath) ? regularFontPath : "https://fonts.gstatic.com/s/ibmplexsansthai/v11/m8JPje1VVIzcq1HzJq2AEdo2Tj_qvLq8Dg.ttf",
       fontWeight: "normal",
     },
     {
-      src: "https://fonts.gstatic.com/s/ibmplexsansthai/v10/m8JQje1VVIzcq1HzJq2AEdo2Tj_qvLqExvcFbehGW74OXw.ttf",
+      src: fs.existsSync(boldFontPath) ? boldFontPath : "https://fonts.gstatic.com/s/ibmplexsansthai/v11/m8JMje1VVIzcq1HzJq2AEdo2Tj_qvLqEsvMFbQ.ttf",
       fontWeight: "bold",
     },
   ],
@@ -30,8 +37,8 @@ Font.register({
 
 const s = StyleSheet.create({
   page: { fontFamily: "IBMPlexSansThai", fontSize: 10, padding: 40, color: "#1a1a1a" },
-  header: { flexDirection: "row", justifyContent: "space-between", marginBottom: 20, borderBottomWidth: 2, borderBottomColor: "#059669", paddingBottom: 15 },
-  docTitle: { fontSize: 18, fontWeight: "bold", color: "#059669", marginBottom: 4 },
+  header: { flexDirection: "row", justifyContent: "space-between", marginBottom: 20, borderBottomWidth: 2, borderBottomColor: "#00E2B5", paddingBottom: 15 },
+  docTitle: { fontSize: 18, fontWeight: "bold", color: "#00E2B5", marginBottom: 4 },
   docSubtitle: { fontSize: 12, color: "#6b7280" },
   docNumber: { fontSize: 11, fontWeight: "bold", textAlign: "right" as const, marginBottom: 2 },
   docDate: { fontSize: 10, color: "#6b7280", textAlign: "right" as const },
@@ -42,7 +49,7 @@ const s = StyleSheet.create({
   infoValue: { fontSize: 10 },
   bold: { fontWeight: "bold" },
   table: { marginTop: 10 },
-  tableHeader: { flexDirection: "row", backgroundColor: "#059669", color: "#ffffff", fontWeight: "bold", fontSize: 9, paddingVertical: 6, paddingHorizontal: 8, borderTopLeftRadius: 4, borderTopRightRadius: 4 },
+  tableHeader: { flexDirection: "row", backgroundColor: "#00E2B5", color: "#0b1118", fontWeight: "bold", fontSize: 9, paddingVertical: 6, paddingHorizontal: 8, borderTopLeftRadius: 4, borderTopRightRadius: 4 },
   tableRow: { flexDirection: "row", paddingVertical: 6, paddingHorizontal: 8, borderBottomWidth: 0.5, borderBottomColor: "#e5e7eb", fontSize: 9 },
   tableRowAlt: { backgroundColor: "#f9fafb" },
   colNo: { width: "8%" },
@@ -53,7 +60,7 @@ const s = StyleSheet.create({
   summaryRow: { flexDirection: "row", justifyContent: "flex-end", paddingVertical: 3, paddingRight: 8 },
   summaryLabel: { width: 140, textAlign: "right" as const, paddingRight: 12, fontSize: 10 },
   summaryValue: { width: 100, textAlign: "right" as const, fontSize: 10 },
-  summaryTotal: { fontWeight: "bold", fontSize: 12, color: "#059669" },
+  summaryTotal: { fontWeight: "bold", fontSize: 12, color: "#00E2B5" },
   summaryBox: { marginTop: 8, borderTopWidth: 1, borderTopColor: "#d1d5db", paddingTop: 8 },
   validityBox: { marginTop: 10, padding: 8, backgroundColor: "#fef3c7", borderRadius: 4, fontSize: 10 },
   footer: { position: "absolute" as const, bottom: 30, left: 40, right: 40, flexDirection: "row", justifyContent: "space-between", borderTopWidth: 1, borderTopColor: "#e5e7eb", paddingTop: 10 },

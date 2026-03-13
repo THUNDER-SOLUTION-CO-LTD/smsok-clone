@@ -3,6 +3,7 @@ import { ApiError, apiResponse, apiError } from "@/lib/api-auth";
 import { authenticateAdmin } from "@/lib/admin-auth";
 import { prisma as db } from "@/lib/db";
 import { applyRateLimit } from "@/lib/rate-limit";
+import { resolveStoredFileUrl } from "@/lib/storage/files";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -56,7 +57,10 @@ export async function GET(req: NextRequest, ctx: Ctx) {
 
     if (!payment) throw new ApiError(404, "ไม่พบรายการชำระเงิน");
 
-    return apiResponse(payment);
+    return apiResponse({
+      ...payment,
+      slipUrl: resolveStoredFileUrl(payment.slipUrl),
+    });
   } catch (error) {
     return apiError(error);
   }

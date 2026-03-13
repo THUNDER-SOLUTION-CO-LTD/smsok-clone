@@ -155,7 +155,12 @@ export function resolveApiKeyRoutePermission(
     return isRead ? "contacts:read" : "contacts:write";
   }
 
-  if (path === "/api/v1/senders" || path.startsWith("/api/v1/senders/")) {
+  if (
+    path === "/api/v1/senders" ||
+    path.startsWith("/api/v1/senders/") ||
+    path === "/api/v1/sender-names" ||
+    path.startsWith("/api/v1/sender-names/")
+  ) {
     return isRead ? "sms:read" : "sms:send";
   }
 

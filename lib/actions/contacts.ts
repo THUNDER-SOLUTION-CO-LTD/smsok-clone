@@ -1,5 +1,6 @@
 "use server";
 
+import { ApiError } from "../api-auth";
 import type { Prisma } from "@prisma/client";
 import { prisma as db } from "../db";
 import { revalidatePath } from "next/cache";
@@ -92,7 +93,7 @@ export async function updateContactConsent(
   const contact = await db.contact.findFirst({
     where: { id: contactId, userId },
   });
-  if (!contact) throw new Error("ไม่พบรายชื่อ");
+  if (!contact) throw new ApiError(404, "ไม่พบรายชื่อ");
 
   const now = new Date();
   const updated = await db.contact.update({
@@ -269,7 +270,7 @@ export async function updateContact(userIdOrContactId: string, contactIdOrData: 
   const contact = await db.contact.findFirst({
     where: { id: contactId, userId },
   });
-  if (!contact) throw new Error("ไม่พบรายชื่อ");
+  if (!contact) throw new ApiError(404, "ไม่พบรายชื่อ");
 
   if (input.phone && input.phone !== contact.phone) {
     const existing = await db.contact.findUnique({
@@ -303,12 +304,11 @@ export async function deleteContact(userIdOrContactId: string, maybeContactId?: 
     maybeContactId === undefined ? undefined : userIdOrContactId,
   );
   const contactId = maybeContactId ?? userIdOrContactId;
-  idSchema.parse({ id: contactId });
 
   const contact = await db.contact.findFirst({
     where: { id: contactId, userId },
   });
-  if (!contact) throw new Error("ไม่พบรายชื่อ");
+  if (!contact) throw new ApiError(404, "ไม่พบผู้ติดต่อ");
 
   await db.contact.delete({ where: { id: contactId } });
 
@@ -448,7 +448,7 @@ export async function addContactsToGroup(
   const group = await db.contactGroup.findFirst({
     where: { id: groupId, userId },
   });
-  if (!group) throw new Error("ไม่พบกลุ่ม");
+  if (!group) throw new ApiError(404, "ไม่พบกลุ่ม");
 
   // Verify contacts ownership — reject if any contact doesn't belong to user
   const contacts = await db.contact.findMany({
@@ -479,14 +479,14 @@ export async function bulkDeleteContacts(userIdOrContactIds: string | string[], 
     Array.isArray(maybeContactIds) ? userIdOrContactIds as string : undefined,
   );
   const contactIds = maybeContactIds ?? userIdOrContactIds as string[];
-  if (contactIds.length === 0) throw new Error("กรุณาเลือกรายชื่อ");
+  if (contactIds.length === 0) throw new ApiError(400, "กรุณาเลือกรายชื่อ");
 
   const contacts = await db.contact.findMany({
     where: { id: { in: contactIds }, userId },
     select: { id: true },
   });
 
-  if (contacts.length === 0) throw new Error("ไม่พบรายชื่อ");
+  if (contacts.length === 0) throw new ApiError(404, "ไม่พบรายชื่อ");
 
   await db.contact.deleteMany({
     where: { id: { in: contacts.map((c: { id: string }) => c.id) }, userId },
@@ -511,7 +511,7 @@ export async function bulkUpdateTags(
   const contactIds = hasExplicitUserId ? contactIdsOrTag as string[] : userIdOrContactIds as string[];
   const tag = hasExplicitUserId ? tagOrAction as string : contactIdsOrTag as string;
   const action = hasExplicitUserId ? maybeAction as "add" | "remove" : tagOrAction as "add" | "remove";
-  if (contactIds.length === 0) throw new Error("กรุณาเลือกรายชื่อ");
+  if (contactIds.length === 0) throw new ApiError(400, "กรุณาเลือกรายชื่อ");
   if (!tag.trim()) throw new Error("กรุณาระบุแท็ก");
 
   const contacts = await db.contact.findMany({
@@ -519,7 +519,7 @@ export async function bulkUpdateTags(
     select: { id: true, tags: true },
   });
 
-  if (contacts.length === 0) throw new Error("ไม่พบรายชื่อ");
+  if (contacts.length === 0) throw new ApiError(404, "ไม่พบรายชื่อ");
 
   const trimmedTag = tag.trim();
 
@@ -567,7 +567,7 @@ export async function getContactsByGroup(userIdOrGroupId: string, maybeGroupId?:
       },
     },
   });
-  if (!group) throw new Error("ไม่พบกลุ่ม");
+  if (!group) throw new ApiError(404, "ไม่พบกลุ่ม");
 
   return group.members.map((m: typeof group.members[number]) => m.contact);
 }
@@ -609,7 +609,7 @@ export async function getGroupsForContact(userIdOrContactId: string, maybeContac
     where: { id: contactId, userId },
     select: { id: true },
   });
-  if (!contact) throw new Error("ไม่พบรายชื่อ");
+  if (!contact) throw new ApiError(404, "ไม่พบรายชื่อ");
 
   const memberships = await db.contactGroupMember.findMany({
     where: { contactId },

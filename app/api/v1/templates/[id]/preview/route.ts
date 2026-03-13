@@ -1,6 +1,5 @@
 import { NextRequest } from "next/server";
-import { ApiError, apiResponse, apiError } from "@/lib/api-auth";
-import { getSession } from "@/lib/auth";
+import { ApiError, apiResponse, apiError, authenticateRequest } from "@/lib/api-auth";
 import { prisma as db } from "@/lib/db";
 import { applyRateLimit } from "@/lib/rate-limit";
 import { z } from "zod";
@@ -21,10 +20,9 @@ type Ctx = { params: Promise<{ id: string }> };
 // POST /api/v1/templates/:id/preview — preview with sample data
 export async function POST(req: NextRequest, ctx: Ctx) {
   try {
-    const session = await getSession();
-    if (!session?.id) throw new ApiError(401, "กรุณาเข้าสู่ระบบ");
+    const user = await authenticateRequest(req);
 
-    const rl = await applyRateLimit(session.id, "template");
+    const rl = await applyRateLimit(user.id, "template");
     if (rl.blocked) return rl.blocked;
 
     const { id } = await ctx.params;
@@ -36,7 +34,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     });
 
     if (!template || template.deletedAt) throw new ApiError(404, "ไม่พบ Template");
-    if (template.userId !== session.id && !template.isPublic) {
+    if (template.userId !== user.id && !template.isPublic) {
       throw new ApiError(403, "ไม่มีสิทธิ์เข้าถึง Template นี้");
     }
 

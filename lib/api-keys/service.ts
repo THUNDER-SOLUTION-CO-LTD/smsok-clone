@@ -1,7 +1,7 @@
 import { randomBytes } from "crypto";
 import { prisma as db } from "../db";
 import { hashApiKey } from "../crypto-utils";
-import { createApiKeySchema, idSchema } from "../validations";
+import { createApiKeySchema, idSchema, updateApiKeyNameSchema } from "../validations";
 
 function generateApiKey(): string {
   return "sk_live_" + randomBytes(32).toString("hex");
@@ -14,7 +14,12 @@ function maskApiKey(key: string): string {
 export async function createApiKeyForUser(userId: string, data: unknown) {
   const input = createApiKeySchema.parse(data);
 
-  const count = await db.apiKey.count({ where: { userId } });
+  const count = await db.apiKey.count({
+    where: {
+      userId,
+      revokedAt: null,
+    },
+  });
   if (count >= 5) {
     throw new Error("สร้าง API Key ได้สูงสุด 5 ตัว");
   }
@@ -30,6 +35,8 @@ export async function createApiKeyForUser(userId: string, data: unknown) {
       key: keyHash,
       keyPrefix,
       permissions: input.permissions ?? [],
+      rateLimit: input.rateLimit,
+      ipWhitelist: input.ipWhitelist ?? [],
     },
   });
 
@@ -37,6 +44,8 @@ export async function createApiKeyForUser(userId: string, data: unknown) {
     id: apiKey.id,
     name: apiKey.name,
     key,
+    rateLimit: apiKey.rateLimit,
+    ipWhitelist: apiKey.ipWhitelist,
     createdAt: apiKey.createdAt,
   };
 }
@@ -49,8 +58,11 @@ export async function listApiKeysForUser(userId: string) {
       name: true,
       keyPrefix: true,
       permissions: true,
+      rateLimit: true,
+      ipWhitelist: true,
       isActive: true,
       lastUsed: true,
+      revokedAt: true,
       createdAt: true,
     },
     orderBy: { createdAt: "desc" },
@@ -61,8 +73,11 @@ export async function listApiKeysForUser(userId: string) {
     name: key.name,
     key: key.keyPrefix || "sk_live_****...****",
     permissions: key.permissions,
+    rateLimit: key.rateLimit,
+    ipWhitelist: key.ipWhitelist,
     isActive: key.isActive,
     lastUsed: key.lastUsed,
+    revokedAt: key.revokedAt,
     createdAt: key.createdAt,
   }));
 }
@@ -71,7 +86,7 @@ export async function toggleApiKeyForUser(userId: string, keyId: string) {
   idSchema.parse({ id: keyId });
 
   const apiKey = await db.apiKey.findFirst({
-    where: { id: keyId, userId },
+    where: { id: keyId, userId, revokedAt: null },
   });
   if (!apiKey) {
     throw new Error("ไม่พบ API Key");
@@ -91,10 +106,10 @@ export async function updateApiKeyNameForUser(
   data: unknown,
 ) {
   idSchema.parse({ id: keyId });
-  const input = createApiKeySchema.parse(data);
+  const input = updateApiKeyNameSchema.parse(data);
 
   const apiKey = await db.apiKey.findFirst({
-    where: { id: keyId, userId },
+    where: { id: keyId, userId, revokedAt: null },
   });
   if (!apiKey) {
     throw new Error("ไม่พบ API Key");
@@ -113,11 +128,17 @@ export async function deleteApiKeyForUser(userId: string, keyId: string) {
   idSchema.parse({ id: keyId });
 
   const apiKey = await db.apiKey.findFirst({
-    where: { id: keyId, userId },
+    where: { id: keyId, userId, revokedAt: null },
   });
   if (!apiKey) {
     throw new Error("ไม่พบ API Key");
   }
 
-  await db.apiKey.delete({ where: { id: keyId } });
+  await db.apiKey.update({
+    where: { id: keyId },
+    data: {
+      isActive: false,
+      revokedAt: new Date(),
+    },
+  });
 }

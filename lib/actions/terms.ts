@@ -1,8 +1,25 @@
 
 import { prisma } from "@/lib/db"
-import { resolveActionUserId } from "@/lib/action-user"
+import {
+  requireSessionUserId,
+  resolveActionUserId,
+  type InternalActionUserToken,
+} from "@/lib/action-user"
 
 const CURRENT_TOS_VERSION = "1.0"
+
+async function resolveTermsUserId(explicitUserId?: string, token?: InternalActionUserToken) {
+  if (explicitUserId && !token) {
+    const sessionUserId = await requireSessionUserId()
+    if (explicitUserId !== sessionUserId) {
+      throw new Error("ไม่สามารถดำเนินการแทนผู้ใช้อื่นได้")
+    }
+
+    return sessionUserId
+  }
+
+  return resolveActionUserId(explicitUserId, token)
+}
 
 // ── Accept Terms (append-only — never overwrite) ────────
 
@@ -10,8 +27,18 @@ export async function acceptTerms(options?: {
   ipAddress?: string
   userAgent?: string
   userId?: string
-}) {
-  const userId = await resolveActionUserId(options?.userId)
+}): Promise<{ success: true; version: string; alreadyAccepted?: true }>
+export async function acceptTerms(options: {
+  ipAddress?: string
+  userAgent?: string
+  userId?: string
+}, token: InternalActionUserToken): Promise<{ success: true; version: string; alreadyAccepted?: true }>
+export async function acceptTerms(options?: {
+  ipAddress?: string
+  userAgent?: string
+  userId?: string
+}, token?: InternalActionUserToken) {
+  const userId = await resolveTermsUserId(options?.userId, token)
   const user = { id: userId }
 
   // Check if already accepted this version
@@ -44,8 +71,22 @@ export async function acceptTerms(options?: {
 
 // ── Get Terms Status ────────────────────────────────────
 
-export async function getTermsStatus(apiUserId?: string) {
-  const userId = await resolveActionUserId(apiUserId)
+export async function getTermsStatus(): Promise<{
+  accepted: boolean
+  currentVersion: string
+  acceptedVersion: string | null
+  acceptedAt: Date | null
+  needsReaccept: boolean
+}>
+export async function getTermsStatus(apiUserId: string, token: InternalActionUserToken): Promise<{
+  accepted: boolean
+  currentVersion: string
+  acceptedVersion: string | null
+  acceptedAt: Date | null
+  needsReaccept: boolean
+}>
+export async function getTermsStatus(apiUserId?: string, token?: InternalActionUserToken) {
+  const userId = await resolveTermsUserId(apiUserId, token)
   const user = { id: userId }
 
   const latest = await prisma.termsAcceptance.findFirst({
@@ -71,8 +112,10 @@ export async function getCurrentTermsVersion() {
 
 // ── Get Acceptance History (audit trail) ─────────────────
 
-export async function getTermsHistory() {
-  const userId = await resolveActionUserId()
+export async function getTermsHistory(): Promise<Array<{ version: string; acceptedAt: Date }>>
+export async function getTermsHistory(apiUserId: string, token: InternalActionUserToken): Promise<Array<{ version: string; acceptedAt: Date }>>
+export async function getTermsHistory(apiUserId?: string, token?: InternalActionUserToken) {
+  const userId = await resolveTermsUserId(apiUserId, token)
 
   const history = await prisma.termsAcceptance.findMany({
     where: { userId },

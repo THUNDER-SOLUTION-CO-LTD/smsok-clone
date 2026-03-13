@@ -19,19 +19,26 @@ import {
   View,
   StyleSheet,
   Font,
-  Image,
 } from "@react-pdf/renderer";
 
 // ── Register Thai Font (IBM Plex Sans Thai) ─────────────
+// Use local TTF files to avoid network download issues
+import path from "path";
+import fs from "fs";
+
+const fontsDir = path.join(process.cwd(), "public", "fonts");
+const regularFontPath = path.join(fontsDir, "ibm-plex-sans-thai-regular.ttf");
+const boldFontPath = path.join(fontsDir, "ibm-plex-sans-thai-bold.ttf");
+
 Font.register({
   family: "IBMPlexSansThai",
   fonts: [
     {
-      src: "https://fonts.gstatic.com/s/ibmplexsansthai/v10/m8JNje1VVIzcq1HzJq2AEdo2Tj_qvLqEatYlR8ZKUqcX.ttf",
+      src: fs.existsSync(regularFontPath) ? regularFontPath : "https://fonts.gstatic.com/s/ibmplexsansthai/v11/m8JPje1VVIzcq1HzJq2AEdo2Tj_qvLq8Dg.ttf",
       fontWeight: "normal",
     },
     {
-      src: "https://fonts.gstatic.com/s/ibmplexsansthai/v10/m8JQje1VVIzcq1HzJq2AEdo2Tj_qvLqExvcFbehGW74OXw.ttf",
+      src: fs.existsSync(boldFontPath) ? boldFontPath : "https://fonts.gstatic.com/s/ibmplexsansthai/v11/m8JMje1VVIzcq1HzJq2AEdo2Tj_qvLqEsvMFbQ.ttf",
       fontWeight: "bold",
     },
   ],
@@ -50,13 +57,13 @@ const s = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 20,
     borderBottomWidth: 2,
-    borderBottomColor: "#2563eb",
+    borderBottomColor: "#00E2B5",
     paddingBottom: 15,
   },
   docTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#2563eb",
+    color: "#00E2B5",
     marginBottom: 4,
   },
   docSubtitle: {
@@ -112,8 +119,8 @@ const s = StyleSheet.create({
   },
   tableHeader: {
     flexDirection: "row",
-    backgroundColor: "#2563eb",
-    color: "#ffffff",
+    backgroundColor: "#00E2B5",
+    color: "#0b1118",
     fontWeight: "bold",
     fontSize: 9,
     paddingVertical: 6,
@@ -158,7 +165,7 @@ const s = StyleSheet.create({
   summaryTotal: {
     fontWeight: "bold",
     fontSize: 12,
-    color: "#2563eb",
+    color: "#00E2B5",
   },
   summaryBox: {
     marginTop: 8,
@@ -478,20 +485,8 @@ export function InvoicePdf({ data }: { data: InvoicePdfData }) {
           </Text>
         </View>
 
-        {(data.verificationUrl || data.verificationQrDataUrl) && (
-          <View style={s.verificationBox}>
-            {data.verificationQrDataUrl && (
-              <Image src={data.verificationQrDataUrl} style={s.verificationQr} />
-            )}
-            <View style={s.verificationText}>
-              <Text style={s.sectionTitle}>ตรวจสอบเอกสาร / Verification</Text>
-              {data.verificationUrl && (
-                <Text style={s.verificationUrl}>{data.verificationUrl}</Text>
-              )}
-              <Text style={s.infoLabel}>สแกน QR Code เพื่อยืนยันเอกสารฉบับนี้</Text>
-            </View>
-          </View>
-        )}
+        {/* QR verification disabled — verify.smsok.co page not yet implemented.
+           Re-enable when verification page is deployed. See BUG-06. */}
 
         {/* ── Notes ── */}
         {data.notes && (

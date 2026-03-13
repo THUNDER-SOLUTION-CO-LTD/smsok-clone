@@ -33,9 +33,9 @@ export async function requestSenderName(userIdOrData: string | unknown, maybeDat
   });
   if (existing) {
     if (existing.status === "REJECTED") {
-      throw new Error("ชื่อผู้ส่งนี้ถูกปฏิเสธแล้ว กรุณาใช้ชื่ออื่น");
+      throw new ApiError(409, "ชื่อผู้ส่งนี้ถูกปฏิเสธแล้ว กรุณาใช้ชื่ออื่น");
     }
-    throw new Error("ชื่อผู้ส่งนี้มีอยู่แล้ว");
+    throw new ApiError(409, "ชื่อผู้ส่งนี้มีอยู่แล้ว");
   }
 
   const [quota, used] = await Promise.all([
@@ -52,9 +52,17 @@ export async function requestSenderName(userIdOrData: string | unknown, maybeDat
     throw new ApiError(400, "เกินจำนวน Sender Name ที่อนุญาต");
   }
 
-  const senderName = await db.senderName.create({
-    data: { userId, name: input.name },
-  });
+  let senderName;
+  try {
+    senderName = await db.senderName.create({
+      data: { userId, name: input.name },
+    });
+  } catch (error) {
+    if (error instanceof Error && "code" in error && (error as { code: string }).code === "P2002") {
+      throw new ApiError(409, "ชื่อผู้ส่งนี้มีอยู่แล้ว");
+    }
+    throw error;
+  }
 
   revalidatePath("/dashboard/senders");
   return senderName;

@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server"
 import { authenticateRequest, apiResponse, apiError } from "@/lib/api-auth"
 import { acceptTerms, getTermsStatus } from "@/lib/actions/terms"
+import { getClientIp } from "@/lib/session-utils"
 
 // GET /api/v1/tos — get current ToS version + user acceptance status
 export async function GET(req: NextRequest) {
@@ -17,10 +18,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     await authenticateRequest(req)
-    const ipAddress =
-      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      req.headers.get("x-real-ip") ||
-      undefined
+    const ipAddress = getClientIp(req.headers) || undefined
     const userAgent = req.headers.get("user-agent") || undefined
 
     const result = await acceptTerms({ ipAddress, userAgent })

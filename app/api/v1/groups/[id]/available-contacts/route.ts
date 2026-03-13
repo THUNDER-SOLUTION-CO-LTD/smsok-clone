@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { authenticateRequest, apiResponse, apiError } from "@/lib/api-auth";
+import { authenticateRequest, apiResponse, apiError, ApiError } from "@/lib/api-auth";
 import { prisma } from "@/lib/db";
 
 // GET /api/v1/groups/:id/available-contacts?search=xxx&tags=vip,bangkok
@@ -18,7 +18,7 @@ export async function GET(
     const group = await prisma.contactGroup.findFirst({
       where: { id: groupId, userId: user.id },
     });
-    if (!group) throw new Error("ไม่พบกลุ่ม");
+    if (!group) throw new ApiError(404, "ไม่พบกลุ่ม");
 
     // Get IDs already in group
     const membersInGroup = await prisma.contactGroupMember.findMany({

@@ -6,7 +6,7 @@ import {
   getScheduledSms,
   cancelScheduledSms,
 } from "@/lib/actions/scheduled-sms";
-import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { applyRateLimit } from "@/lib/rate-limit";
 import { scheduledSmsCancelSchema, scheduledSmsCreateSchema } from "@/lib/validations";
 
 // GET /api/v1/sms/scheduled — list scheduled messages
@@ -42,8 +42,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Create — rate limited
-    const limit = await checkRateLimit(user.id, "sms");
-    if (!limit.allowed) return rateLimitResponse(limit.resetIn);
+    const rl = await applyRateLimit(user.id, "sms");
+    if (rl.blocked) return rl.blocked;
 
     const input = scheduledSmsCreateSchema.parse(body);
     const result = await createScheduledSms(user.id, {

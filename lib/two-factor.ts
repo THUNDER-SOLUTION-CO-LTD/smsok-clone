@@ -3,56 +3,41 @@ import * as OTPAuth from "otpauth"
 import QRCode from "qrcode"
 import bcrypt from "bcryptjs"
 import { env } from "./env"
+import { checkCustomRateLimit } from "./rate-limit"
 
 const APP_NAME = "SMSOK"
 const RECOVERY_CODE_COUNT = 10
 const RECOVERY_CODE_LENGTH = 8 // 8 hex chars = 4 bytes
 
-// ── Rate Limiting (in-memory) ───────────────────────────
+// ── Rate Limiting (Redis-backed) ────────────────────────
 // 5 attempts per 15 minutes per userId
 
 const RATE_LIMIT_MAX = 5
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000 // 15 min
 
-type RateLimitEntry = {
-  attempts: number
-  windowStart: number
+export async function check2FARateLimit(
+  userId: string,
+): Promise<{ allowed: boolean; remaining: number; retryAfterMs: number }> {
+  const result = await checkCustomRateLimit(`2fa:${userId}`, {
+    windowMs: RATE_LIMIT_WINDOW_MS,
+    maxRequests: RATE_LIMIT_MAX,
+  })
+
+  return {
+    allowed: result.allowed,
+    remaining: result.remaining,
+    retryAfterMs: result.allowed ? 0 : result.resetIn,
+  }
 }
 
-const rateLimitMap = new Map<string, RateLimitEntry>()
-
-export function check2FARateLimit(userId: string): { allowed: boolean; remaining: number; retryAfterMs: number } {
-  const now = Date.now()
-  const entry = rateLimitMap.get(userId)
-
-  if (!entry || now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
-    // New window
-    rateLimitMap.set(userId, { attempts: 1, windowStart: now })
-    return { allowed: true, remaining: RATE_LIMIT_MAX - 1, retryAfterMs: 0 }
+export async function reset2FARateLimit(userId: string): Promise<void> {
+  try {
+    const { redis } = await import("./redis")
+    await redis.del(`rl:2fa:${userId}`)
+  } catch {
+    // Best effort — failure to clear the window should not break auth flows.
   }
-
-  if (entry.attempts >= RATE_LIMIT_MAX) {
-    const retryAfterMs = RATE_LIMIT_WINDOW_MS - (now - entry.windowStart)
-    return { allowed: false, remaining: 0, retryAfterMs }
-  }
-
-  entry.attempts++
-  return { allowed: true, remaining: RATE_LIMIT_MAX - entry.attempts, retryAfterMs: 0 }
 }
-
-export function reset2FARateLimit(userId: string): void {
-  rateLimitMap.delete(userId)
-}
-
-// Cleanup stale entries every 30 minutes
-setInterval(() => {
-  const now = Date.now()
-  for (const [key, entry] of rateLimitMap) {
-    if (now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
-      rateLimitMap.delete(key)
-    }
-  }
-}, 30 * 60 * 1000).unref()
 
 // ── Encryption (AES-256-GCM) ────────────────────────────
 // Uses dedicated TWO_FA_ENCRYPTION_KEY — MUST be set (no fallback)

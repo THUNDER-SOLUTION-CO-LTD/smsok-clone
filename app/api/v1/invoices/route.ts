@@ -1,7 +1,8 @@
 import { NextRequest } from "next/server";
-import { ApiError, apiResponse, apiError } from "@/lib/api-auth";
-import { getSession } from "@/lib/auth";
+import { Prisma } from "@prisma/client";
+import { apiResponse, apiError, authenticateRequest } from "@/lib/api-auth";
 import { prisma as db } from "@/lib/db";
+import { ensurePaymentDocumentNumber } from "@/lib/payments/documents";
 import { createInvoiceSchema } from "@/lib/validations";
 import { calculateVat, calculateWithWht, round2 } from "@/lib/accounting/vat";
 import { numberToThaiText } from "@/lib/accounting/thai-number";
@@ -10,11 +11,10 @@ import { generateInvoiceNumber } from "@/lib/accounting/invoice-number";
 // POST /api/v1/invoices — create invoice
 export async function POST(req: NextRequest) {
   try {
-    const session = await getSession();
-    if (!session?.id) throw new ApiError(401, "กรุณาเข้าสู่ระบบ");
+    const user = await authenticateRequest(req);
 
     const { applyRateLimit } = await import("@/lib/rate-limit");
-    const rl = await applyRateLimit(session.id, "invoice_create");
+    const rl = await applyRateLimit(user.id, "invoice_create");
     if (rl.blocked) return rl.blocked;
 
     const body = await req.json();
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
 
       return tx.invoice.create({
         data: {
-          userId: session.id,
+          userId: user.id,
           transactionId: input.transactionId,
           invoiceNumber,
           type: input.type,
@@ -70,21 +70,63 @@ export async function POST(req: NextRequest) {
 // GET /api/v1/invoices — list invoices
 export async function GET(req: NextRequest) {
   try {
-    const session = await getSession();
-    if (!session?.id) throw new ApiError(401, "กรุณาเข้าสู่ระบบ");
+    const user = await authenticateRequest(req);
 
-    const target = new URL(`/api/invoices${new URL(req.url).search}`, req.url);
-    const response = await fetch(target, {
-      headers: {
-        cookie: req.headers.get("cookie") || "",
-        accept: "application/json",
-      },
-      cache: "no-store",
-    });
+    const { applyRateLimit } = await import("@/lib/rate-limit");
+    const rl = await applyRateLimit(user.id, "api");
+    if (rl.blocked) return rl.blocked;
 
-    return new Response(response.body, {
-      status: response.status,
-      headers: new Headers(response.headers),
+    const { searchParams } = req.nextUrl;
+    const page = Math.max(1, Number.parseInt(searchParams.get("page") || "1", 10));
+    const limit = Math.min(100, Math.max(1, Number.parseInt(searchParams.get("limit") || "20", 10)));
+
+    const where: Prisma.PaymentWhereInput = {
+      userId: user.id,
+      status: { in: ["COMPLETED", "REFUNDED"] },
+    };
+
+    const [payments, total] = await Promise.all([
+      db.payment.findMany({
+        where,
+        orderBy: [{ paidAt: "desc" }, { createdAt: "desc" }],
+        skip: (page - 1) * limit,
+        take: limit,
+        select: {
+          id: true,
+          status: true,
+          createdAt: true,
+          paidAt: true,
+          amount: true,
+          vatAmount: true,
+          totalAmount: true,
+          invoiceNumber: true,
+          invoiceUrl: true,
+        },
+      }),
+      db.payment.count({ where }),
+    ]);
+
+    const invoices = [];
+    for (const payment of payments) {
+      const invoiceNumber =
+        payment.invoiceNumber ??
+        (await ensurePaymentDocumentNumber(payment.id, "invoice"));
+
+      invoices.push({
+        id: payment.id,
+        invoiceNumber,
+        createdAt: payment.paidAt ?? payment.createdAt,
+        subtotal: payment.amount / 100,
+        vatAmount: (payment.vatAmount ?? 0) / 100,
+        total: (payment.totalAmount ?? 0) / 100,
+        status: payment.status === "COMPLETED" ? "PAID" : "VOIDED",
+        downloadUrl: invoiceNumber ? `/api/v1/invoices/${payment.id}/pdf` : null,
+      });
+    }
+
+    return apiResponse({
+      invoices,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
     });
   } catch (error) {
     return apiError(error);

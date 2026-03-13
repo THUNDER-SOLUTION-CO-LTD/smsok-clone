@@ -9,6 +9,10 @@ import {
   generatePaymentDocumentNumber,
   getUserPrimaryOrganizationId,
 } from "@/lib/payments/documents";
+import { bufferToDataUrl } from "@/lib/storage/files";
+import { removeStoredFile, StorageUploadError, storeBufferInR2 } from "@/lib/storage/service";
+import { coerceUploadedFile } from "@/lib/uploaded-file";
+import { verifyTopupSlipSchema } from "@/lib/validations";
 import { z } from "zod";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "application/pdf"];
@@ -51,31 +55,27 @@ type TierRecord = {
   isActive: boolean;
 };
 
-async function fileToBase64(file: File) {
-  const buffer = await file.arrayBuffer();
-  return Buffer.from(buffer).toString("base64");
-}
-
 async function readUpload(req: NextRequest): Promise<{
-  payload: string;
-  slipUrl: string;
+  body: Buffer;
+  contentType: string;
+  verificationPayload: string;
   fileName: string | null;
   fileSize: number | null;
   input: PackagePurchaseInput;
 }> {
-  const contentType = req.headers.get("content-type") || "";
+  const requestContentType = req.headers.get("content-type") || "";
 
-  if (contentType.includes("multipart/form-data")) {
+  if (requestContentType.includes("multipart/form-data")) {
     const formData = await req.formData();
-    const file = formData.get("slip");
-    if (!(file instanceof File)) {
+    const file = coerceUploadedFile(formData.get("slip"));
+    if (!file || file.size === 0) {
       throw new ApiError(400, "กรุณาแนบไฟล์สลิป");
     }
     if (!ALLOWED_TYPES.includes(file.type)) {
       throw new ApiError(400, "รองรับเฉพาะ JPG, PNG, PDF");
     }
 
-    const payload = await fileToBase64(file);
+    const body = Buffer.from(await file.arrayBuffer());
     const input = packagePurchaseInputSchema.parse({
       packageId: formData.get("packageId"),
       credits: formData.get("credits"),
@@ -86,8 +86,9 @@ async function readUpload(req: NextRequest): Promise<{
     });
 
     return {
-      payload,
-      slipUrl: `data:${file.type};base64,${payload}`,
+      body,
+      contentType: file.type || "application/octet-stream",
+      verificationPayload: bufferToDataUrl(file.type || "application/octet-stream", body),
       fileName: file.name,
       fileSize: file.size,
       input,
@@ -101,19 +102,18 @@ async function readUpload(req: NextRequest): Promise<{
     throw new ApiError(400, "กรุณาส่งข้อมูล JSON หรือ multipart/form-data");
   }
 
-  const payload = typeof (body as { payload?: unknown }).payload === "string"
-    ? (body as { payload: string }).payload
-    : null;
-  if (!payload) {
-    throw new ApiError(400, "กรุณาแนบสลิปแบบ base64 ใน field 'payload'");
-  }
-
+  const parsedSlip = verifyTopupSlipSchema.parse(body);
   const input = packagePurchaseInputSchema.parse(body);
-  const approxBytes = Math.ceil((payload.length * 3) / 4);
+  const approxBytes = parsedSlip.payload.length > 0
+    ? Math.ceil((parsedSlip.payload.length * 3) / 4)
+    : 0;
+  const resolvedContentType = parsedSlip.mimeType || "application/octet-stream";
+  const bodyBuffer = Buffer.from(parsedSlip.payload, "base64");
 
   return {
-    payload,
-    slipUrl: `data:application/octet-stream;base64,${payload}`,
+    body: bodyBuffer,
+    contentType: resolvedContentType,
+    verificationPayload: bufferToDataUrl(resolvedContentType, bodyBuffer),
     fileName: "slip-base64",
     fileSize: approxBytes,
     input,
@@ -261,7 +261,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const verification = await verifySlipByBase64(upload.payload);
+    const verification = await verifySlipByBase64(upload.verificationPayload);
     const duplicateRef = verification.success && verification.data?.transRef
       ? await Promise.all([
           db.payment.findFirst({
@@ -317,8 +317,19 @@ export async function POST(req: NextRequest) {
               ? receiverCheck.note ?? "Receiver account verification failed"
               : `Amount mismatch: expected ${totals.totalAmount}, got ${detectedSatang}`
             : `EasySlip: ${verification.error ?? "verification pending manual review"}`;
+    const storedSlip = await storeBufferInR2({
+      userId: session.id,
+      scope: "payments",
+      resourceId: `topup-${Date.now()}`,
+      kind: "slips",
+      body: upload.body,
+      contentType: upload.contentType,
+      fileName: upload.fileName,
+    });
 
-    const payment = await db.$transaction(async (tx) => {
+    let payment;
+    try {
+      payment = await db.$transaction(async (tx) => {
       const created = await tx.payment.create({
         data: {
           userId: session.id,
@@ -329,7 +340,7 @@ export async function POST(req: NextRequest) {
           totalAmount: totals.totalAmount,
           method: "BANK_TRANSFER",
           status,
-          slipUrl: upload.slipUrl,
+          slipUrl: storedSlip.ref,
           slipFileName: upload.fileName,
           slipFileSize: upload.fileSize,
           easyslipVerified: verification.success,
@@ -345,12 +356,13 @@ export async function POST(req: NextRequest) {
           invoiceNumber,
           paidAt: status === "COMPLETED" ? now : null,
           creditsAdded: tier.totalSms,
-          idempotencyKey: verification.data?.transRef ?? null,
+          idempotencyKey: duplicateId ? null : (verification.data?.transRef ?? null),
           metadata: {
             source: "package-purchase-v1",
             submittedDate: upload.input.date ?? null,
             submittedTime: upload.input.time ?? null,
             note: upload.input.note ?? null,
+            duplicateReferenceId: duplicateId,
           },
         },
         select: {
@@ -432,11 +444,18 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      return updated;
-    });
+        return updated;
+      });
+    } catch (error) {
+      await removeStoredFile(storedSlip.ref);
+      throw error;
+    }
 
     return apiResponse(buildCompatResponse(payment));
   } catch (error) {
+    if (error instanceof StorageUploadError) {
+      return apiError(new ApiError(503, "ระบบอัปโหลดไฟล์ยังไม่พร้อม กรุณาลองใหม่"));
+    }
     return apiError(error);
   }
 }

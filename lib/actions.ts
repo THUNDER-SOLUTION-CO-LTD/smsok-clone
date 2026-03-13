@@ -49,7 +49,9 @@ export async function register(formData: FormData) {
 // ==========================================
 
 export async function registerWithOtp(data: {
-  name: string;
+  name?: string;
+  firstName?: string;
+  lastName?: string;
   email: string;
   phone: string;
   password: string;
@@ -59,14 +61,31 @@ export async function registerWithOtp(data: {
   consentService?: boolean;
   consentThirdParty?: boolean;
   consentMarketing?: boolean;
+  ipAddress?: string;
+  userAgent?: string;
 }) {
   const { verifyOtpForRegister } = await import("./actions/otp");
+  const requiredConsentsAccepted =
+    data.acceptTerms === true ||
+    (data.consentService === true && data.consentThirdParty === true);
+  const consentService = data.consentService ?? requiredConsentsAccepted;
+  const consentThirdParty = data.consentThirdParty ?? requiredConsentsAccepted;
+  const consentMarketing = data.consentMarketing ?? false;
+
+  if (!requiredConsentsAccepted || !consentService || !consentThirdParty) {
+    throw new Error("กรุณายอมรับเงื่อนไขการใช้งานและความยินยอมที่จำเป็น");
+  }
+
+  const combinedName = data.name ?? `${data.firstName ?? ""} ${data.lastName ?? ""}`.trim();
+  const nameParts = combinedName.split(/\s+/).filter(Boolean);
+  const derivedFirstName = data.firstName?.trim() || nameParts[0] || combinedName;
+  const derivedLastName = data.lastName?.trim() || nameParts.slice(1).join(" ") || derivedFirstName;
 
   // Validate schema + check duplicates BEFORE consuming OTP
   // (prevents OTP being permanently used if validation or duplicate check fails)
   const parsed = registerSchema.safeParse({
-    firstName: data.name.split(" ")[0] || data.name,
-    lastName: data.name.split(" ").slice(1).join(" ") || data.name,
+    firstName: derivedFirstName,
+    lastName: derivedLastName,
     email: data.email,
     phone: data.phone,
     password: data.password,
@@ -97,6 +116,7 @@ export async function registerWithOtp(data: {
   }
 
   const hashed = await hashPassword(password);
+  const acceptedTermsAt = new Date();
   const user = await prisma.$transaction(async (tx) => {
     const newUser = await tx.user.create({
       data: {
@@ -105,9 +125,63 @@ export async function registerWithOtp(data: {
         phone,
         password: hashed,
         phoneVerified: true,
-        acceptedTermsAt: data.acceptTerms ? new Date() : null,
+        acceptedTermsAt,
       },
     });
+
+    await tx.termsAcceptance.create({
+      data: {
+        userId: newUser.id,
+        version: "1.0",
+        ipAddress: data.ipAddress ?? null,
+        userAgent: data.userAgent ?? null,
+      },
+    });
+
+    const activePolicies = await tx.pdpaPolicy.findMany({
+      where: {
+        isActive: true,
+        type: { in: ["TERMS", "PRIVACY", "MARKETING"] },
+      },
+      select: {
+        id: true,
+        type: true,
+      },
+    });
+    const policyMap = new Map(activePolicies.map((policy) => [policy.type, policy.id]));
+    const consentLogs = [
+      {
+        policyId: policyMap.get("TERMS"),
+        consentType: "SERVICE",
+        action: "OPT_IN",
+      },
+      {
+        policyId: policyMap.get("PRIVACY"),
+        consentType: "THIRD_PARTY",
+        action: "OPT_IN",
+      },
+      {
+        policyId: policyMap.get("MARKETING"),
+        consentType: "MARKETING",
+        action: consentMarketing ? "OPT_IN" : "OPT_OUT",
+      },
+    ]
+      .filter((entry): entry is { policyId: string; consentType: "SERVICE" | "THIRD_PARTY" | "MARKETING"; action: "OPT_IN" | "OPT_OUT" } => Boolean(entry.policyId))
+      .map((entry) => ({
+        userId: newUser.id,
+        policyId: entry.policyId,
+        consentType: entry.consentType,
+        action: entry.action,
+        ipAddress: data.ipAddress ?? null,
+        userAgent: data.userAgent ?? null,
+      }));
+
+    if (consentLogs.length > 0) {
+      await tx.pdpaConsentLog.createMany({
+        data: consentLogs,
+      });
+    }
+
     return newUser;
   });
 

@@ -1,6 +1,5 @@
 import { NextRequest } from "next/server";
-import { ApiError, apiError } from "@/lib/api-auth";
-import { getSession } from "@/lib/auth";
+import { ApiError, apiError, authenticateRequest } from "@/lib/api-auth";
 import { prisma as db } from "@/lib/db";
 import { renderOrderInvoicePdf } from "@/lib/orders/pdf";
 import { applyRateLimit } from "@/lib/rate-limit";
@@ -39,15 +38,14 @@ const orderSelect = {
 
 export async function GET(req: NextRequest, ctx: RouteContext) {
   try {
-    const session = await getSession();
-    if (!session?.id) throw new ApiError(401, "กรุณาเข้าสู่ระบบ");
+    const user = await authenticateRequest(req);
 
-    const rl = await applyRateLimit(session.id, "invoice_pdf");
+    const rl = await applyRateLimit(user.id, "invoice_pdf");
     if (rl.blocked) return rl.blocked;
 
     const { id } = await ctx.params;
     const order = await db.order.findFirst({
-      where: { id, userId: session.id },
+      where: { id, userId: user.id },
       select: orderSelect,
     });
     if (!order || !order.invoiceNumber) {

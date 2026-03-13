@@ -183,7 +183,7 @@ export async function generatePaymentDocumentNumber(
     },
   });
 
-  return `${getSequencePrefix(kind)}-${yearMonth}-${String(sequence.lastNumber).padStart(4, "0")}`;
+  return `${getSequencePrefix(kind)}-${yearMonth}-${String(sequence.lastNumber).padStart(5, "0")}`;
 }
 
 export async function ensurePaymentDocumentNumber(

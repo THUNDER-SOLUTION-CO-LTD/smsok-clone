@@ -7,53 +7,48 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ══════════════════════════════════════════════════════════
-// Organization & Multi-Tenant
-// ══════════════════════════════════════════════════════════
-
 model Organization {
-  id             String   @id @default(cuid())
-  name           String
-  slug           String   @unique
-  plan           String   @default("free") // free, starter, business, enterprise
-  sendingHoursStart Int   @default(8)  @map("sending_hours_start")  // PDPA: ห้ามส่ง marketing นอกเวลา
-  sendingHoursEnd   Int   @default(20) @map("sending_hours_end")
-  require2fa     Boolean  @default(false) @map("require_2fa")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
-
-  memberships        Membership[]
-  invites            OrgInvite[]
-  messages           Message[]
-  contacts           Contact[]
-  apiKeys            ApiKey[]
-  campaigns          Campaign[]
-  tags               Tag[]
-  contactGroups      ContactGroup[]
-  senderNames        SenderName[]
-  messageTemplates   MessageTemplate[]
-  scheduledSms       ScheduledSms[]
-  invoices           Invoice[]
-  transactions       Transaction[]
-  taxDocuments       TaxDocument[]
-  whtCertificates    WhtCertificate[]
-  taxProfiles        TaxProfile[]
-  webhooks           Webhook[]
-  customFields       CustomField[]
-  consents           Consent[]
-  optOutLogs         OptOutLog[]
-  dataRequests       DataRequest[]
-  auditLogs          AuditLog[]
-  billingInfo        OrgBillingInfo?
-  payments           Payment[]
-  subscriptions      Subscription[]
-  customerTaxInfos   CustomerTaxInfo[]
-  packagePurchases   PackagePurchase[]
-  roles              Role[]
-  userRoles          UserRole[]
-  quotations         Quotation[]
-  shortLinks         ShortLink[]
-  orders             Order[]
+  id                String            @id @default(cuid())
+  name              String
+  slug              String            @unique
+  plan              String            @default("free")
+  sendingHoursStart Int               @default(8) @map("sending_hours_start")
+  sendingHoursEnd   Int               @default(20) @map("sending_hours_end")
+  require2fa        Boolean           @default(false) @map("require_2fa")
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+  apiKeys           ApiKey[]
+  auditLogs         AuditLog[]
+  campaigns         Campaign[]
+  consents          Consent[]
+  contactGroups     ContactGroup[]
+  contacts          Contact[]
+  customFields      CustomField[]
+  customerTaxInfos  CustomerTaxInfo[]
+  dataRequests      DataRequest[]
+  invoices          Invoice[]
+  memberships       Membership[]
+  messageTemplates  MessageTemplate[]
+  messages          Message[]
+  optOutLogs        OptOutLog[]
+  orders            Order[]
+  billingInfo       OrgBillingInfo?
+  invites           OrgInvite[]
+  packagePurchases  PackagePurchase[]
+  payments          Payment[]
+  quotations        Quotation[]
+  roles             Role[]
+  scheduledSms      ScheduledSms[]
+  senderNames       SenderName[]
+  shortLinks        ShortLink[]
+  subscriptions     Subscription[]
+  tags              Tag[]
+  taxDocuments      TaxDocument[]
+  taxProfiles       TaxProfile[]
+  transactions      Transaction[]
+  userRoles         UserRole[]
+  webhooks          Webhook[]
+  whtCertificates   WhtCertificate[]
 
   @@map("organizations")
 }
@@ -64,8 +59,8 @@ model Membership {
   organizationId String       @map("organization_id")
   role           OrgRole      @default(MEMBER)
   createdAt      DateTime     @default(now()) @map("created_at")
-  user           User         @relation(fields: [userId], references: [id])
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id])
 
   @@unique([userId, organizationId])
   @@index([organizationId])
@@ -89,23 +84,19 @@ model OrgInvite {
   @@map("org_invites")
 }
 
-// ══════════════════════════════════════════════════════════
-// Dynamic RBAC — Roles & Permissions
-// ══════════════════════════════════════════════════════════
-
 model Role {
   id             String           @id @default(cuid())
   organizationId String           @map("organization_id")
-  name           String           // "Owner", "Admin", "Marketing_Lead", etc.
+  name           String
   description    String?
   isSystemRole   Boolean          @default(false) @map("is_system_role")
   parentRoleId   String?          @map("parent_role_id")
   createdAt      DateTime         @default(now()) @map("created_at")
   updatedAt      DateTime         @updatedAt @map("updated_at")
+  permissions    RolePermission[]
   organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   parentRole     Role?            @relation("RoleHierarchy", fields: [parentRoleId], references: [id])
   childRoles     Role[]           @relation("RoleHierarchy")
-  permissions    RolePermission[]
   userRoles      UserRole[]
 
   @@unique([organizationId, name])
@@ -115,8 +106,8 @@ model Role {
 
 model Permission {
   id          String           @id @default(cuid())
-  action      String           // "create", "read", "update", "delete", "manage"
-  resource    String           // "sms", "contact", "campaign", etc.
+  action      String
+  resource    String
   description String?
   roles       RolePermission[]
 
@@ -127,8 +118,8 @@ model Permission {
 model RolePermission {
   roleId       String     @map("role_id")
   permissionId String     @map("permission_id")
-  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
   permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   @@id([roleId, permissionId])
   @@map("role_permissions")
@@ -139,9 +130,9 @@ model UserRole {
   roleId         String       @map("role_id")
   organizationId String       @map("organization_id")
   assignedAt     DateTime     @default(now()) @map("assigned_at")
-  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role           Role         @relation(fields: [roleId], references: [id], onDelete: Cascade)
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  role           Role         @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([userId, roleId, organizationId])
   @@index([organizationId])
@@ -149,86 +140,82 @@ model UserRole {
   @@map("user_roles")
 }
 
-// ══════════════════════════════════════════════════════════
-// User (updated with memberships relation)
-// ══════════════════════════════════════════════════════════
-
 model User {
-  id                  String              @id @default(cuid())
-  email               String              @unique
-  phone               String              @default("")
+  id                  String             @id @default(cuid())
+  email               String             @unique
+  phone               String             @default("")
   name                String
   password            String
-  role                String              @default("user")
-  emailVerified       Boolean             @default(false)
-  createdAt           DateTime            @default(now()) @map("created_at")
-  updatedAt           DateTime            @updatedAt @map("updated_at")
-  mustChangePassword  Boolean             @default(false) @map("must_change_password")
-  phoneVerified       Boolean             @default(false) @map("phone_verified")
-  notificationsReadAt DateTime?           @map("notifications_read_at")
-  acceptedTermsAt     DateTime?           @map("accepted_terms_at")
-  failedLoginAttempts Int                 @default(0) @map("failed_login_attempts")
-  lockedUntil         DateTime?           @map("locked_until")
-  securityVersion     Int                 @default(1) @map("security_version")
-  deletedAt           DateTime?           @map("deleted_at")
-  passwordHistory     PasswordHistory[]
-  memberships         Membership[]
+  role                String             @default("user")
+  emailVerified       Boolean            @default(false)
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @updatedAt @map("updated_at")
+  mustChangePassword  Boolean            @default(false) @map("must_change_password")
+  phoneVerified       Boolean            @default(false) @map("phone_verified")
+  notificationsReadAt DateTime?          @map("notifications_read_at")
+  acceptedTermsAt     DateTime?          @map("accepted_terms_at")
+  failedLoginAttempts Int                @default(0) @map("failed_login_attempts")
+  lockedUntil         DateTime?          @map("locked_until")
+  securityVersion     Int                @default(1) @map("security_version")
+  deletedAt           DateTime?          @map("deleted_at")
   apiKeys             ApiKey[]
   apiLogs             ApiLog[]
+  auditLogs           AuditLog[]
+  autoTopupSetting    AutoTopupSetting?
+  bankAccounts        BankAccount[]
   billingInfo         BillingInfo?
   campaigns           Campaign[]
   contactGroups       ContactGroup[]
   contacts            Contact[]
+  couponUsages        CouponUsage[]
   customFields        CustomField[]
+  customerTaxInfo     CustomerTaxInfo?
   invoices            Invoice[]
+  memberships         Membership[]
   messageTemplates    MessageTemplate[]
   messages            Message[]
+  notificationPrefs   NotificationPrefs?
+  orders              Order[]
   otpRequests         OtpRequest[]
+  packagePurchases    PackagePurchase[]
+  passwordHistory     PasswordHistory[]
+  payments            Payment[]
+  consentLogs         PdpaConsentLog[]
+  createdPolicies     PdpaPolicy[]       @relation("PolicyCreator")
+  quotations          Quotation[]
   scheduledSms        ScheduledSms[]
   senderNames         SenderName[]
+  shortLinks          ShortLink[]
+  subscriptions       Subscription[]
   tags                Tag[]
   taxDocuments        TaxDocument[]
+  taxProfiles         TaxProfile[]
   termsAcceptances    TermsAcceptance[]
   transactions        Transaction[]
   twoFactorAuth       TwoFactorAuth?
+  onboarding          UserOnboarding?
+  userRoles           UserRole[]
+  sessions            UserSession[]
   webhooks            Webhook[]
   whtCertificates     WhtCertificate[]
   workspaceSettings   WorkspaceSettings?
-  notificationPrefs   NotificationPrefs?
-  auditLogs           AuditLog[]
-  payments            Payment[]
-  subscriptions       Subscription[]
-  onboarding          UserOnboarding?
-  customerTaxInfo     CustomerTaxInfo?
-  packagePurchases    PackagePurchase[]
-  couponUsages        CouponUsage[]
-  userRoles           UserRole[]
-  quotations          Quotation[]
-  shortLinks          ShortLink[]
-  consentLogs         PdpaConsentLog[]
-  createdPolicies     PdpaPolicy[]     @relation("PolicyCreator")
-  autoTopupSetting    AutoTopupSetting?
-  bankAccounts        BankAccount[]
-  sessions            UserSession[]
-  taxProfiles         TaxProfile[]
-  orders              Order[]
 
   @@map("users")
 }
 
 model UserSession {
-  id            String    @id @default(cuid())
-  userId        String    @map("user_id")
-  tokenHash     String    @unique @map("token_hash") // SHA-256 hash of JWT token
-  deviceName    String?   @map("device_name")
-  deviceType    String?   @map("device_type") // desktop, mobile, tablet
-  browser       String?
-  os            String?
-  ipAddress     String?   @map("ip_address")
-  location      String?
-  lastActiveAt  DateTime  @default(now()) @map("last_active_at")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id           String   @id @default(cuid())
+  userId       String   @map("user_id")
+  tokenHash    String   @unique @map("token_hash")
+  deviceName   String?  @map("device_name")
+  deviceType   String?  @map("device_type")
+  browser      String?
+  os           String?
+  ipAddress    String?  @map("ip_address")
+  location     String?
+  lastActiveAt DateTime @default(now()) @map("last_active_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, lastActiveAt])
   @@index([tokenHash])
@@ -236,19 +223,15 @@ model UserSession {
 }
 
 model PasswordHistory {
-  id            String   @id @default(cuid())
-  userId        String   @map("user_id")
-  passwordHash  String   @map("password_hash")
-  createdAt     DateTime @default(now()) @map("created_at")
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id           String   @id @default(cuid())
+  userId       String   @map("user_id")
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at")
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
   @@map("password_history")
 }
-
-// ══════════════════════════════════════════════════════════
-// Core Business Models (with organizationId FK)
-// ══════════════════════════════════════════════════════════
 
 model Message {
   id             String        @id @default(cuid())
@@ -268,8 +251,8 @@ model Message {
   channel        Channel       @default(WEB)
   type           MessageType   @default(SMS)
   campaign       Campaign?     @relation(fields: [campaignId], references: [id])
-  user           User          @relation(fields: [userId], references: [id])
   organization   Organization? @relation(fields: [organizationId], references: [id])
+  user           User          @relation(fields: [userId], references: [id])
 
   @@index([userId, createdAt])
   @@index([organizationId, createdAt])
@@ -286,12 +269,15 @@ model ApiKey {
   name           String
   key            String        @unique
   keyPrefix      String        @default("") @map("key_prefix")
-  permissions    String[]      @default([]) // e.g., ["sms:send", "contacts:read", "campaigns:write"]
+  permissions    String[]      @default([])
   isActive       Boolean       @default(true) @map("is_active")
   lastUsed       DateTime?     @map("last_used")
   createdAt      DateTime      @default(now()) @map("created_at")
-  user           User          @relation(fields: [userId], references: [id])
+  ipWhitelist    String[]      @default([]) @map("ip_whitelist")
+  rateLimit      Int           @default(60) @map("rate_limit")
+  revokedAt      DateTime?     @map("revoked_at")
   organization   Organization? @relation(fields: [organizationId], references: [id])
+  user           User          @relation(fields: [userId], references: [id])
   apiLogs        ApiLog[]
 
   @@index([key])
@@ -313,14 +299,14 @@ model Contact {
   optOutAt          DateTime?            @map("opt_out_at")
   optOutReason      String?              @map("opt_out_reason")
   createdAt         DateTime             @default(now()) @map("created_at")
+  consents          Consent[]
   groups            ContactGroupMember[]
   contactTags       ContactTag[]
-  customFieldValues CustomFieldValue[]
-  consents          Consent[]
-  optOutLogs        OptOutLog[]
-  dataRequests      DataRequest[]
-  user              User                 @relation(fields: [userId], references: [id])
   organization      Organization?        @relation(fields: [organizationId], references: [id])
+  user              User                 @relation(fields: [userId], references: [id])
+  customFieldValues CustomFieldValue[]
+  dataRequests      DataRequest[]
+  optOutLogs        OptOutLog[]
 
   @@unique([userId, phone])
   @@index([userId])
@@ -340,8 +326,8 @@ model CustomField {
   position       Int                @default(0)
   createdAt      DateTime           @default(now()) @map("created_at")
   values         CustomFieldValue[]
-  user           User               @relation(fields: [userId], references: [id])
   organization   Organization?      @relation(fields: [organizationId], references: [id])
+  user           User               @relation(fields: [userId], references: [id])
 
   @@unique([userId, name])
   @@index([userId])
@@ -371,8 +357,8 @@ model Tag {
   color          String        @default("#94A3B8")
   createdAt      DateTime      @default(now()) @map("created_at")
   contactTags    ContactTag[]
-  user           User          @relation(fields: [userId], references: [id])
   organization   Organization? @relation(fields: [organizationId], references: [id])
+  user           User          @relation(fields: [userId], references: [id])
 
   @@unique([userId, name])
   @@index([userId])
@@ -400,8 +386,8 @@ model ContactGroup {
   createdAt      DateTime             @default(now()) @map("created_at")
   campaigns      Campaign[]
   members        ContactGroupMember[]
-  user           User                 @relation(fields: [userId], references: [id])
   organization   Organization?        @relation(fields: [organizationId], references: [id])
+  user           User                 @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([organizationId])
@@ -420,26 +406,26 @@ model ContactGroupMember {
 }
 
 model SenderName {
-  id             String        @id @default(cuid())
-  userId         String        @map("user_id")
-  organizationId String?       @map("organization_id")
+  id             String               @id @default(cuid())
+  userId         String               @map("user_id")
+  organizationId String?              @map("organization_id")
   name           String
-  status         String        @default("DRAFT") // DRAFT→PENDING→REVIEWING→SUBMITTED_TO_OPERATOR→APPROVED/REJECTED/EXPIRED
-  accountType    String?       @map("account_type") // "corporate" | "individual"
-  rejectNote     String?       @map("reject_note")
-  adminNotes     String?       @map("admin_notes") @db.Text
-  submittedAt    DateTime?     @map("submitted_at")
-  approvedAt     DateTime?     @map("approved_at")
-  approvedBy     String?       @map("approved_by")
-  expiresAt      DateTime?     @map("expires_at") // 1 year from approval
-  operatorSentAt DateTime?     @map("operator_sent_at")
-  createdAt      DateTime      @default(now()) @map("created_at")
-  updatedAt      DateTime      @default(now()) @updatedAt @map("updated_at")
-  user           User          @relation(fields: [userId], references: [id])
-  organization   Organization? @relation(fields: [organizationId], references: [id])
+  status         String               @default("DRAFT")
+  accountType    String?              @map("account_type")
+  rejectNote     String?              @map("reject_note")
+  adminNotes     String?              @map("admin_notes")
+  submittedAt    DateTime?            @map("submitted_at")
+  approvedAt     DateTime?            @map("approved_at")
+  approvedBy     String?              @map("approved_by")
+  expiresAt      DateTime?            @map("expires_at")
+  operatorSentAt DateTime?            @map("operator_sent_at")
+  createdAt      DateTime             @default(now()) @map("created_at")
+  updatedAt      DateTime             @default(now()) @updatedAt @map("updated_at")
   documents      SenderNameDocument[]
-  urls           SenderNameUrl[]
   history        SenderNameHistory[]
+  urls           SenderNameUrl[]
+  organization   Organization?        @relation(fields: [organizationId], references: [id])
+  user           User                 @relation(fields: [userId], references: [id])
 
   @@unique([userId, name])
   @@index([status])
@@ -450,7 +436,7 @@ model SenderName {
 model SenderNameDocument {
   id           String     @id @default(cuid())
   senderNameId String     @map("sender_name_id")
-  type         String     // "company_cert", "vat_cert", "id_card", "loa", "selfie", "brand_proof"
+  type         String
   fileName     String     @map("file_name")
   fileUrl      String     @map("file_url")
   fileSize     Int        @map("file_size")
@@ -479,11 +465,11 @@ model SenderNameUrl {
 model SenderNameHistory {
   id           String     @id @default(cuid())
   senderNameId String     @map("sender_name_id")
-  action       String     // "submitted", "reviewing", "approved", "rejected", "expired", "operator_sent"
+  action       String
   fromStatus   String?    @map("from_status")
   toStatus     String     @map("to_status")
-  note         String?    @db.Text
-  performedBy  String?    @map("performed_by") // admin id or "system"
+  note         String?
+  performedBy  String?    @map("performed_by")
   createdAt    DateTime   @default(now()) @map("created_at")
   senderName   SenderName @relation(fields: [senderNameId], references: [id], onDelete: Cascade)
 
@@ -491,24 +477,22 @@ model SenderNameHistory {
   @@map("sender_name_history")
 }
 
-// Package model removed — replaced by PackageTier
-
 model MessageTemplate {
   id             String        @id @default(cuid())
   userId         String        @map("user_id")
   organizationId String?       @map("organization_id")
   name           String
-  content        String        @db.Text
-  category       String        @default("GENERAL")  // OTP, TRANSACTIONAL, MARKETING, NOTIFICATION, GENERAL
-  variables      String[]      @default([])          // extracted {{varName}} list
+  content        String
+  category       String        @default("GENERAL")
+  variables      String[]      @default([])
   segmentCount   Int           @default(1) @map("segment_count")
-  isPublic       Boolean       @default(false) @map("is_public")  // library/pre-built templates
+  isPublic       Boolean       @default(false) @map("is_public")
   deletedAt      DateTime?     @map("deleted_at")
   createdAt      DateTime      @default(now()) @map("created_at")
   updatedAt      DateTime      @updatedAt @map("updated_at")
   campaigns      Campaign[]
-  user           User          @relation(fields: [userId], references: [id])
   organization   Organization? @relation(fields: [organizationId], references: [id])
+  user           User          @relation(fields: [userId], references: [id])
 
   @@index([userId, deletedAt])
   @@index([organizationId])
@@ -517,18 +501,18 @@ model MessageTemplate {
 }
 
 model OtpRequest {
-  id        String   @id @default(cuid())
-  userId    String?  @map("user_id")
-  phone     String
-  code      String
-  purpose   String   @default("verify")
-  attempts  Int      @default(0)
-  verified  Boolean  @default(false)
+  id         String    @id @default(cuid())
+  userId     String?   @map("user_id")
+  phone      String
+  code       String
+  purpose    String    @default("verify")
+  attempts   Int       @default(0)
+  verified   Boolean   @default(false)
+  expiresAt  DateTime  @map("expires_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  refCode    String    @unique @map("ref_code")
   verifiedAt DateTime? @map("verified_at")
-  expiresAt DateTime @map("expires_at")
-  createdAt DateTime @default(now()) @map("created_at")
-  refCode   String   @unique @map("ref_code")
-  user      User?    @relation(fields: [userId], references: [id])
+  user       User?     @relation(fields: [userId], references: [id])
 
   @@index([userId, phone, createdAt])
   @@index([phone, createdAt])
@@ -536,41 +520,41 @@ model OtpRequest {
 }
 
 model Campaign {
-  id              String            @id @default(cuid())
-  userId          String            @map("user_id")
-  organizationId  String?           @map("organization_id")
-  name            String            @db.VarChar(100)
-  contactGroupId  String?           @map("contact_group_id")
-  templateId      String?           @map("template_id")
-  senderName      String?           @map("sender_name")
-  messageBody     String?           @map("message_body") @db.Text
-  segmentCount    Int               @default(1) @map("segment_count")
-  status          String            @default("DRAFT") // CampaignStatus: DRAFT, SCHEDULED, QUEUING, SENDING, PAUSED, COMPLETED, CANCELLED
-  priority        String            @default("LOW")   // CampaignPriority: HIGH, MEDIUM, LOW
-  recipientSource String?           @map("recipient_source") // RecipientSource: GROUP, CSV, MANUAL
-  scheduledAt     DateTime?         @map("scheduled_at")
-  totalRecipients Int               @default(0) @map("total_recipients")
-  validRecipients Int               @default(0) @map("valid_recipients")
-  sentCount       Int               @default(0) @map("sent_count")
-  deliveredCount  Int               @default(0) @map("delivered_count")
-  failedCount     Int               @default(0) @map("failed_count")
-  creditReserved  Int               @default(0) @map("credit_reserved")
-  creditUsed      Int               @default(0) @map("credit_used")
-  estimatedCost   Decimal?          @map("estimated_cost") @db.Decimal(10, 2)
-  actualCost      Decimal?          @map("actual_cost") @db.Decimal(10, 2)
-  startedAt       DateTime?         @map("started_at")
-  completedAt     DateTime?         @map("completed_at")
-  cancelledAt     DateTime?         @map("cancelled_at")
-  cancelledBy     String?           @map("cancelled_by")
-  createdAt       DateTime          @default(now()) @map("created_at")
-  updatedAt       DateTime          @updatedAt @map("updated_at")
-  contactGroup    ContactGroup?     @relation(fields: [contactGroupId], references: [id])
-  template        MessageTemplate?  @relation(fields: [templateId], references: [id])
-  user            User              @relation(fields: [userId], references: [id])
-  organization    Organization?     @relation(fields: [organizationId], references: [id])
-  messages        Message[]
-  shortLinks      ShortLink[]
+  id               String            @id @default(cuid())
+  userId           String            @map("user_id")
+  organizationId   String?           @map("organization_id")
+  name             String            @db.VarChar(100)
+  contactGroupId   String?           @map("contact_group_id")
+  templateId       String?           @map("template_id")
+  senderName       String?           @map("sender_name")
+  messageBody      String?           @map("message_body")
+  segmentCount     Int               @default(1) @map("segment_count")
+  status           String            @default("DRAFT")
+  priority         String            @default("LOW")
+  recipientSource  String?           @map("recipient_source")
+  scheduledAt      DateTime?         @map("scheduled_at")
+  totalRecipients  Int               @default(0) @map("total_recipients")
+  validRecipients  Int               @default(0) @map("valid_recipients")
+  sentCount        Int               @default(0) @map("sent_count")
+  deliveredCount   Int               @default(0) @map("delivered_count")
+  failedCount      Int               @default(0) @map("failed_count")
+  creditReserved   Int               @default(0) @map("credit_reserved")
+  creditUsed       Int               @default(0) @map("credit_used")
+  estimatedCost    Decimal?          @map("estimated_cost") @db.Decimal(10, 2)
+  actualCost       Decimal?          @map("actual_cost") @db.Decimal(10, 2)
+  startedAt        DateTime?         @map("started_at")
+  completedAt      DateTime?         @map("completed_at")
+  cancelledAt      DateTime?         @map("cancelled_at")
+  cancelledBy      String?           @map("cancelled_by")
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
   campaignMessages CampaignMessage[]
+  contactGroup     ContactGroup?     @relation(fields: [contactGroupId], references: [id])
+  organization     Organization?     @relation(fields: [organizationId], references: [id])
+  template         MessageTemplate?  @relation(fields: [templateId], references: [id])
+  user             User              @relation(fields: [userId], references: [id])
+  messages         Message[]
+  shortLinks       ShortLink[]
 
   @@index([userId, status])
   @@index([organizationId, status])
@@ -613,8 +597,8 @@ model ScheduledSms {
   errorCode      String?       @map("error_code")
   creditCost     Int           @default(1) @map("credit_cost")
   createdAt      DateTime      @default(now()) @map("created_at")
-  user           User          @relation(fields: [userId], references: [id])
   organization   Organization? @relation(fields: [organizationId], references: [id])
+  user           User          @relation(fields: [userId], references: [id])
 
   @@index([userId, scheduledAt])
   @@index([organizationId])
@@ -622,49 +606,41 @@ model ScheduledSms {
   @@map("scheduled_sms")
 }
 
-// ══════════════════════════════════════════════════════════
-// Auto Top-up Settings (per user)
-// ══════════════════════════════════════════════════════════
-
 model AutoTopupSetting {
-  id             String      @id @default(cuid())
-  userId         String      @unique @map("user_id")
-  isEnabled      Boolean     @default(false) @map("is_enabled")
-  tierId         String      @map("tier_id")       // Package tier to auto-purchase
-  threshold      Int         @default(100)          // Trigger when SMS remaining <= threshold
-  maxPerMonth    Int         @default(3) @map("max_per_month") // Max auto purchases per month
-  purchasedThisMonth Int     @default(0) @map("purchased_this_month")
-  monthResetAt   DateTime    @default(now()) @map("month_reset_at")
-  createdAt      DateTime    @default(now()) @map("created_at")
-  updatedAt      DateTime    @updatedAt @map("updated_at")
-  user           User        @relation(fields: [userId], references: [id])
-  tier           PackageTier @relation(fields: [tierId], references: [id])
+  id                 String      @id @default(cuid())
+  userId             String      @unique @map("user_id")
+  isEnabled          Boolean     @default(false) @map("is_enabled")
+  tierId             String      @map("tier_id")
+  threshold          Int         @default(100)
+  maxPerMonth        Int         @default(3) @map("max_per_month")
+  purchasedThisMonth Int         @default(0) @map("purchased_this_month")
+  monthResetAt       DateTime    @default(now()) @map("month_reset_at")
+  createdAt          DateTime    @default(now()) @map("created_at")
+  updatedAt          DateTime    @updatedAt @map("updated_at")
+  tier               PackageTier @relation(fields: [tierId], references: [id])
+  user               User        @relation(fields: [userId], references: [id])
 
   @@map("auto_topup_settings")
 }
 
-// ══════════════════════════════════════════════════════════
-// Package System (replaces Credit System)
-// ══════════════════════════════════════════════════════════
-
 model PackageTier {
-  id              String            @id @default(cuid())
-  name            String                                    // 'Starter', 'Basic', etc.
-  tierCode        String            @unique @map("tier_code") // 'A', 'B', etc.
-  price           Decimal           @db.Decimal(10, 2)      // ราคาไม่รวม VAT
-  smsQuota        Int               @map("sms_quota")       // base SMS count
-  bonusPercent    Int               @default(0) @map("bonus_percent")
-  totalSms        Int               @map("total_sms")       // quota + bonus
-  senderNameLimit Int?              @map("sender_name_limit") // NULL = unlimited
-  expiryMonths    Int               @map("expiry_months")
-  isActive        Boolean           @default(true) @map("is_active")
-  isTrial         Boolean           @default(false) @map("is_trial")
-  sortOrder       Int               @default(0) @map("sort_order")
-  createdAt       DateTime          @default(now()) @map("created_at")
-  purchases       PackagePurchase[]
+  id                String             @id @default(cuid())
+  name              String
+  tierCode          String             @unique @map("tier_code")
+  price             Decimal            @db.Decimal(10, 2)
+  smsQuota          Int                @map("sms_quota")
+  bonusPercent      Int                @default(0) @map("bonus_percent")
+  totalSms          Int                @map("total_sms")
+  senderNameLimit   Int?               @map("sender_name_limit")
+  expiryMonths      Int                @map("expiry_months")
+  isActive          Boolean            @default(true) @map("is_active")
+  isTrial           Boolean            @default(false) @map("is_trial")
+  sortOrder         Int                @default(0) @map("sort_order")
+  createdAt         DateTime           @default(now()) @map("created_at")
   autoTopupSettings AutoTopupSetting[]
-  payments        Payment[]
-  orders          Order[]
+  orders            Order[]
+  purchases         PackagePurchase[]
+  payments          Payment[]
 
   @@map("package_tiers")
 }
@@ -674,7 +650,7 @@ model PackagePurchase {
   userId         String        @map("user_id")
   organizationId String?       @map("organization_id")
   tierId         String        @map("tier_id")
-  smsTotal       Int           @map("sms_total")           // total SMS (quota + bonus + promo)
+  smsTotal       Int           @map("sms_total")
   smsUsed        Int           @default(0) @map("sms_used")
   purchasedAt    DateTime      @default(now()) @map("purchased_at")
   expiresAt      DateTime      @map("expires_at")
@@ -684,12 +660,12 @@ model PackagePurchase {
   couponId       String?       @map("coupon_id")
   autoRenew      Boolean       @default(false) @map("auto_renew")
   createdAt      DateTime      @default(now()) @map("created_at")
-  tier           PackageTier   @relation(fields: [tierId], references: [id])
-  user           User          @relation(fields: [userId], references: [id])
+  couponUsages   CouponUsage[]
+  coupon         Coupon?       @relation(fields: [couponId], references: [id])
   organization   Organization? @relation(fields: [organizationId], references: [id])
   promotion      Promotion?    @relation(fields: [promotionId], references: [id])
-  coupon         Coupon?       @relation(fields: [couponId], references: [id])
-  couponUsages   CouponUsage[]
+  tier           PackageTier   @relation(fields: [tierId], references: [id])
+  user           User          @relation(fields: [userId], references: [id])
 
   @@index([userId, isActive, expiresAt])
   @@index([organizationId, isActive])
@@ -697,18 +673,18 @@ model PackagePurchase {
 }
 
 model Promotion {
-  id                  String            @id @default(cuid())
-  name                String
-  type                String                                 // 'bonus_boost', 'price_discount', 'extra_sender', 'extended_expiry'
-  value               Decimal           @db.Decimal(10, 2)   // % or fixed amount
-  applicableTiers     String[]          @map("applicable_tiers") // tier IDs
-  startsAt            DateTime          @map("starts_at")
-  endsAt              DateTime          @map("ends_at")
-  maxRedemptions      Int?              @map("max_redemptions")
-  currentRedemptions  Int               @default(0) @map("current_redemptions")
-  isActive            Boolean           @default(true) @map("is_active")
-  createdAt           DateTime          @default(now()) @map("created_at")
-  purchases           PackagePurchase[]
+  id                 String            @id @default(cuid())
+  name               String
+  type               String
+  value              Decimal           @db.Decimal(10, 2)
+  applicableTiers    String[]          @map("applicable_tiers")
+  startsAt           DateTime          @map("starts_at")
+  endsAt             DateTime          @map("ends_at")
+  maxRedemptions     Int?              @map("max_redemptions")
+  currentRedemptions Int               @default(0) @map("current_redemptions")
+  isActive           Boolean           @default(true) @map("is_active")
+  createdAt          DateTime          @default(now()) @map("created_at")
+  purchases          PackagePurchase[]
 
   @@map("promotions")
 }
@@ -716,18 +692,18 @@ model Promotion {
 model Coupon {
   id              String            @id @default(cuid())
   code            String            @unique
-  discountType    String            @map("discount_type")    // 'percent', 'fixed', 'extra_sms', 'extra_sender'
+  discountType    String            @map("discount_type")
   discountValue   Decimal           @map("discount_value") @db.Decimal(10, 2)
-  minTier         String?           @map("min_tier")         // minimum tier code
-  applicableTiers String[]          @map("applicable_tiers") // tier IDs
-  usageLimit      Int?              @map("usage_limit")      // total uses
+  minTier         String?           @map("min_tier")
+  applicableTiers String[]          @map("applicable_tiers")
+  usageLimit      Int?              @map("usage_limit")
   perUserLimit    Int               @default(1) @map("per_user_limit")
   currentUsage    Int               @default(0) @map("current_usage")
   expiresAt       DateTime?         @map("expires_at")
   isActive        Boolean           @default(true) @map("is_active")
   createdAt       DateTime          @default(now()) @map("created_at")
-  purchases       PackagePurchase[]
   usages          CouponUsage[]
+  purchases       PackagePurchase[]
 
   @@map("coupons")
 }
@@ -739,17 +715,13 @@ model CouponUsage {
   purchaseId String          @map("purchase_id")
   usedAt     DateTime        @default(now()) @map("used_at")
   coupon     Coupon          @relation(fields: [couponId], references: [id])
-  user       User            @relation(fields: [userId], references: [id])
   purchase   PackagePurchase @relation(fields: [purchaseId], references: [id])
+  user       User            @relation(fields: [userId], references: [id])
 
   @@index([couponId])
   @@index([userId, couponId])
   @@map("coupon_usages")
 }
-
-// ══════════════════════════════════════════════════════════
-// Financial / Tax / Invoices (with organizationId)
-// ══════════════════════════════════════════════════════════
 
 model Invoice {
   id             String        @id @default(cuid())
@@ -774,8 +746,8 @@ model Invoice {
   notes          String?
   createdAt      DateTime      @default(now()) @map("created_at")
   updatedAt      DateTime      @updatedAt @map("updated_at")
-  user           User          @relation(fields: [userId], references: [id])
   organization   Organization? @relation(fields: [organizationId], references: [id])
+  user           User          @relation(fields: [userId], references: [id])
 
   @@index([userId, createdAt])
   @@index([organizationId, createdAt])
@@ -785,28 +757,28 @@ model Invoice {
 }
 
 model Quotation {
-  id               String          @id @default(cuid())
-  userId           String          @map("user_id")
-  organizationId   String?         @map("organization_id")
-  quotationNumber  String          @unique @map("quotation_number")
-  status           QuotationStatus @default(DRAFT)
-  buyerName        String          @map("buyer_name")
-  buyerAddress     String          @map("buyer_address")
-  buyerPhone       String?         @map("buyer_phone")
-  buyerEmail       String?         @map("buyer_email")
-  items            Json
-  subtotal         Decimal         @db.Decimal(12, 2)
-  vatRate          Decimal         @default(7.00) @map("vat_rate") @db.Decimal(4, 2)
-  vatAmount        Decimal         @map("vat_amount") @db.Decimal(12, 2)
-  total            Decimal         @db.Decimal(12, 2)
-  amountInWords    String?         @map("amount_in_words")
-  validUntil       DateTime        @map("valid_until")
-  pdfUrl           String?         @map("pdf_url")
-  notes            String?
-  createdAt        DateTime        @default(now()) @map("created_at")
-  updatedAt        DateTime        @updatedAt @map("updated_at")
-  user             User            @relation(fields: [userId], references: [id])
-  organization     Organization?   @relation(fields: [organizationId], references: [id])
+  id              String          @id @default(cuid())
+  userId          String          @map("user_id")
+  organizationId  String?         @map("organization_id")
+  quotationNumber String          @unique @map("quotation_number")
+  status          QuotationStatus @default(DRAFT)
+  buyerName       String          @map("buyer_name")
+  buyerAddress    String          @map("buyer_address")
+  buyerPhone      String?         @map("buyer_phone")
+  buyerEmail      String?         @map("buyer_email")
+  items           Json
+  subtotal        Decimal         @db.Decimal(12, 2)
+  vatRate         Decimal         @default(7.00) @map("vat_rate") @db.Decimal(4, 2)
+  vatAmount       Decimal         @map("vat_amount") @db.Decimal(12, 2)
+  total           Decimal         @db.Decimal(12, 2)
+  amountInWords   String?         @map("amount_in_words")
+  validUntil      DateTime        @map("valid_until")
+  pdfUrl          String?         @map("pdf_url")
+  notes           String?
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+  organization    Organization?   @relation(fields: [organizationId], references: [id])
+  user            User            @relation(fields: [userId], references: [id])
 
   @@index([userId, createdAt])
   @@index([organizationId, createdAt])
@@ -831,8 +803,8 @@ model Transaction {
   createdAt           DateTime         @default(now()) @map("created_at")
   billingInfoSnapshot Json?            @map("billing_info_snapshot")
   taxDocuments        TaxDocument[]
-  user                User             @relation(fields: [userId], references: [id])
   organization        Organization?    @relation(fields: [organizationId], references: [id])
+  user                User             @relation(fields: [userId], references: [id])
   whtCertificates     WhtCertificate[]
 
   @@index([userId, createdAt])
@@ -915,9 +887,9 @@ model TaxDocument {
   pdfGeneratedAt DateTime?     @map("pdf_generated_at")
   createdAt      DateTime      @default(now()) @map("created_at")
   updatedAt      DateTime      @updatedAt @map("updated_at")
+  organization   Organization? @relation(fields: [organizationId], references: [id])
   transaction    Transaction?  @relation(fields: [transactionId], references: [id])
   user           User          @relation(fields: [userId], references: [id])
-  organization   Organization? @relation(fields: [organizationId], references: [id])
 
   @@index([userId, type])
   @@index([organizationId, type])
@@ -943,9 +915,9 @@ model WhtCertificate {
   reviewedAt     DateTime?     @map("reviewed_at")
   reviewNote     String?       @map("review_note")
   createdAt      DateTime      @default(now()) @map("created_at")
+  organization   Organization? @relation(fields: [organizationId], references: [id])
   transaction    Transaction?  @relation(fields: [transactionId], references: [id])
   user           User          @relation(fields: [userId], references: [id])
-  organization   Organization? @relation(fields: [organizationId], references: [id])
 
   @@index([userId])
   @@index([organizationId])
@@ -954,28 +926,28 @@ model WhtCertificate {
 }
 
 model CompanyInfo {
-  id          String   @id @default(cuid())
-  name        String                                     // ชื่อบริษัทผู้ขาย
-  taxId       String   @map("tax_id")                    // Tax ID 13 หลัก
-  branch      String   @default("สำนักงานใหญ่")          // สาขา
-  branchCode  String   @default("00000") @map("branch_code")
-  address     String                                     // ที่อยู่เต็ม
-  phone       String?
-  email       String?
-  logo        String?                                    // URL to logo
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id         String   @id @default(cuid())
+  name       String
+  taxId      String   @map("tax_id")
+  branch     String   @default("สำนักงานใหญ่")
+  branchCode String   @default("00000") @map("branch_code")
+  address    String
+  phone      String?
+  email      String?
+  logo       String?
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
 
   @@map("company_info")
 }
 
 model CustomerTaxInfo {
   id             String        @id @default(cuid())
-  userId         String        @map("user_id")
+  userId         String        @unique @map("user_id")
   organizationId String?       @map("organization_id")
   companyName    String        @map("company_name")
-  taxId          String        @map("tax_id")            // Tax ID 13 หลัก
+  taxId          String        @map("tax_id")
   branch         String        @default("สำนักงานใหญ่")
   branchCode     String        @default("00000") @map("branch_code")
   address        String
@@ -984,10 +956,9 @@ model CustomerTaxInfo {
   email          String?
   createdAt      DateTime      @default(now()) @map("created_at")
   updatedAt      DateTime      @updatedAt @map("updated_at")
-  user           User          @relation(fields: [userId], references: [id])
   organization   Organization? @relation(fields: [organizationId], references: [id])
+  user           User          @relation(fields: [userId], references: [id])
 
-  @@unique([userId])
   @@index([organizationId])
   @@map("customer_tax_info")
 }
@@ -997,7 +968,7 @@ model DocumentSequence {
   type       DocumentType?
   year       Int?
   prefix     String?       @db.VarChar(5)
-  yearMonth  String?       @map("year_month") @db.VarChar(4)
+  yearMonth  String?       @map("year_month") @db.VarChar(6)
   lastNumber Int           @default(0) @map("last_number")
 
   @@unique([type, year])
@@ -1006,61 +977,61 @@ model DocumentSequence {
 }
 
 model Order {
-  id               String             @id @default(cuid())
-  userId           String             @map("user_id")
-  organizationId   String?            @map("organization_id")
-  packageTierId    String             @map("package_tier_id")
-  taxProfileId     String?            @map("tax_profile_id")
-  orderNumber      String             @unique @map("order_number")
-  customerType     OrderCustomerType  @map("customer_type")
-  packageName      String             @map("package_name")
-  smsCount         Int                @map("sms_count")
-  taxName          String             @map("tax_name")
-  taxId            String             @map("tax_id")
-  taxAddress       String             @map("tax_address") @db.Text
-  taxBranchType    OrderBranchType    @map("tax_branch_type")
-  taxBranchNumber  String?            @map("tax_branch_number")
-  netAmount        Decimal            @map("net_amount") @db.Decimal(12, 2)
-  vatAmount        Decimal            @map("vat_amount") @db.Decimal(12, 2)
-  totalAmount      Decimal            @map("total_amount") @db.Decimal(12, 2)
-  hasWht           Boolean            @default(false) @map("has_wht")
-  whtAmount        Decimal            @map("wht_amount") @db.Decimal(12, 2)
-  payAmount        Decimal            @map("pay_amount") @db.Decimal(12, 2)
-  status           OrderStatus        @default(DRAFT)
-  expiresAt        DateTime           @map("expires_at")
-  quotationNumber  String?            @unique @map("quotation_number")
-  quotationUrl     String?            @map("quotation_url")
-  invoiceNumber    String?            @unique @map("invoice_number")
-  invoiceUrl       String?            @map("invoice_url")
-  creditNoteNumber String?            @unique @map("credit_note_number")
-  creditNoteUrl    String?            @map("credit_note_url")
-  debitNoteNumber  String?            @unique @map("debit_note_number")
-  debitNoteUrl     String?            @map("debit_note_url")
-  slipUrl          String?            @map("slip_url")
-  slipFileName     String?            @map("slip_file_name")
-  slipFileSize     Int?               @map("slip_file_size")
-  easyslipVerified Boolean?           @map("easyslip_verified")
-  easyslipResponse Json?              @map("easyslip_response")
-  whtCertUrl       String?            @map("wht_cert_url")
-  whtCertVerified  Boolean?           @map("wht_cert_verified")
-  adminNote        String?            @map("admin_note")
-  rejectReason     String?            @map("reject_reason")
-  reviewedBy       String?            @map("reviewed_by")
-  reviewedAt       DateTime?          @map("reviewed_at")
-  paidAt           DateTime?          @map("paid_at")
-  cancelledAt      DateTime?          @map("cancelled_at")
-  cancellationReason String?          @map("cancellation_reason") @db.Text
-  completedAt      DateTime?          @map("completed_at")
-  createdBy        String             @map("created_by")
-  createdAt        DateTime           @default(now()) @map("created_at")
-  updatedAt        DateTime           @updatedAt @map("updated_at")
-  user             User               @relation(fields: [userId], references: [id])
-  organization     Organization?      @relation(fields: [organizationId], references: [id])
-  packageTier      PackageTier        @relation(fields: [packageTierId], references: [id])
-  taxProfile       TaxProfile?        @relation(fields: [taxProfileId], references: [id])
-  history          OrderHistory[]
-  documents        OrderDocument[]
-  slips            OrderSlip[]
+  id                 String            @id @default(cuid())
+  userId             String            @map("user_id")
+  organizationId     String?           @map("organization_id")
+  packageTierId      String            @map("package_tier_id")
+  taxProfileId       String?           @map("tax_profile_id")
+  orderNumber        String            @unique @map("order_number")
+  customerType       OrderCustomerType @map("customer_type")
+  packageName        String            @map("package_name")
+  smsCount           Int               @map("sms_count")
+  taxName            String            @map("tax_name")
+  taxId              String            @map("tax_id")
+  taxAddress         String            @map("tax_address")
+  taxBranchType      OrderBranchType   @map("tax_branch_type")
+  taxBranchNumber    String?           @map("tax_branch_number")
+  netAmount          Decimal           @map("net_amount") @db.Decimal(12, 2)
+  vatAmount          Decimal           @map("vat_amount") @db.Decimal(12, 2)
+  totalAmount        Decimal           @map("total_amount") @db.Decimal(12, 2)
+  hasWht             Boolean           @default(false) @map("has_wht")
+  whtAmount          Decimal           @map("wht_amount") @db.Decimal(12, 2)
+  payAmount          Decimal           @map("pay_amount") @db.Decimal(12, 2)
+  status             OrderStatus       @default(DRAFT)
+  expiresAt          DateTime          @map("expires_at")
+  quotationNumber    String?           @unique @map("quotation_number")
+  quotationUrl       String?           @map("quotation_url")
+  invoiceNumber      String?           @unique @map("invoice_number")
+  invoiceUrl         String?           @map("invoice_url")
+  creditNoteNumber   String?           @unique @map("credit_note_number")
+  creditNoteUrl      String?           @map("credit_note_url")
+  debitNoteNumber    String?           @unique @map("debit_note_number")
+  debitNoteUrl       String?           @map("debit_note_url")
+  slipUrl            String?           @map("slip_url")
+  slipFileName       String?           @map("slip_file_name")
+  slipFileSize       Int?              @map("slip_file_size")
+  easyslipVerified   Boolean?          @map("easyslip_verified")
+  easyslipResponse   Json?             @map("easyslip_response")
+  whtCertUrl         String?           @map("wht_cert_url")
+  whtCertVerified    Boolean?          @map("wht_cert_verified")
+  adminNote          String?           @map("admin_note")
+  rejectReason       String?           @map("reject_reason")
+  reviewedBy         String?           @map("reviewed_by")
+  reviewedAt         DateTime?         @map("reviewed_at")
+  paidAt             DateTime?         @map("paid_at")
+  cancelledAt        DateTime?         @map("cancelled_at")
+  cancellationReason String?           @map("cancellation_reason")
+  completedAt        DateTime?         @map("completed_at")
+  createdBy          String            @map("created_by")
+  createdAt          DateTime          @default(now()) @map("created_at")
+  updatedAt          DateTime          @updatedAt @map("updated_at")
+  documents          OrderDocument[]
+  history            OrderHistory[]
+  slips              OrderSlip[]
+  organization       Organization?     @relation(fields: [organizationId], references: [id])
+  packageTier        PackageTier       @relation(fields: [packageTierId], references: [id])
+  taxProfile         TaxProfile?       @relation(fields: [taxProfileId], references: [id])
+  user               User              @relation(fields: [userId], references: [id])
 
   @@index([userId, createdAt])
   @@index([organizationId, createdAt])
@@ -1071,21 +1042,21 @@ model Order {
 }
 
 model OrderDocument {
-  id                  String             @id @default(cuid())
-  orderId             String             @map("order_id")
-  type                OrderDocumentType
-  documentNumber      String             @unique @map("document_number")
-  issuedAt            DateTime           @default(now()) @map("issued_at")
-  voidedAt            DateTime?          @map("voided_at")
-  voidReason          String?            @map("void_reason") @db.Text
-  replacesDocumentId  String?            @map("replaces_document_id")
-  pdfUrl              String?            @map("pdf_url")
-  deletedAt           DateTime?          @map("deleted_at")
-  createdAt           DateTime           @default(now()) @map("created_at")
-  updatedAt           DateTime           @updatedAt @map("updated_at")
-  order               Order              @relation(fields: [orderId], references: [id], onDelete: Restrict)
-  replacesDocument    OrderDocument?     @relation("OrderDocumentReplacement", fields: [replacesDocumentId], references: [id])
-  replacementDocs     OrderDocument[]    @relation("OrderDocumentReplacement")
+  id                 String            @id @default(cuid())
+  orderId            String            @map("order_id")
+  type               OrderDocumentType
+  documentNumber     String            @unique @map("document_number")
+  issuedAt           DateTime          @default(now()) @map("issued_at")
+  voidedAt           DateTime?         @map("voided_at")
+  voidReason         String?           @map("void_reason")
+  replacesDocumentId String?           @map("replaces_document_id")
+  pdfUrl             String?           @map("pdf_url")
+  deletedAt          DateTime?         @map("deleted_at")
+  createdAt          DateTime          @default(now()) @map("created_at")
+  updatedAt          DateTime          @updatedAt @map("updated_at")
+  order              Order             @relation(fields: [orderId], references: [id])
+  replacesDocument   OrderDocument?    @relation("OrderDocumentReplacement", fields: [replacesDocumentId], references: [id])
+  replacementDocs    OrderDocument[]   @relation("OrderDocumentReplacement")
 
   @@index([orderId, issuedAt])
   @@index([type, issuedAt])
@@ -1094,19 +1065,19 @@ model OrderDocument {
 }
 
 model OrderSlip {
-  id          String    @id @default(cuid())
-  orderId     String    @map("order_id")
-  fileUrl     String    @map("file_url") @db.Text
-  fileKey     String    @map("file_key")
-  fileSize    Int?      @map("file_size")
-  fileType    String?   @map("file_type")
-  uploadedAt  DateTime  @default(now()) @map("uploaded_at")
-  verifiedAt  DateTime? @map("verified_at")
-  verifiedBy  String?   @map("verified_by")
-  deletedAt   DateTime? @map("deleted_at")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
-  order       Order     @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  id         String    @id @default(cuid())
+  orderId    String    @map("order_id")
+  fileUrl    String    @map("file_url")
+  fileKey    String    @map("file_key")
+  fileSize   Int?      @map("file_size")
+  fileType   String?   @map("file_type")
+  uploadedAt DateTime  @default(now()) @map("uploaded_at")
+  verifiedAt DateTime? @map("verified_at")
+  verifiedBy String?   @map("verified_by")
+  deletedAt  DateTime? @map("deleted_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  order      Order     @relation(fields: [orderId], references: [id])
 
   @@index([orderId, uploadedAt])
   @@index([verifiedBy])
@@ -1116,7 +1087,7 @@ model OrderSlip {
 
 model OrderHistory {
   id         String       @id @default(cuid())
-  orderId     String       @map("order_id")
+  orderId    String       @map("order_id")
   fromStatus OrderStatus? @map("from_status")
   toStatus   OrderStatus  @map("to_status")
   changedBy  String?      @map("changed_by")
@@ -1128,22 +1099,18 @@ model OrderHistory {
   @@map("order_history")
 }
 
-// ══════════════════════════════════════════════════════════
-// Auth & Security
-// ══════════════════════════════════════════════════════════
-
 model TwoFactorAuth {
-  id                      String    @id @default(cuid())
-  userId                  String    @unique @map("user_id")
-  secret                  String
-  recoveryCodes           String[]  @map("recovery_codes")
-  enabled                 Boolean   @default(false)
-  rememberTokenHash       String?   @map("remember_token_hash")
-  rememberTokenExpiresAt  DateTime? @map("remember_token_expires_at")
-  recoveryTokenHash       String?   @map("recovery_token_hash")
-  recoveryTokenExpiresAt  DateTime? @map("recovery_token_expires_at")
-  createdAt               DateTime  @default(now()) @map("created_at")
-  user                    User      @relation(fields: [userId], references: [id])
+  id                     String    @id @default(cuid())
+  userId                 String    @unique @map("user_id")
+  secret                 String
+  recoveryCodes          String[]  @map("recovery_codes")
+  enabled                Boolean   @default(false)
+  rememberTokenHash      String?   @map("remember_token_hash")
+  rememberTokenExpiresAt DateTime? @map("remember_token_expires_at")
+  recoveryTokenHash      String?   @map("recovery_token_hash")
+  recoveryTokenExpiresAt DateTime? @map("recovery_token_expires_at")
+  createdAt              DateTime  @default(now()) @map("created_at")
+  user                   User      @relation(fields: [userId], references: [id])
 
   @@map("two_factor_auth")
 }
@@ -1161,10 +1128,6 @@ model TermsAcceptance {
   @@map("terms_acceptances")
 }
 
-// ══════════════════════════════════════════════════════════
-// Webhooks (with organizationId)
-// ══════════════════════════════════════════════════════════
-
 model Webhook {
   id             String        @id @default(cuid())
   userId         String        @map("user_id")
@@ -1177,8 +1140,8 @@ model Webhook {
   createdAt      DateTime      @default(now()) @map("created_at")
   updatedAt      DateTime      @updatedAt @map("updated_at")
   logs           WebhookLog[]
-  user           User          @relation(fields: [userId], references: [id])
   organization   Organization? @relation(fields: [organizationId], references: [id])
+  user           User          @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([organizationId])
@@ -1201,10 +1164,6 @@ model WebhookLog {
   @@map("webhook_logs")
 }
 
-// ══════════════════════════════════════════════════════════
-// Link Shortener & Click Tracking
-// ══════════════════════════════════════════════════════════
-
 model ShortLink {
   id             String        @id @default(cuid())
   shortCode      String        @unique @map("short_code")
@@ -1217,10 +1176,10 @@ model ShortLink {
   lastClickedAt  DateTime?     @map("last_clicked_at")
   expiresAt      DateTime?     @map("expires_at")
   createdAt      DateTime      @default(now()) @map("created_at")
-  user           User          @relation(fields: [userId], references: [id])
-  organization   Organization? @relation(fields: [organizationId], references: [id])
-  campaign       Campaign?     @relation(fields: [campaignId], references: [id])
   clickEvents    ClickEvent[]
+  campaign       Campaign?     @relation(fields: [campaignId], references: [id])
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  user           User          @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([campaignId])
@@ -1229,21 +1188,17 @@ model ShortLink {
 }
 
 model ClickEvent {
-  id          String   @id @default(cuid())
-  shortLinkId String   @map("short_link_id")
-  ipAddress   String?  @map("ip_address")
-  userAgent   String?  @map("user_agent")
+  id          String    @id @default(cuid())
+  shortLinkId String    @map("short_link_id")
+  ipAddress   String?   @map("ip_address")
+  userAgent   String?   @map("user_agent")
   referer     String?
-  createdAt   DateTime @default(now()) @map("created_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
   shortLink   ShortLink @relation(fields: [shortLinkId], references: [id], onDelete: Cascade)
 
   @@index([shortLinkId, createdAt])
   @@map("click_events")
 }
-
-// ══════════════════════════════════════════════════════════
-// Settings
-// ══════════════════════════════════════════════════════════
 
 model WorkspaceSettings {
   id        String   @id @default(cuid())
@@ -1259,26 +1214,22 @@ model WorkspaceSettings {
 }
 
 model NotificationPrefs {
-  id                String   @id @default(cuid())
-  userId            String   @unique @map("user_id")
-  emailCreditLow    Boolean  @default(true) @map("email_credit_low")
-  emailCampaignDone Boolean  @default(true) @map("email_campaign_done")
-  emailWeeklyReport Boolean  @default(false) @map("email_weekly_report")
-  emailPackageExpiry Boolean @default(true) @map("email_package_expiry")
-  emailInvoice      Boolean  @default(true) @map("email_invoice")
-  emailSecurity     Boolean  @default(true) @map("email_security")
-  smsCreditLow      Boolean  @default(false) @map("sms_credit_low")
-  smsCampaignDone   Boolean  @default(false) @map("sms_campaign_done")
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
-  user              User     @relation(fields: [userId], references: [id])
+  id                 String   @id @default(cuid())
+  userId             String   @unique @map("user_id")
+  emailCreditLow     Boolean  @default(true) @map("email_credit_low")
+  emailCampaignDone  Boolean  @default(true) @map("email_campaign_done")
+  emailWeeklyReport  Boolean  @default(false) @map("email_weekly_report")
+  emailPackageExpiry Boolean  @default(true) @map("email_package_expiry")
+  emailInvoice       Boolean  @default(true) @map("email_invoice")
+  emailSecurity      Boolean  @default(true) @map("email_security")
+  smsCreditLow       Boolean  @default(false) @map("sms_credit_low")
+  smsCampaignDone    Boolean  @default(false) @map("sms_campaign_done")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+  user               User     @relation(fields: [userId], references: [id])
 
   @@map("notification_prefs")
 }
-
-// ══════════════════════════════════════════════════════════
-// API Logs
-// ══════════════════════════════════════════════════════════
 
 model ApiLog {
   id         String   @id @default(cuid())
@@ -1309,19 +1260,15 @@ model ApiLog {
   @@map("api_logs")
 }
 
-// ══════════════════════════════════════════════════════════
-// PDPA Compliance
-// ══════════════════════════════════════════════════════════
-
 model Consent {
   id             String         @id @default(cuid())
   organizationId String?        @map("organization_id")
   contactId      String         @map("contact_id")
   purpose        ConsentPurpose
   granted        Boolean
-  source         String         // "form", "api", "import", "sms"
+  source         String
   ipAddress      String?        @map("ip_address")
-  evidence       String?        // reference to consent form/screenshot
+  evidence       String?
   grantedAt      DateTime       @default(now()) @map("granted_at")
   revokedAt      DateTime?      @map("revoked_at")
   createdAt      DateTime       @default(now()) @map("created_at")
@@ -1338,8 +1285,8 @@ model OptOutLog {
   organizationId String?       @map("organization_id")
   contactId      String?       @map("contact_id")
   phone          String
-  method         String        // "sms_reply", "link", "manual", "api"
-  keyword        String?       // "STOP", "ยกเลิก" etc.
+  method         String
+  keyword        String?
   processedAt    DateTime?     @map("processed_at")
   createdAt      DateTime      @default(now()) @map("created_at")
   contact        Contact?      @relation(fields: [contactId], references: [id])
@@ -1361,7 +1308,7 @@ model DataRequest {
   status         DataRequestStatus @default(PENDING)
   processedBy    String?           @map("processed_by")
   notes          String?
-  dueDate        DateTime          @map("due_date") // PDPA: must process within 30 days
+  dueDate        DateTime          @map("due_date")
   completedAt    DateTime?         @map("completed_at")
   createdAt      DateTime          @default(now()) @map("created_at")
   contact        Contact?          @relation(fields: [contactId], references: [id])
@@ -1373,21 +1320,17 @@ model DataRequest {
   @@map("data_requests")
 }
 
-// ══════════════════════════════════════════════════════════
-// Audit Logs (append-only, immutable)
-// ══════════════════════════════════════════════════════════
-
 model AuditLog {
   id             String        @id @default(cuid())
   organizationId String?       @map("organization_id")
   userId         String?       @map("user_id")
-  action         String        // "message.send", "contact.delete", "member.invite", etc.
-  resource       String        // "Message", "Contact", "Campaign", etc.
+  action         String
+  resource       String
   resourceId     String?       @map("resource_id")
-  metadata       Json?         // flexible payload
+  metadata       Json?
   ipAddress      String?       @map("ip_address")
   userAgent      String?       @map("user_agent")
-  result         String        @default("success") // "success" | "failure"
+  result         String        @default("success")
   createdAt      DateTime      @default(now()) @map("created_at")
   organization   Organization? @relation(fields: [organizationId], references: [id])
   user           User?         @relation(fields: [userId], references: [id])
@@ -1399,30 +1342,22 @@ model AuditLog {
   @@map("audit_logs")
 }
 
-// ══════════════════════════════════════════════════════════
-// Backoffice — Admin Users
-// ══════════════════════════════════════════════════════════
-
 model AdminUser {
-  id             String          @id @default(cuid())
-  email          String          @unique
-  name           String
-  password       String
-  role           AdminRole       @default(SUPPORT)
-  isActive       Boolean         @default(true) @map("is_active")
-  lastLogin      DateTime?       @map("last_login")
-  createdAt      DateTime        @default(now()) @map("created_at")
-  updatedAt      DateTime        @updatedAt @map("updated_at")
-  refunds        Refund[]
-  ticketReplies  TicketReply[]
+  id              String          @id @default(cuid())
+  email           String          @unique
+  name            String
+  password        String
+  role            AdminRole       @default(SUPPORT)
+  isActive        Boolean         @default(true) @map("is_active")
+  lastLogin       DateTime?       @map("last_login")
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+  refunds         Refund[]
   assignedTickets SupportTicket[] @relation("AssignedTickets")
+  ticketReplies   TicketReply[]
 
   @@map("admin_users")
 }
-
-// ══════════════════════════════════════════════════════════
-// Backoffice — Support: Tickets & Knowledge Base
-// ══════════════════════════════════════════════════════════
 
 model SupportTicket {
   id             String         @id @default(cuid())
@@ -1431,16 +1366,16 @@ model SupportTicket {
   assigneeId     String?        @map("assignee_id")
   subject        String
   description    String
-  status         TicketStatus     @default(OPEN)
-  priority       TicketPriority   @default(MEDIUM)
-  category       TicketCategory   @default(GENERAL)
-  resolvedAt     DateTime?        @map("resolved_at")
-  closedAt       DateTime?        @map("closed_at")
-  firstReplyAt   DateTime?        @map("first_reply_at")
-  createdAt      DateTime         @default(now()) @map("created_at")
-  updatedAt      DateTime         @updatedAt @map("updated_at")
+  status         TicketStatus   @default(OPEN)
+  priority       TicketPriority @default(MEDIUM)
+  category       TicketCategory @default(GENERAL)
+  resolvedAt     DateTime?      @map("resolved_at")
+  closedAt       DateTime?      @map("closed_at")
+  firstReplyAt   DateTime?      @map("first_reply_at")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+  assignee       AdminUser?     @relation("AssignedTickets", fields: [assigneeId], references: [id])
   replies        TicketReply[]
-  assignee       AdminUser?       @relation("AssignedTickets", fields: [assigneeId], references: [id])
 
   @@index([userId, status])
   @@index([status, priority])
@@ -1452,17 +1387,17 @@ model SupportTicket {
 }
 
 model TicketReply {
-  id          String           @id @default(cuid())
-  ticketId    String           @map("ticket_id")
-  adminId     String?          @map("admin_id")
-  userId      String?          @map("user_id")
-  senderType  TicketSenderType @default(CUSTOMER)  @map("sender_type")
+  id          String             @id @default(cuid())
+  ticketId    String             @map("ticket_id")
+  adminId     String?            @map("admin_id")
+  userId      String?            @map("user_id")
+  senderType  TicketSenderType   @default(CUSTOMER) @map("sender_type")
   content     String
-  isInternal  Boolean          @default(false) @map("is_internal")
-  createdAt   DateTime         @default(now()) @map("created_at")
-  ticket      SupportTicket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  admin       AdminUser?       @relation(fields: [adminId], references: [id])
+  isInternal  Boolean            @default(false) @map("is_internal")
+  createdAt   DateTime           @default(now()) @map("created_at")
   attachments TicketAttachment[]
+  admin       AdminUser?         @relation(fields: [adminId], references: [id])
+  ticket      SupportTicket      @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
   @@index([ticketId, createdAt])
   @@map("ticket_replies")
@@ -1483,19 +1418,19 @@ model TicketAttachment {
 }
 
 model KnowledgeBase {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   title           String
-  content         String   @db.Text
-  category        String   @default("general")
-  slug            String   @unique
-  published       Boolean  @default(false)
+  content         String
+  category        String    @default("general")
+  slug            String    @unique
+  published       Boolean   @default(false)
   publishedAt     DateTime? @map("published_at")
-  searchCount     Int      @default(0) @map("search_count")
-  viewCount       Int      @default(0) @map("view_count")
-  helpfulCount    Int      @default(0) @map("helpful_count")
-  notHelpfulCount Int      @default(0) @map("not_helpful_count")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  searchCount     Int       @default(0) @map("search_count")
+  viewCount       Int       @default(0) @map("view_count")
+  helpfulCount    Int       @default(0) @map("helpful_count")
+  notHelpfulCount Int       @default(0) @map("not_helpful_count")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
   @@index([category])
   @@index([published])
@@ -1503,22 +1438,18 @@ model KnowledgeBase {
   @@map("knowledge_base")
 }
 
-// ══════════════════════════════════════════════════════════
-// Backoffice — CTO: Alerts & Deployments
-// ══════════════════════════════════════════════════════════
-
 model Alert {
-  id         String        @id @default(cuid())
-  type       String        // "error_rate", "latency", "delivery_rate", "credit_low"
-  severity   AlertSeverity @default(WARNING)
-  message    String
-  rule       Json?         // alert rule config
-  isActive   Boolean       @default(true) @map("is_active")
-  triggeredAt DateTime?    @map("triggered_at")
-  resolvedAt DateTime?     @map("resolved_at")
-  resolvedBy String?       @map("resolved_by")
-  resolveNote String?      @map("resolve_note")
-  createdAt  DateTime      @default(now()) @map("created_at")
+  id          String        @id @default(cuid())
+  type        String
+  severity    AlertSeverity @default(WARNING)
+  message     String
+  rule        Json?
+  isActive    Boolean       @default(true) @map("is_active")
+  triggeredAt DateTime?     @map("triggered_at")
+  resolvedAt  DateTime?     @map("resolved_at")
+  resolvedBy  String?       @map("resolved_by")
+  resolveNote String?       @map("resolve_note")
+  createdAt   DateTime      @default(now()) @map("created_at")
 
   @@index([isActive])
   @@index([severity])
@@ -1531,23 +1462,19 @@ model Deployment {
   version    String
   commitHash String?  @map("commit_hash")
   deployedBy String   @map("deployed_by")
-  status     String   @default("success") // success, failed, rollback
+  status     String   @default("success")
   changelog  String?
-  duration   Int?     // seconds
+  duration   Int?
   createdAt  DateTime @default(now()) @map("created_at")
 
   @@index([createdAt])
   @@map("deployments")
 }
 
-// ══════════════════════════════════════════════════════════
-// Backoffice — Marketing: Promo Codes
-// ══════════════════════════════════════════════════════════
-
 model PromoCode {
   id            String    @id @default(cuid())
   code          String    @unique
-  discountType  String    @map("discount_type") // "credits", "percent"
+  discountType  String    @map("discount_type")
   discountValue Int       @map("discount_value")
   maxUses       Int?      @map("max_uses")
   usedCount     Int       @default(0) @map("used_count")
@@ -1561,19 +1488,15 @@ model PromoCode {
   @@map("promo_codes")
 }
 
-// ══════════════════════════════════════════════════════════
-// Payment Integration
-// ══════════════════════════════════════════════════════════
-
 model Plan {
   id            String         @id @default(cuid())
-  name          String         @unique // starter, business, enterprise
+  name          String         @unique
   displayName   String         @map("display_name")
-  price         Int            // satang (e.g., 49900 = 499 THB)
-  credits       Int            // monthly credits included
-  interval      String         @default("monthly") // monthly, yearly
+  price         Int
+  credits       Int
+  interval      String         @default("monthly")
   maxSenders    Int            @default(5) @map("max_senders")
-  features      Json?          // additional features as JSON
+  features      Json?
   active        Boolean        @default(true)
   sortOrder     Int            @default(0) @map("sort_order")
   createdAt     DateTime       @default(now()) @map("created_at")
@@ -1584,20 +1507,20 @@ model Plan {
 }
 
 model Subscription {
-  id               String    @id @default(cuid())
-  userId           String    @map("user_id")
-  organizationId   String?   @map("organization_id")
-  planId           String    @map("plan_id")
-  status           String    @default("active") // active, canceled, past_due, trialing
-  scheduleId       String?   @unique @map("omise_schedule_id")
-  currentPeriodStart DateTime @map("current_period_start")
-  currentPeriodEnd DateTime  @map("current_period_end")
-  canceledAt       DateTime? @map("canceled_at")
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
-  user             User      @relation(fields: [userId], references: [id])
-  organization     Organization? @relation(fields: [organizationId], references: [id])
-  plan             Plan      @relation(fields: [planId], references: [id])
+  id                 String        @id @default(cuid())
+  userId             String        @map("user_id")
+  organizationId     String?       @map("organization_id")
+  planId             String        @map("plan_id")
+  status             String        @default("active")
+  scheduleId         String?       @unique @map("omise_schedule_id")
+  currentPeriodStart DateTime      @map("current_period_start")
+  currentPeriodEnd   DateTime      @map("current_period_end")
+  canceledAt         DateTime?     @map("canceled_at")
+  createdAt          DateTime      @default(now()) @map("created_at")
+  updatedAt          DateTime      @updatedAt @map("updated_at")
+  organization       Organization? @relation(fields: [organizationId], references: [id])
+  plan               Plan          @relation(fields: [planId], references: [id])
+  user               User          @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([organizationId])
@@ -1606,72 +1529,62 @@ model Subscription {
 }
 
 model Payment {
-  id              String    @id @default(cuid())
-  userId          String    @map("user_id")
-  organizationId  String?   @map("organization_id")
-  packageTierId   String?   @map("package_tier_id")
-  amount          Int       // satang (pre-VAT)
-  vatAmount       Int?      @map("vat_amount") // VAT 7% in satang
-  totalAmount     Int?      @map("total_amount") // amount + vat in satang
-  currency        String    @default("THB")
-  method          String    @default("BANK_TRANSFER") // BANK_TRANSFER only
-  status          String    @default("PENDING") // PENDING, PROCESSING, PENDING_REVIEW, COMPLETED, FAILED, REFUNDED, EXPIRED
-  // Slip
-  slipUrl         String?   @map("slip_url")
-  slipFileName    String?   @map("slip_file_name")
-  slipFileSize    Int?      @map("slip_file_size")
-  // EasySlip verification
-  easyslipVerified Boolean? @map("easyslip_verified")
-  easyslipResponse Json?    @map("easyslip_response")
-  easyslipAmount  Int?      @map("easyslip_amount") // amount detected from slip (satang)
-  easyslipBank    String?   @map("easyslip_bank")
-  easyslipDate    DateTime? @map("easyslip_date")
-  // Admin review
-  adminNote       String?   @map("admin_note")
-  rejectReason    String?   @map("reject_reason")
-  reviewedBy      String?   @map("reviewed_by")
-  reviewedAt      DateTime? @map("reviewed_at")
-  // WHT 3%
-  hasWht          Boolean   @default(false) @map("has_wht")
-  whtCertUrl      String?   @map("wht_cert_url")
-  whtCertVerified Boolean?  @map("wht_cert_verified")
-  // Tax
-  taxProfileId    String?   @map("tax_profile_id")
-  taxProfile      TaxProfile? @relation(fields: [taxProfileId], references: [id])
-  // Amounts
-  netPayAmount    Int?      @map("net_pay_amount") // total - wht = amount customer transfers (satang)
-  expiresAt       DateTime? @map("expires_at") // 24hr expiry; partial index idx_payment_expires maintained in SQL migration
-  // Invoice
-  invoiceNumber   String?   @map("invoice_number") // INV-YYYYMM-XXXX
-  invoiceUrl      String?   @map("invoice_url")
-  preInvoiceNumber String?  @map("pre_invoice_number") // QT-YYYYMM-XXXX
-  preInvoiceUrl   String?   @map("pre_invoice_url")
-  creditNoteNumber String?  @map("credit_note_number") // CN-YYYYMM-XXXX
-  creditNoteUrl   String?   @map("credit_note_url")
-  // Refund
-  refundAmount    Int?      @map("refund_amount") // satang
-  refundedAt      DateTime? @map("refunded_at")
-  // References
-  creditsAdded    Int?      @map("credits_added")
-  transactionId   String?   @map("transaction_id")
-  subscriptionId  String?   @map("subscription_id")
-  paidAt          DateTime? @map("paid_at")
-  // Legacy Omise fields (unused)
-  chargeId        String?   @unique @map("omise_charge_id")
-  paymentToken    String?   @map("omise_token")
-  failureCode     String?   @map("failure_code")
-  failureMessage  String?   @map("failure_message")
-  metadata        Json?
-  subtotal        Int?
-  whtAmount       Int?      @map("wht_amount")
-  netAmount       Int?      @map("net_amount")
-  idempotencyKey  String?   @unique @map("idempotency_key")
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
-  user            User      @relation(fields: [userId], references: [id])
-  organization    Organization? @relation(fields: [organizationId], references: [id])
-  packageTier     PackageTier?  @relation(fields: [packageTierId], references: [id])
-  history         PaymentHistory[]
+  id               String           @id @default(cuid())
+  userId           String           @map("user_id")
+  organizationId   String?          @map("organization_id")
+  packageTierId    String?          @map("package_tier_id")
+  amount           Int
+  vatAmount        Int?             @map("vat_amount")
+  totalAmount      Int?             @map("total_amount")
+  currency         String           @default("THB")
+  method           String           @default("BANK_TRANSFER")
+  status           String           @default("PENDING")
+  slipUrl          String?          @map("slip_url")
+  slipFileName     String?          @map("slip_file_name")
+  slipFileSize     Int?             @map("slip_file_size")
+  easyslipVerified Boolean?         @map("easyslip_verified")
+  easyslipResponse Json?            @map("easyslip_response")
+  easyslipAmount   Int?             @map("easyslip_amount")
+  easyslipBank     String?          @map("easyslip_bank")
+  easyslipDate     DateTime?        @map("easyslip_date")
+  adminNote        String?          @map("admin_note")
+  rejectReason     String?          @map("reject_reason")
+  reviewedBy       String?          @map("reviewed_by")
+  reviewedAt       DateTime?        @map("reviewed_at")
+  hasWht           Boolean          @default(false) @map("has_wht")
+  whtCertUrl       String?          @map("wht_cert_url")
+  whtCertVerified  Boolean?         @map("wht_cert_verified")
+  taxProfileId     String?          @map("tax_profile_id")
+  netPayAmount     Int?             @map("net_pay_amount")
+  expiresAt        DateTime?        @map("expires_at")
+  invoiceNumber    String?          @map("invoice_number")
+  invoiceUrl       String?          @map("invoice_url")
+  preInvoiceNumber String?          @map("pre_invoice_number")
+  preInvoiceUrl    String?          @map("pre_invoice_url")
+  creditNoteNumber String?          @map("credit_note_number")
+  creditNoteUrl    String?          @map("credit_note_url")
+  refundAmount     Int?             @map("refund_amount")
+  refundedAt       DateTime?        @map("refunded_at")
+  creditsAdded     Int?             @map("credits_added")
+  transactionId    String?          @map("transaction_id")
+  subscriptionId   String?          @map("subscription_id")
+  paidAt           DateTime?        @map("paid_at")
+  chargeId         String?          @unique @map("omise_charge_id")
+  paymentToken     String?          @map("omise_token")
+  failureCode      String?          @map("failure_code")
+  failureMessage   String?          @map("failure_message")
+  metadata         Json?
+  subtotal         Int?
+  whtAmount        Int?             @map("wht_amount")
+  netAmount        Int?             @map("net_amount")
+  idempotencyKey   String?          @unique @map("idempotency_key")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+  history          PaymentHistory[]
+  organization     Organization?    @relation(fields: [organizationId], references: [id])
+  packageTier      PackageTier?     @relation(fields: [packageTierId], references: [id])
+  taxProfile       TaxProfile?      @relation(fields: [taxProfileId], references: [id])
+  user             User             @relation(fields: [userId], references: [id])
 
   @@index([userId, createdAt])
   @@index([organizationId])
@@ -1682,35 +1595,35 @@ model Payment {
 }
 
 model PaymentHistory {
-  id          String    @id @default(cuid())
-  paymentId   String    @map("payment_id")
-  fromStatus  String?   @map("from_status")
-  toStatus    String    @map("to_status")
-  changedBy   String?   @map("changed_by") // admin or "system"
-  note        String?
-  createdAt   DateTime  @default(now()) @map("created_at")
-  payment     Payment   @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  paymentId  String   @map("payment_id")
+  fromStatus String?  @map("from_status")
+  toStatus   String   @map("to_status")
+  changedBy  String?  @map("changed_by")
+  note       String?
+  createdAt  DateTime @default(now()) @map("created_at")
+  payment    Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
 
   @@index([paymentId, createdAt])
   @@map("payment_history")
 }
 
 model TaxProfile {
-  id              String    @id @default(cuid())
-  organizationId  String?   @map("organization_id")
-  userId          String    @map("user_id")
-  companyName     String    @map("company_name")
-  taxId           String    @map("tax_id") // 13 digits
-  address         String    @db.Text
-  branchType      String    @default("HEAD") @map("branch_type") // HEAD or BRANCH
-  branchNumber    String?   @map("branch_number")
-  isDefault       Boolean   @default(true) @map("is_default")
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
-  organization    Organization? @relation(fields: [organizationId], references: [id])
-  user            User      @relation(fields: [userId], references: [id])
-  payments        Payment[]
-  orders          Order[]
+  id             String        @id @default(cuid())
+  organizationId String?       @map("organization_id")
+  userId         String        @map("user_id")
+  companyName    String        @map("company_name")
+  taxId          String        @map("tax_id")
+  address        String
+  branchType     String        @default("HEAD") @map("branch_type")
+  branchNumber   String?       @map("branch_number")
+  isDefault      Boolean       @default(true) @map("is_default")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  orders         Order[]
+  payments       Payment[]
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  user           User          @relation(fields: [userId], references: [id])
 
   @@index([organizationId], map: "idx_tax_profile_org")
   @@index([userId])
@@ -1719,48 +1632,44 @@ model TaxProfile {
 
 model SystemSetting {
   key       String   @id
-  value     String   @db.Text
+  value     String
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("system_settings")
 }
 
-// ══════════════════════════════════════════════════════════
-// Backoffice — Operations: SMS Providers & Delivery
-// ══════════════════════════════════════════════════════════
-
 model SmsProvider {
-  id             String           @id @default(cuid())
-  name           String           @unique // "easythunder", "thaibulksms", "twilio"
-  displayName    String           @map("display_name")
-  apiUrl         String           @map("api_url")
-  credentials    Json             // encrypted credentials
-  status         ProviderStatus   @default(ACTIVE)
-  priority       Int              @default(0) // lower = higher priority
-  costPerSms     Decimal          @map("cost_per_sms") @db.Decimal(6, 4)
-  balance        Decimal?         @db.Decimal(12, 2)
-  balanceAlert   Decimal?         @map("balance_alert") @db.Decimal(12, 2)
-  dailyLimit     Int?             @map("daily_limit")
-  dailySent      Int              @default(0) @map("daily_sent")
-  createdAt      DateTime         @default(now()) @map("created_at")
-  updatedAt      DateTime         @updatedAt @map("updated_at")
-  failoverConfig FailoverConfig[]
-  carrierRoutes  CarrierRoute[]
+  id              String           @id @default(cuid())
+  name            String           @unique
+  displayName     String           @map("display_name")
+  apiUrl          String           @map("api_url")
+  credentials     Json
+  status          ProviderStatus   @default(ACTIVE)
+  priority        Int              @default(0)
+  costPerSms      Decimal          @map("cost_per_sms") @db.Decimal(6, 4)
+  balance         Decimal?         @db.Decimal(12, 2)
+  balanceAlert    Decimal?         @map("balance_alert") @db.Decimal(12, 2)
+  dailyLimit      Int?             @map("daily_limit")
+  dailySent       Int              @default(0) @map("daily_sent")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+  carrierRoutes   CarrierRoute[]
   deliveryReports DeliveryReport[]
+  failoverConfig  FailoverConfig[]
 
   @@index([status, priority])
   @@map("sms_providers")
 }
 
 model FailoverConfig {
-  id              String      @id @default(cuid())
-  primaryId       String      @map("primary_id")
-  secondaryId     String      @map("secondary_id")
-  triggerThreshold Decimal    @map("trigger_threshold") @db.Decimal(5, 2) // delivery rate % below this triggers failover
-  autoEnabled     Boolean     @default(true) @map("auto_enabled")
-  createdAt       DateTime    @default(now()) @map("created_at")
-  primary         SmsProvider @relation(fields: [primaryId], references: [id])
+  id               String      @id @default(cuid())
+  primaryId        String      @map("primary_id")
+  secondaryId      String      @map("secondary_id")
+  triggerThreshold Decimal     @map("trigger_threshold") @db.Decimal(5, 2)
+  autoEnabled      Boolean     @default(true) @map("auto_enabled")
+  createdAt        DateTime    @default(now()) @map("created_at")
+  primary          SmsProvider @relation(fields: [primaryId], references: [id])
 
   @@unique([primaryId, secondaryId])
   @@map("failover_configs")
@@ -1768,7 +1677,7 @@ model FailoverConfig {
 
 model CarrierRoute {
   id         String      @id @default(cuid())
-  carrier    String      // "AIS", "DTAC", "TRUEMOVE", "NT"
+  carrier    String
   providerId String      @map("provider_id")
   priority   Int         @default(0)
   active     Boolean     @default(true)
@@ -1785,7 +1694,7 @@ model DeliveryReport {
   messageId   String      @map("message_id")
   providerId  String      @map("provider_id")
   carrier     String?
-  status      String      // "delivered", "failed", "pending", "expired"
+  status      String
   errorCode   String?     @map("error_code")
   errorDetail String?     @map("error_detail")
   latencyMs   Int?        @map("latency_ms")
@@ -1802,28 +1711,24 @@ model DeliveryReport {
 model PhoneBlacklist {
   id        String   @id @default(cuid())
   phone     String   @unique
-  reason    String   // "spam", "invalid", "carrier_blocked"
-  addedBy   String   @map("added_by") // admin user id
+  reason    String
+  addedBy   String   @map("added_by")
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("phone_blacklist")
 }
-
-// ══════════════════════════════════════════════════════════
-// Backoffice — CFO: Refunds & Tax Reports
-// ══════════════════════════════════════════════════════════
 
 model Refund {
   id            String       @id @default(cuid())
   transactionId String       @map("transaction_id")
   userId        String       @map("user_id")
   amount        Decimal      @db.Decimal(12, 2)
-  credits       Int          // credits to restore
+  credits       Int
   reason        String
   status        RefundStatus @default(PENDING)
   processedBy   String?      @map("processed_by")
   processedAt   DateTime?    @map("processed_at")
-  refundRef     String?      @map("refund_ref") // payment gateway refund reference
+  refundRef     String?      @map("refund_ref")
   createdAt     DateTime     @default(now()) @map("created_at")
   admin         AdminUser?   @relation(fields: [processedBy], references: [id])
 
@@ -1834,26 +1739,95 @@ model Refund {
 }
 
 model TaxReport {
-  id            String   @id @default(cuid())
-  type          String   // "monthly_vat", "monthly_wht", "annual"
-  period        String   // "2026-03", "2026"
-  totalRevenue  Decimal  @map("total_revenue") @db.Decimal(12, 2)
-  totalVat      Decimal  @map("total_vat") @db.Decimal(12, 2)
-  totalWht      Decimal  @map("total_wht") @db.Decimal(12, 2)
-  netAmount     Decimal  @map("net_amount") @db.Decimal(12, 2)
-  transactionCount Int   @map("transaction_count")
-  data          Json     // detailed breakdown
-  generatedAt   DateTime @default(now()) @map("generated_at")
-  generatedBy   String?  @map("generated_by")
+  id               String   @id @default(cuid())
+  type             String
+  period           String
+  totalRevenue     Decimal  @map("total_revenue") @db.Decimal(12, 2)
+  totalVat         Decimal  @map("total_vat") @db.Decimal(12, 2)
+  totalWht         Decimal  @map("total_wht") @db.Decimal(12, 2)
+  netAmount        Decimal  @map("net_amount") @db.Decimal(12, 2)
+  transactionCount Int      @map("transaction_count")
+  data             Json
+  generatedAt      DateTime @default(now()) @map("generated_at")
+  generatedBy      String?  @map("generated_by")
 
   @@unique([type, period])
   @@index([type, period])
   @@map("tax_reports")
 }
 
-// ══════════════════════════════════════════════════════════
-// Enums
-// ══════════════════════════════════════════════════════════
+model UserOnboarding {
+  id               String    @id @default(cuid())
+  userId           String    @unique @map("user_id")
+  emailVerified    Boolean   @default(false) @map("email_verified")
+  phoneVerified    Boolean   @default(false) @map("phone_verified")
+  senderNameSet    Boolean   @default(false) @map("sender_name_set")
+  contactsImported Boolean   @default(false) @map("contacts_imported")
+  testSmsSent      Boolean   @default(false) @map("test_sms_sent")
+  toppedUp         Boolean   @default(false) @map("topped_up")
+  firstCampaign    Boolean   @default(false) @map("first_campaign")
+  completedAt      DateTime? @map("completed_at")
+  bonusCredited    Boolean   @default(false) @map("bonus_credited")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  user             User      @relation(fields: [userId], references: [id])
+
+  @@map("user_onboarding")
+}
+
+model PdpaPolicy {
+  id                String           @id @default(cuid())
+  version           String
+  type              PolicyDocType
+  title             String
+  content           String
+  summary           String?
+  requiresReconsent Boolean          @default(false) @map("requires_reconsent")
+  isActive          Boolean          @default(true) @map("is_active")
+  createdAt         DateTime         @default(now()) @map("created_at")
+  createdBy         String?          @map("created_by")
+  consentLogs       PdpaConsentLog[]
+  creator           User?            @relation("PolicyCreator", fields: [createdBy], references: [id])
+
+  @@unique([type, version])
+  @@index([type, isActive])
+  @@map("pdpa_policies")
+}
+
+model PdpaConsentLog {
+  id          String        @id @default(cuid())
+  userId      String        @map("user_id")
+  policyId    String        @map("policy_id")
+  consentType ConsentType   @map("consent_type")
+  action      ConsentAction
+  ipAddress   String?       @map("ip_address")
+  userAgent   String?       @map("user_agent")
+  metadata    Json?
+  recordedAt  DateTime      @default(now()) @map("recorded_at")
+  policy      PdpaPolicy    @relation(fields: [policyId], references: [id])
+  user        User          @relation(fields: [userId], references: [id])
+
+  @@index([userId, recordedAt])
+  @@index([consentType, action])
+  @@index([policyId])
+  @@map("pdpa_consent_logs")
+}
+
+model BankAccount {
+  id            String   @id @default(cuid())
+  userId        String   @map("user_id")
+  bankCode      String   @map("bank_code")
+  bankName      String   @map("bank_name")
+  accountNumber String   @map("account_number")
+  accountName   String   @map("account_name")
+  isDefault     Boolean  @default(false) @map("is_default")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  user          User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("bank_accounts")
+}
 
 enum MessageType {
   SMS
@@ -1913,10 +1887,10 @@ enum DocStatus {
 }
 
 enum InvoiceType {
-  TAX_INVOICE       // ใบกำกับภาษี
-  RECEIPT           // ใบเสร็จรับเงิน
-  TAX_INVOICE_RECEIPT // ใบเสร็จรับเงิน/ใบกำกับภาษี
-  INVOICE           // ใบแจ้งหนี้
+  TAX_INVOICE
+  RECEIPT
+  TAX_INVOICE_RECEIPT
+  INVOICE
 }
 
 enum InvoiceStatus {
@@ -2029,33 +2003,6 @@ enum AlertSeverity {
   INFO
 }
 
-// ══════════════════════════════════════════════════════════
-// Onboarding
-// ══════════════════════════════════════════════════════════
-
-model UserOnboarding {
-  id                String   @id @default(cuid())
-  userId            String   @unique @map("user_id")
-  emailVerified     Boolean  @default(false) @map("email_verified")
-  phoneVerified     Boolean  @default(false) @map("phone_verified")
-  senderNameSet     Boolean  @default(false) @map("sender_name_set")
-  contactsImported  Boolean  @default(false) @map("contacts_imported")
-  testSmsSent       Boolean  @default(false) @map("test_sms_sent")
-  toppedUp          Boolean  @default(false) @map("topped_up")
-  firstCampaign     Boolean  @default(false) @map("first_campaign")
-  completedAt       DateTime? @map("completed_at")
-  bonusCredited     Boolean  @default(false) @map("bonus_credited")
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
-  user              User     @relation(fields: [userId], references: [id])
-
-  @@map("user_onboarding")
-}
-
-// ══════════════════════════════════════════════════════════
-// PDPA Consent Logging (Immutable — append only)
-// ══════════════════════════════════════════════════════════
-
 enum ConsentType {
   SERVICE
   MARKETING
@@ -2074,68 +2021,6 @@ enum PolicyDocType {
   MARKETING
   COOKIE
 }
-
-model PdpaPolicy {
-  id               String       @id @default(cuid())
-  version          String       // 'v1.0', 'v2.0'
-  type             PolicyDocType
-  title            String
-  content          String       @db.Text
-  summary          String?      @db.Text
-  requiresReconsent Boolean     @default(false) @map("requires_reconsent")
-  isActive         Boolean      @default(true) @map("is_active")
-  createdAt        DateTime     @default(now()) @map("created_at")
-  createdBy        String?      @map("created_by")
-  consentLogs      PdpaConsentLog[]
-  creator          User?        @relation("PolicyCreator", fields: [createdBy], references: [id])
-
-  @@unique([type, version])
-  @@index([type, isActive])
-  @@map("pdpa_policies")
-}
-
-model PdpaConsentLog {
-  id          String        @id @default(cuid())
-  userId      String        @map("user_id")
-  policyId    String        @map("policy_id")
-  consentType ConsentType   @map("consent_type")
-  action      ConsentAction
-  ipAddress   String?       @map("ip_address")
-  userAgent   String?       @map("user_agent") @db.Text
-  metadata    Json?
-  recordedAt  DateTime      @default(now()) @map("recorded_at")
-  user        User          @relation(fields: [userId], references: [id])
-  policy      PdpaPolicy    @relation(fields: [policyId], references: [id])
-
-  @@index([userId, recordedAt])
-  @@index([consentType, action])
-  @@index([policyId])
-  @@map("pdpa_consent_logs")
-}
-
-// ══════════════════════════════════════════════════════════
-// Bank Accounts
-// ══════════════════════════════════════════════════════════
-
-model BankAccount {
-  id            String   @id @default(cuid())
-  userId        String   @map("user_id")
-  bankCode      String   @map("bank_code")       // e.g. "KBANK", "SCB", "BBL"
-  bankName      String   @map("bank_name")        // e.g. "ธนาคารกสิกรไทย"
-  accountNumber String   @map("account_number")
-  accountName   String   @map("account_name")
-  isDefault     Boolean  @default(false) @map("is_default")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
-  user          User     @relation(fields: [userId], references: [id])
-
-  @@index([userId])
-  @@map("bank_accounts")
-}
-
-// ══════════════════════════════════════════════════════════
-// Campaign Queue Enums
-// ══════════════════════════════════════════════════════════
 
 enum CampaignStatus {
   DRAFT

@@ -74,44 +74,52 @@ export async function POST(req: NextRequest) {
       where: { userId_name: { userId: user.id, name: input.name.toUpperCase() } },
     });
     if (existing) {
-      throw new ApiError(400, "ชื่อผู้ส่งนี้มีอยู่แล้ว");
+      throw new ApiError(409, "ชื่อผู้ส่งนี้มีอยู่แล้ว", "DUPLICATE");
     }
 
     // Create sender name + URLs in transaction
-    const senderName = await db.$transaction(async (tx) => {
-      const sn = await tx.senderName.create({
-        data: {
-          userId: user.id,
-          name: input.name.toUpperCase(),
-          status: "PENDING",
-          accountType: input.accountType,
-          submittedAt: new Date(),
-        },
-      });
-
-      // Create URL whitelists
-      if (input.urls.length > 0) {
-        await tx.senderNameUrl.createMany({
-          data: input.urls.map((domain) => ({
-            senderNameId: sn.id,
-            domain,
-          })),
-        });
-      }
-
-      // Log history
-      await tx.senderNameHistory.create({
-        data: {
-          senderNameId: sn.id,
-            action: "submitted",
-            fromStatus: "DRAFT",
-            toStatus: "PENDING",
-            performedBy: user.id,
+    let senderName;
+    try {
+      senderName = await db.$transaction(async (tx) => {
+        const sn = await tx.senderName.create({
+          data: {
+            userId: user.id,
+            name: input.name.toUpperCase(),
+            status: "PENDING",
+            accountType: input.accountType,
+            submittedAt: new Date(),
           },
         });
 
-      return sn;
-    });
+        // Create URL whitelists
+        if (input.urls.length > 0) {
+          await tx.senderNameUrl.createMany({
+            data: input.urls.map((domain) => ({
+              senderNameId: sn.id,
+              domain,
+            })),
+          });
+        }
+
+        // Log history
+        await tx.senderNameHistory.create({
+          data: {
+            senderNameId: sn.id,
+              action: "submitted",
+              fromStatus: "DRAFT",
+              toStatus: "PENDING",
+              performedBy: user.id,
+            },
+          });
+
+        return sn;
+      });
+    } catch (error) {
+      if (error instanceof Error && "code" in error && (error as { code: string }).code === "P2002") {
+        throw new ApiError(409, "ชื่อผู้ส่งนี้มีอยู่แล้ว", "DUPLICATE");
+      }
+      throw error;
+    }
 
     return apiResponse({
       senderName: {

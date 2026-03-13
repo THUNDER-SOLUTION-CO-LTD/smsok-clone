@@ -1,6 +1,5 @@
 import { NextRequest } from "next/server";
-import { ApiError, apiResponse, apiError } from "@/lib/api-auth";
-import { getSession } from "@/lib/auth";
+import { ApiError, apiResponse, apiError, authenticateRequest } from "@/lib/api-auth";
 import { prisma as db } from "@/lib/db";
 import { updateInvoiceStatusSchema } from "@/lib/validations";
 
@@ -18,15 +17,14 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
 // PUT /api/v1/invoices/:id/status — update invoice status
 export async function PUT(req: NextRequest, ctx: Ctx) {
   try {
-    const session = await getSession();
-    if (!session?.id) throw new ApiError(401, "กรุณาเข้าสู่ระบบ");
+    const user = await authenticateRequest(req);
 
     const { id } = await ctx.params;
     const body = await req.json();
     const { status } = updateInvoiceStatusSchema.parse(body);
 
     const invoice = await db.invoice.findFirst({
-      where: { id, userId: session.id },
+      where: { id, userId: user.id },
       select: { id: true, status: true },
     });
     if (!invoice) throw new ApiError(404, "ไม่พบใบแจ้งหนี้");

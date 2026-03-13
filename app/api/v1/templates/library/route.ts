@@ -1,6 +1,5 @@
 import { NextRequest } from "next/server";
-import { ApiError, apiResponse, apiError } from "@/lib/api-auth";
-import { getSession } from "@/lib/auth";
+import { apiResponse, apiError, authenticateRequest } from "@/lib/api-auth";
 import { prisma as db } from "@/lib/db";
 import { applyRateLimit } from "@/lib/rate-limit";
 import { z } from "zod";
@@ -14,10 +13,9 @@ const listSchema = z.object({
 // GET /api/v1/templates/library — pre-built public templates
 export async function GET(req: NextRequest) {
   try {
-    const session = await getSession();
-    if (!session?.id) throw new ApiError(401, "กรุณาเข้าสู่ระบบ");
+    const user = await authenticateRequest(req);
 
-    const rl = await applyRateLimit(session.id, "template");
+    const rl = await applyRateLimit(user.id, "template");
     if (rl.blocked) return rl.blocked;
 
     const params = Object.fromEntries(new URL(req.url).searchParams);

@@ -1,7 +1,6 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { ApiError, apiError, apiResponse } from "@/lib/api-auth";
-import { getSession } from "@/lib/auth";
+import { ApiError, apiError, apiResponse, authenticateRequest } from "@/lib/api-auth";
 import { prisma as db } from "@/lib/db";
 import { applyRateLimit } from "@/lib/rate-limit";
 import { ensureOrderDocument, orderSummarySelect } from "@/lib/orders/api";
@@ -17,14 +16,17 @@ import {
 } from "@/lib/orders/service";
 import { generateOrderDocumentNumber } from "@/lib/orders/numbering";
 
+// Strip HTML tags to prevent XSS
+const stripHtml = (val: string) => val.replace(/<[^>]*>/g, "");
+
 const createSchema = z.object({
   package_tier_id: z.string().min(1),
   customer_type: z.enum(["INDIVIDUAL", "COMPANY"]),
-  company_name: z.string().trim().min(2).max(200).optional(),
-  company_address: z.string().trim().min(10).max(1000).optional(),
-  tax_name: z.string().trim().min(2).max(200),
+  company_name: z.string().trim().transform(stripHtml).pipe(z.string().min(2).max(200)).optional(),
+  company_address: z.string().trim().transform(stripHtml).pipe(z.string().min(10).max(1000)).optional(),
+  tax_name: z.string().trim().transform(stripHtml).pipe(z.string().min(2).max(200)),
   tax_id: z.string().regex(/^\d{13}$/),
-  tax_address: z.string().trim().min(10).max(1000),
+  tax_address: z.string().trim().transform(stripHtml).pipe(z.string().min(10).max(1000)),
   tax_branch_type: z.enum(["HEAD", "BRANCH"]),
   tax_branch_number: z.string().regex(/^\d{5}$/).optional(),
   has_wht: z.boolean().default(false),
@@ -69,15 +71,14 @@ const listSchema = z.object({
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getSession();
-    if (!session?.id) throw new ApiError(401, "กรุณาเข้าสู่ระบบ");
+    const user = await authenticateRequest(req);
 
-    const rl = await applyRateLimit(session.id, "purchase");
+    const rl = await applyRateLimit(user.id, "purchase");
     if (rl.blocked) return rl.blocked;
 
     await db.order.updateMany({
       where: {
-        userId: session.id,
+        userId: user.id,
         status: { in: ["DRAFT", "PENDING_PAYMENT"] },
         expiresAt: { lt: new Date() },
       },
@@ -85,7 +86,7 @@ export async function GET(req: NextRequest) {
     });
 
     const input = listSchema.parse(Object.fromEntries(new URL(req.url).searchParams));
-    const where: Record<string, unknown> = { userId: session.id };
+    const where: Record<string, unknown> = { userId: user.id };
 
     if (input.status) {
       const mappedStatuses = parseLegacyOrderStatus(input.status);
@@ -118,16 +119,16 @@ export async function GET(req: NextRequest) {
         take: input.limit,
       }),
       db.order.count({ where }),
-      db.order.count({ where: { userId: session.id } }),
+      db.order.count({ where: { userId: user.id } }),
       db.order.count({
         where: {
-          userId: session.id,
+          userId: user.id,
           status: { in: ["DRAFT", "PENDING_PAYMENT", "VERIFYING"] },
         },
       }),
-      db.order.count({ where: { userId: session.id, status: "PAID" } }),
+      db.order.count({ where: { userId: user.id, status: "PAID" } }),
       db.order.aggregate({
-        where: { userId: session.id, status: "PAID" },
+        where: { userId: user.id, status: "PAID" },
         _sum: { payAmount: true },
       }),
     ]);
@@ -154,10 +155,9 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getSession();
-    if (!session?.id) throw new ApiError(401, "กรุณาเข้าสู่ระบบ");
+    const user = await authenticateRequest(req);
 
-    const rl = await applyRateLimit(session.id, "purchase");
+    const rl = await applyRateLimit(user.id, "purchase");
     if (rl.blocked) return rl.blocked;
 
     const input = createSchema.parse(await req.json());
@@ -177,10 +177,10 @@ export async function POST(req: NextRequest) {
     });
     if (!tier || !tier.isActive) throw new ApiError(404, "ไม่พบแพ็กเกจ");
     if (hasWht && !isWhtEligible(Number(tier.price), input.customer_type)) {
-      throw new ApiError(400, "หักภาษี ณ ที่จ่ายใช้ได้เมื่อเป็นนิติบุคคลและยอดก่อน VAT ตั้งแต่ 1,000 บาท");
+      throw new ApiError(400, "หักภาษี ณ ที่จ่ายใช้ได้เมื่อเป็นนิติบุคคลและยอดก่อน VAT ตั้งแต่ 1,000 เครดิต");
     }
 
-    const organizationId = await getUserPrimaryOrganizationId(session.id);
+    const organizationId = await getUserPrimaryOrganizationId(user.id);
     const totals = calculateOrderAmounts(Number(tier.price), hasWht);
     const expiresAt = getOrderExpirationDate(input.payment_method);
 
@@ -190,7 +190,7 @@ export async function POST(req: NextRequest) {
 
       let taxProfileId: string | null = null;
       if (input.save_tax_profile && input.customer_type === "COMPANY") {
-        const profile = await upsertDefaultCompanyTaxProfile(tx, session.id, organizationId, {
+        const profile = await upsertDefaultCompanyTaxProfile(tx, user.id, organizationId, {
           companyName,
           taxId: input.tax_id,
           address: companyAddress,
@@ -202,7 +202,7 @@ export async function POST(req: NextRequest) {
 
       const created = await tx.order.create({
         data: {
-          userId: session.id,
+          userId: user.id,
           organizationId,
           packageTierId: tier.id,
           taxProfileId,
@@ -225,7 +225,7 @@ export async function POST(req: NextRequest) {
           expiresAt,
           quotationNumber,
           quotationUrl: "",
-          createdBy: session.id,
+          createdBy: user.id,
         },
         select: orderSummarySelect,
       });
@@ -240,7 +240,7 @@ export async function POST(req: NextRequest) {
       });
 
       await createOrderHistory(tx, updated.id, "PENDING_PAYMENT", {
-        changedBy: session.id,
+        changedBy: user.id,
         note: "Order created",
       });
 

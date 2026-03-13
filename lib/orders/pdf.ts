@@ -1,4 +1,11 @@
-import { renderToBuffer } from "@react-pdf/renderer";
+import {
+  Document,
+  Page,
+  StyleSheet,
+  Text,
+  View,
+  renderToBuffer,
+} from "@react-pdf/renderer";
 import { createElement } from "react";
 import {
   InvoicePdf,
@@ -56,6 +63,44 @@ const INVOICE_SELLER = {
   email: process.env.COMPANY_EMAIL || "billing@smsok.com",
 };
 
+const fallbackStyles = StyleSheet.create({
+  page: {
+    padding: 40,
+    fontSize: 11,
+    color: "#111827",
+  },
+  title: {
+    fontSize: 18,
+    marginBottom: 8,
+    fontWeight: "bold",
+  },
+  subtitle: {
+    fontSize: 10,
+    color: "#6b7280",
+    marginBottom: 20,
+  },
+  row: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5e7eb",
+  },
+  label: {
+    width: "38%",
+    color: "#6b7280",
+  },
+  value: {
+    width: "60%",
+    textAlign: "right",
+  },
+  note: {
+    marginTop: 18,
+    fontSize: 9,
+    color: "#6b7280",
+  },
+});
+
 function toNumber(value: NumericLike) {
   return typeof value === "number" ? value : value.toNumber();
 }
@@ -82,6 +127,55 @@ function buildBuyerBranch(order: OrderPdfRecord) {
   }
 
   return "สำนักงานใหญ่";
+}
+
+function buildFallbackPdfElement(
+  title: string,
+  documentNumber: string,
+  rows: Array<[string, string]>,
+) {
+  const rowElements = rows.map(([label, value], index) =>
+    createElement(
+      View,
+      { key: `${label}-${index}`, style: fallbackStyles.row },
+      createElement(Text, { style: fallbackStyles.label }, label),
+      createElement(Text, { style: fallbackStyles.value }, value),
+    ),
+  );
+
+  return createElement(
+    Document,
+    null,
+    createElement(
+      Page,
+      { size: "A4", style: fallbackStyles.page },
+      createElement(Text, { style: fallbackStyles.title }, title),
+      createElement(Text, { style: fallbackStyles.subtitle }, `เลขที่เอกสาร ${documentNumber}`),
+      ...rowElements,
+      createElement(
+        Text,
+        { style: fallbackStyles.note },
+        "ระบบใช้ layout สำรองสำหรับ PDF ฉบับนี้เพื่อหลีกเลี่ยงข้อผิดพลาดของ template หลัก",
+      ),
+    ),
+  );
+}
+
+async function renderOrderPdfWithFallback(
+  title: string,
+  documentNumber: string,
+  rows: Array<[string, string]>,
+  renderPrimary: () => Promise<Buffer>,
+) {
+  try {
+    return await renderPrimary();
+  } catch (error) {
+    console.error(`[orders/pdf] primary ${title} render failed for ${documentNumber}:`, error);
+    const fallbackElement = buildFallbackPdfElement(title, documentNumber, rows);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const fallbackBuffer = await renderToBuffer(fallbackElement as any);
+    return Buffer.from(fallbackBuffer);
+  }
 }
 
 async function buildOrderInvoicePdfData(
@@ -136,34 +230,47 @@ export async function renderOrderQuotationPdf(order: OrderPdfRecord) {
     throw new Error("ไม่พบใบเสนอราคาสำหรับคำสั่งซื้อนี้");
   }
 
-  const total = toNumber(order.totalAmount);
-  const vatAmount = toNumber(order.vatAmount);
-  const subtotal = toNumber(order.netAmount);
+  return renderOrderPdfWithFallback(
+    "ใบเสนอราคา",
+    order.quotationNumber,
+    [
+      ["เลขที่คำสั่งซื้อ", order.orderNumber],
+      ["ผู้ซื้อ", order.taxName],
+      ["แพ็กเกจ", order.packageName],
+      ["จำนวนข้อความ", order.smsCount.toLocaleString("th-TH")],
+      ["ยอดรวม", toNumber(order.totalAmount).toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })],
+    ],
+    async () => {
+      const total = toNumber(order.totalAmount);
+      const vatAmount = toNumber(order.vatAmount);
+      const subtotal = toNumber(order.netAmount);
 
-  const data: QuotationPdfData = {
-    quotationNumber: order.quotationNumber,
-    createdAt: order.createdAt,
-    validUntil: order.expiresAt ?? order.createdAt,
-    seller: QUOTATION_SELLER,
-    buyer: {
-      name: order.taxName,
-      address: order.taxAddress,
-      phone: order.user?.phone ?? undefined,
-      email: order.user?.email ?? undefined,
+      const data: QuotationPdfData = {
+        quotationNumber: order.quotationNumber!,
+        createdAt: order.createdAt,
+        validUntil: order.expiresAt ?? order.createdAt,
+        seller: QUOTATION_SELLER,
+        buyer: {
+          name: order.taxName,
+          address: order.taxAddress,
+          phone: order.user?.phone ?? undefined,
+          email: order.user?.email ?? undefined,
+        },
+        items: buildOrderItem(order),
+        subtotal,
+        vatRate: 7,
+        vatAmount,
+        total,
+        amountInWords: numberToThaiText(total),
+        notes: `อ้างอิงคำสั่งซื้อ ${order.orderNumber}`,
+      };
+
+      const element = createElement(QuotationPdf, { data });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const buffer = await renderToBuffer(element as any);
+      return Buffer.from(buffer);
     },
-    items: buildOrderItem(order),
-    subtotal,
-    vatRate: 7,
-    vatAmount,
-    total,
-    amountInWords: numberToThaiText(total),
-    notes: `อ้างอิงคำสั่งซื้อ ${order.orderNumber}`,
-  };
-
-  const element = createElement(QuotationPdf, { data });
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const buffer = await renderToBuffer(element as any);
-  return Buffer.from(buffer);
+  );
 }
 
 export async function renderOrderInvoicePdf(order: OrderPdfRecord) {
@@ -171,16 +278,29 @@ export async function renderOrderInvoicePdf(order: OrderPdfRecord) {
     throw new Error("ไม่พบใบกำกับภาษีสำหรับคำสั่งซื้อนี้");
   }
 
-  const data = await buildOrderInvoicePdfData(order, {
-    documentNumber: order.invoiceNumber,
-    type: "TAX_INVOICE_RECEIPT",
-    issuedAt: order.paidAt ?? order.createdAt,
-  });
+  return renderOrderPdfWithFallback(
+    "ใบกำกับภาษี / ใบเสร็จรับเงิน",
+    order.invoiceNumber,
+    [
+      ["เลขที่คำสั่งซื้อ", order.orderNumber],
+      ["ผู้ซื้อ", order.taxName],
+      ["แพ็กเกจ", order.packageName],
+      ["ยอดรวม", toNumber(order.totalAmount).toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })],
+      ["ยอดชำระสุทธิ", toNumber(order.payAmount).toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })],
+    ],
+    async () => {
+      const data = await buildOrderInvoicePdfData(order, {
+        documentNumber: order.invoiceNumber!,
+        type: "TAX_INVOICE_RECEIPT",
+        issuedAt: order.paidAt ?? order.createdAt,
+      });
 
-  const element = createElement(InvoicePdf, { data });
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const buffer = await renderToBuffer(element as any);
-  return Buffer.from(buffer);
+      const element = createElement(InvoicePdf, { data });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const buffer = await renderToBuffer(element as any);
+      return Buffer.from(buffer);
+    },
+  );
 }
 
 export async function renderOrderAccountingDocumentPdf(
@@ -193,9 +313,21 @@ export async function renderOrderAccountingDocumentPdf(
     isVoid?: boolean;
   },
 ) {
-  const data = await buildOrderInvoicePdfData(order, options);
-  const element = createElement(InvoicePdf, { data });
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const buffer = await renderToBuffer(element as any);
-  return Buffer.from(buffer);
+  return renderOrderPdfWithFallback(
+    options.type,
+    options.documentNumber,
+    [
+      ["เลขที่คำสั่งซื้อ", order.orderNumber],
+      ["ผู้ซื้อ", order.taxName],
+      ["แพ็กเกจ", order.packageName],
+      ["ยอดรวม", toNumber(order.totalAmount).toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })],
+    ],
+    async () => {
+      const data = await buildOrderInvoicePdfData(order, options);
+      const element = createElement(InvoicePdf, { data });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const buffer = await renderToBuffer(element as any);
+      return Buffer.from(buffer);
+    },
+  );
 }

@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
       where: { userId: user.id },
     });
 
-    reset2FARateLimit(user.id);
+    await reset2FARateLimit(user.id);
 
     return NextResponse.json({
       ok: true,

@@ -6,18 +6,11 @@ import { createAuditLog } from "@/lib/actions/audit";
 import { prisma as db } from "@/lib/db";
 import { revokeAllUserSessions } from "@/lib/auth";
 import { applyRateLimit } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/session-utils";
 
 const bodySchema = z.object({
   reason: z.string().trim().max(500).optional(),
 });
-
-function getClientIp(req: NextRequest) {
-  return (
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    req.headers.get("x-real-ip") ||
-    "unknown"
-  );
-}
 
 export async function POST(
   req: NextRequest,
@@ -67,7 +60,7 @@ export async function POST(
         revokedSessions: revoked,
         reason: body.reason ?? null,
       },
-      ipAddress: getClientIp(req),
+      ipAddress: getClientIp(req.headers),
       userAgent: req.headers.get("user-agent") ?? undefined,
       result: "success",
     });

@@ -1,6 +1,5 @@
 import { NextRequest } from "next/server";
-import { ApiError, apiResponse, apiError } from "@/lib/api-auth";
-import { authenticatePublicApiKey } from "@/lib/api-key-auth";
+import { ApiError, apiResponse, apiError, authenticateRequest } from "@/lib/api-auth";
 import { requireApiPermission } from "@/lib/rbac";
 import { prisma as db } from "@/lib/db";
 
@@ -9,7 +8,7 @@ type Ctx = { params: Promise<{ id: string }> };
 // GET /api/v1/campaigns/:id/analytics — campaign delivery stats + CTR
 export async function GET(req: NextRequest, ctx: Ctx) {
   try {
-    const user = await authenticatePublicApiKey(req);
+    const user = await authenticateRequest(req);
 
     const denied = await requireApiPermission(user.id, "read", "campaign");
     if (denied) return denied;

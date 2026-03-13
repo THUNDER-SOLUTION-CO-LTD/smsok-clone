@@ -3,8 +3,23 @@ import { apiError, apiResponse } from "@/lib/api-auth";
 import { authenticateRequest } from "@/lib/api-auth";
 import { requireApiPermission } from "@/lib/rbac";
 import { createCampaign, getCampaigns } from "@/lib/actions/campaigns";
-import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { applyRateLimit } from "@/lib/rate-limit";
 import { createCampaignSchema } from "@/lib/validations";
+
+function normalizeCampaignPayload(body: unknown) {
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return body;
+  }
+
+  const input = body as Record<string, unknown>;
+  return {
+    ...input,
+    contactGroupId: input.contactGroupId ?? input.contact_group_id,
+    templateId: input.templateId ?? input.template_id,
+    senderName: input.senderName ?? input.sender_name,
+    scheduledAt: input.scheduledAt ?? input.scheduled_at,
+  };
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -32,10 +47,10 @@ export async function POST(req: NextRequest) {
     const denied = await requireApiPermission(user.id, "create", "campaign");
     if (denied) return denied;
 
-    const limit = await checkRateLimit(user.id, "batch");
-    if (!limit.allowed) return rateLimitResponse(limit.resetIn);
+    const rl = await applyRateLimit(user.id, "batch");
+    if (rl.blocked) return rl.blocked;
 
-    const body = await req.json();
+    const body = normalizeCampaignPayload(await req.json());
     const input = createCampaignSchema.parse(body);
     const campaign = await createCampaign(user.id, input);
     return apiResponse(campaign, 201);

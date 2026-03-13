@@ -143,6 +143,8 @@ export type ApiKeyCreateResponse = {
   id: string
   name: string
   key: string
+  rateLimit: number
+  ipWhitelist: string[]
   createdAt: Date
 }
 
@@ -150,8 +152,12 @@ export type ApiKeyListItem = {
   id: string
   name: string
   key: string // masked: sk_live_xxxx...xxxx
+  permissions: string[]
+  rateLimit: number
+  ipWhitelist: string[]
   isActive: boolean
   lastUsed: Date | null
+  revokedAt: Date | null
   createdAt: Date
 }
 

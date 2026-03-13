@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { ApiError, apiResponse, apiError } from "@/lib/api-auth";
 import { getSession } from "@/lib/auth";
 import { prisma as db } from "@/lib/db";
+import { resolveStoredFileUrl } from "@/lib/storage/files";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -107,6 +108,8 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     const { packageTier, ...data } = payment;
     return apiResponse({
       ...data,
+      slipUrl: resolveStoredFileUrl(data.slipUrl),
+      whtCertUrl: resolveStoredFileUrl(data.whtCertUrl),
       packageName: packageTier?.name ?? null,
       tierCode: packageTier?.tierCode ?? null,
       smsCredits: packageTier?.totalSms ?? 0,

@@ -1,16 +1,14 @@
 import { NextRequest } from "next/server";
-import { ApiError, apiResponse, apiError } from "@/lib/api-auth";
-import { getSession } from "@/lib/auth";
+import { ApiError, apiResponse, apiError, authenticateRequest } from "@/lib/api-auth";
 import { requireApiPermission } from "@/lib/rbac";
 import { createQuotation, listQuotations } from "@/lib/actions/quotations";
 
 // GET /api/v1/quotations — list quotations
 export async function GET(req: NextRequest) {
   try {
-    const session = await getSession();
-    if (!session?.id) throw new ApiError(401, "กรุณาเข้าสู่ระบบ");
+    const user = await authenticateRequest(req);
 
-    const denied = await requireApiPermission(session.id, "read", "invoice");
+    const denied = await requireApiPermission(user.id, "read", "invoice");
     if (denied) return denied;
 
     const { searchParams } = new URL(req.url);
@@ -20,7 +18,7 @@ export async function GET(req: NextRequest) {
       status: searchParams.get("status") || undefined,
     };
 
-    const result = await listQuotations(session.id, filters);
+    const result = await listQuotations(user.id, filters);
     return apiResponse(result);
   } catch (error) {
     return apiError(error);
@@ -30,10 +28,9 @@ export async function GET(req: NextRequest) {
 // POST /api/v1/quotations — create quotation
 export async function POST(req: NextRequest) {
   try {
-    const session = await getSession();
-    if (!session?.id) throw new ApiError(401, "กรุณาเข้าสู่ระบบ");
+    const user = await authenticateRequest(req);
 
-    const denied = await requireApiPermission(session.id, "create", "invoice");
+    const denied = await requireApiPermission(user.id, "create", "invoice");
     if (denied) return denied;
 
     let body: unknown;
@@ -42,7 +39,7 @@ export async function POST(req: NextRequest) {
     } catch {
       throw new ApiError(400, "กรุณาส่งข้อมูล JSON");
     }
-    const quotation = await createQuotation(session.id, body);
+    const quotation = await createQuotation(user.id, body);
     return apiResponse({ quotation }, 201);
   } catch (error) {
     return apiError(error);

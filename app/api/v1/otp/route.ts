@@ -2,12 +2,13 @@ import { NextRequest } from "next/server";
 import { ApiError, apiError } from "@/lib/api-auth";
 import { ERROR_CODES } from "@/lib/api-log";
 import { handleSendOtp, handleVerifyOtp, isVerifyOtpRequest } from "@/lib/otp-api";
+import { getClientIp } from "@/lib/session-utils";
 import { sendOtpSchema, verifyOtpSchema } from "@/lib/validations";
 
 // POST /api/v1/otp — generate or verify OTP
 export async function POST(req: NextRequest) {
   try {
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const ip = getClientIp(req.headers);
     const { applyRateLimit } = await import("@/lib/rate-limit");
 
     let body: Record<string, unknown>;

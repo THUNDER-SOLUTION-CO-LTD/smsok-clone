@@ -3,7 +3,7 @@ import { apiError, apiResponse } from "@/lib/api-auth";
 import { authenticateRequest } from "@/lib/api-auth";
 import { requireApiPermission } from "@/lib/rbac";
 import { executeCampaign } from "@/lib/actions/campaigns";
-import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { applyRateLimit } from "@/lib/rate-limit";
 
 // POST /api/v1/campaigns/:id/send — execute a campaign
 export async function POST(
@@ -16,8 +16,8 @@ export async function POST(
     const denied = await requireApiPermission(user.id, "create", "campaign");
     if (denied) return denied;
 
-    const limit = await checkRateLimit(user.id, "batch");
-    if (!limit.allowed) return rateLimitResponse(limit.resetIn);
+    const rl = await applyRateLimit(user.id, "batch");
+    if (rl.blocked) return rl.blocked;
 
     const { id } = await params;
     const result = await executeCampaign(user.id, id, undefined);

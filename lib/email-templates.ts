@@ -4,17 +4,17 @@
 // ---------------------------------------------------------------------------
 
 const BRAND = {
-  primary: "#6366F1",
-  primaryDark: "#4F46E5",
-  dark: "#0A0A0A",
-  card: "#18181B",
-  text: "#E4E4E7",
-  textMuted: "#A1A1AA",
-  border: "#27272A",
+  primary: "#00E2B5",
+  primaryDark: "#00C49E",
+  dark: "#0b1118",
+  card: "#10161c",
+  text: "#b2bacd",
+  textMuted: "#6b7280",
+  border: "#20252c",
   white: "#FFFFFF",
-  warning: "#F59E0B",
-  success: "#22C55E",
-  danger: "#EF4444",
+  warning: "#FACD63",
+  success: "#089981",
+  danger: "#F23645",
 } as const;
 
 const DASHBOARD_URL = process.env.NEXT_PUBLIC_APP_URL || "https://smsok.io";
@@ -125,17 +125,18 @@ export function welcomeEmail(name: string) {
 
   const html = emailLayout(`
     ${heading(`สวัสดี ${name}!`)}
-    ${paragraph("ยินดีต้อนรับสู่ SMSOK — แพลตฟอร์ม SMS Marketing ที่ง่ายและทรงพลัง")}
-    ${paragraph("คุณได้รับ <strong style=\"color:" + BRAND.primary + ";\">15 SMS ฟรี</strong> เพื่อเริ่มต้นใช้งาน ส่ง SMS ถึงลูกค้าของคุณได้เลยวันนี้!")}
+    ${paragraph("ยินดีต้อนรับสู่ SMSOK — แพลตฟอร์มส่งข้อความที่ใช้งานง่ายและทรงพลัง")}
+    ${paragraph("คุณได้รับ <strong style=\"color:" + BRAND.primary + ";\">15 ข้อความทดลองใช้ฟรี</strong> เพื่อเริ่มต้นใช้งาน ส่งข้อความถึงลูกค้าของคุณได้เลยวันนี้!")}
     ${statsTable([
-      ["SMS ฟรี", "15 ข้อความ"],
-      ["ราคาต่อ SMS", "เริ่มต้น 0.35 บาท"],
+      ["ข้อความทดลองใช้ฟรี", "15 ข้อความ"],
+      ["แพ็กเกจเริ่มต้น", "100 ข้อความ"],
     ])}
+    ${paragraph("เลือกแพ็กเกจตามปริมาณการใช้งานของคุณได้ พร้อมราคาแบบบาท/ข้อความที่ชัดเจนและคุ้มค่าสำหรับธุรกิจทุกขนาด")}
     ${ctaButton("ไปยังแดชบอร์ด", `${DASHBOARD_URL}/dashboard`)}
     ${paragraph("หากมีคำถามใด ๆ ตอบกลับอีเมลนี้ได้เลย ทีมงานพร้อมช่วยเหลือคุณ")}
   `);
 
-  const text = `สวัสดี ${name}!\n\nยินดีต้อนรับสู่ SMSOK — คุณได้รับ 15 SMS ฟรีเพื่อเริ่มต้นใช้งาน\n\nไปยังแดชบอร์ด: ${DASHBOARD_URL}/dashboard`;
+  const text = `สวัสดี ${name}!\n\nยินดีต้อนรับสู่ SMSOK — คุณได้รับ 15 ข้อความทดลองใช้ฟรีเพื่อเริ่มต้นใช้งาน\n\nไปยังแดชบอร์ด: ${DASHBOARD_URL}/dashboard`;
 
   return { subject, html, text };
 }
@@ -209,14 +210,14 @@ export function invoiceEmail(
     ${statsTable([
       ["เลขที่ใบเสร็จ", `#${data.invoiceNumber}`],
       ["วันที่", data.date],
-      ["จำนวนเงิน", `${data.amount.toLocaleString()} บาท`],
+      ["จำนวนเครดิต", `${data.amount.toLocaleString()} เครดิต`],
       ["ข้อความที่ได้รับ", `${data.credits.toLocaleString()} SMS`],
     ])}
     ${downloadBtn}
     ${paragraph("หากมีข้อสงสัยเกี่ยวกับใบเสร็จ สามารถตอบกลับอีเมลนี้ได้เลย")}
   `);
 
-  const text = `สวัสดี ${name}\n\nใบเสร็จ #${data.invoiceNumber}\nวันที่: ${data.date}\nจำนวนเงิน: ${data.amount.toLocaleString()} บาท\nข้อความ: ${data.credits.toLocaleString()} SMS${data.pdfUrl ? `\n\nดาวน์โหลด: ${data.pdfUrl}` : ""}`;
+  const text = `สวัสดี ${name}\n\nใบเสร็จ #${data.invoiceNumber}\nวันที่: ${data.date}\nจำนวนเครดิต: ${data.amount.toLocaleString()} เครดิต\nข้อความ: ${data.credits.toLocaleString()} SMS${data.pdfUrl ? `\n\nดาวน์โหลด: ${data.pdfUrl}` : ""}`;
 
   return { subject, html, text };
 }
@@ -229,7 +230,7 @@ export function creditLowEmail(
   name: string,
   data: { currentCredits: number; threshold: number }
 ) {
-  const subject = "\u26A0\uFE0F SMS SMSOK เหลือน้อย";
+  const subject = "โควต้าข้อความ SMSOK ใกล้หมด";
 
   const html = emailLayout(`
     ${heading("ข้อความเหลือน้อย")}
@@ -238,11 +239,11 @@ export function creditLowEmail(
       ["ข้อความคงเหลือ", `${data.currentCredits.toLocaleString()} SMS`],
       ["เกณฑ์แจ้งเตือน", `${data.threshold.toLocaleString()} SMS`],
     ])}
-    ${paragraph("ซื้อแพคเกจตอนนี้เพื่อให้แคมเปญทำงานต่อได้โดยไม่สะดุด")}
-    ${ctaButton("ซื้อแพคเกจ", `${DASHBOARD_URL}/packages`)}
+    ${paragraph("ซื้อแพ็กเกจข้อความตอนนี้เพื่อให้แคมเปญทำงานต่อได้โดยไม่สะดุด")}
+    ${ctaButton("ซื้อแพ็กเกจข้อความ", `${DASHBOARD_URL}/packages`)}
   `);
 
-  const text = `สวัสดี ${name}\n\nข้อความเหลือน้อย: ${data.currentCredits} SMS (เกณฑ์: ${data.threshold})\n\nซื้อแพคเกจ: ${DASHBOARD_URL}/packages`;
+  const text = `สวัสดี ${name}\n\nข้อความเหลือน้อย: ${data.currentCredits} SMS (เกณฑ์: ${data.threshold})\n\nซื้อแพ็กเกจข้อความ: ${DASHBOARD_URL}/packages`;
 
   return { subject, html, text };
 }
@@ -330,14 +331,14 @@ export function weeklyReportEmail(
     ${paragraph(`สวัสดี ${name}, สรุปการใช้งานของคุณในสัปดาห์ที่ผ่านมา`)}
     <p style="margin:0 0 16px;font-size:13px;color:${BRAND.textMuted};">${data.period}</p>
     ${statsTable([
-      ["SMS ที่ส่ง", data.smsSent.toLocaleString()],
+      ["ข้อความที่ส่ง", data.smsSent.toLocaleString()],
       ["ข้อความคงเหลือ", data.credits.toLocaleString()],
       ["แคมเปญ", data.campaigns.toLocaleString()],
     ])}
     ${ctaButton("ดูแดชบอร์ด", `${DASHBOARD_URL}/dashboard`)}
   `);
 
-  const text = `สวัสดี ${name}\n\nรายงานประจำสัปดาห์ (${data.period})\nSMS ที่ส่ง: ${data.smsSent}\nข้อความคงเหลือ: ${data.credits}\nแคมเปญ: ${data.campaigns}\n\nดูแดชบอร์ด: ${DASHBOARD_URL}/dashboard`;
+  const text = `สวัสดี ${name}\n\nรายงานประจำสัปดาห์ (${data.period})\nข้อความที่ส่ง: ${data.smsSent}\nข้อความคงเหลือ: ${data.credits}\nแคมเปญ: ${data.campaigns}\n\nดูแดชบอร์ด: ${DASHBOARD_URL}/dashboard`;
 
   return { subject, html, text };
 }

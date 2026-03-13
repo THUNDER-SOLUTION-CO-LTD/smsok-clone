@@ -1,5 +1,5 @@
-import { ApiError, apiError, apiResponse } from "@/lib/api-auth";
-import { getSession } from "@/lib/auth";
+import { NextRequest } from "next/server";
+import { ApiError, apiError, apiResponse, authenticateRequest } from "@/lib/api-auth";
 import { prisma as db } from "@/lib/db";
 import { orderSummarySelect } from "@/lib/orders/api";
 import { createOrderHistory, serializeOrder } from "@/lib/orders/service";
@@ -10,14 +10,13 @@ type RouteContext = {
 
 const cancellableStatuses = new Set(["DRAFT", "PENDING_PAYMENT", "VERIFYING"]);
 
-export async function POST(req: Request, ctx: RouteContext) {
+export async function POST(req: NextRequest, ctx: RouteContext) {
   try {
-    const session = await getSession();
-    if (!session?.id) throw new ApiError(401, "กรุณาเข้าสู่ระบบ");
+    const user = await authenticateRequest(req);
 
     const { id } = await ctx.params;
     const order = await db.order.findFirst({
-      where: { id, userId: session.id },
+      where: { id, userId: user.id },
       select: { id: true, status: true },
     });
     if (!order) throw new ApiError(404, "ไม่พบคำสั่งซื้อ");
@@ -43,7 +42,7 @@ export async function POST(req: Request, ctx: RouteContext) {
       });
       await createOrderHistory(tx, order.id, "CANCELLED", {
         fromStatus: order.status,
-        changedBy: session.id,
+        changedBy: user.id,
         note: cancellationReason,
       });
       return next;

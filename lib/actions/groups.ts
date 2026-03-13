@@ -1,11 +1,12 @@
 "use server";
 
+import { ApiError } from "../api-auth";
 import type { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { prisma as db } from "../db";
 import { z } from "zod";
 import { normalizePhone } from "../validations";
-import { checkRateLimit } from "../rate-limit";
+import { checkRateLimitAsync } from "../rate-limit";
 import { resolveActionUserId } from "../action-user";
 
 const createGroupSchema = z.object({
@@ -43,7 +44,7 @@ export async function createGroup(userIdOrData: string | unknown, maybeData?: un
   );
   const parsed = createGroupSchema.safeParse(maybeData === undefined ? userIdOrData : maybeData);
   if (!parsed.success) {
-    throw new Error(parsed.error.issues[0]?.message || "ข้อมูลไม่ถูกต้อง");
+    throw new ApiError(400, parsed.error.issues[0]?.message || "ข้อมูลไม่ถูกต้อง");
   }
   const group = await db.contactGroup.create({
     data: { userId, name: parsed.data.name },
@@ -60,11 +61,11 @@ export async function updateGroup(userIdOrGroupId: string, groupIdOrData: string
   const groupId = hasExplicitUserId ? groupIdOrData as string : userIdOrGroupId;
   const parsed = createGroupSchema.safeParse(hasExplicitUserId ? maybeData : groupIdOrData);
   if (!parsed.success) {
-    throw new Error(parsed.error.issues[0]?.message || "ข้อมูลไม่ถูกต้อง");
+    throw new ApiError(400, parsed.error.issues[0]?.message || "ข้อมูลไม่ถูกต้อง");
   }
   const input = parsed.data;
   const existing = await db.contactGroup.findFirst({ where: { id: groupId, userId } });
-  if (!existing) throw new Error("ไม่พบกลุ่ม");
+  if (!existing) throw new ApiError(404, "ไม่พบกลุ่ม");
   const updated = await db.contactGroup.update({
     where: { id: groupId },
     data: { name: input.name },
@@ -81,7 +82,7 @@ export async function deleteGroup(userIdOrGroupId: string, maybeGroupId?: string
   );
   const groupId = maybeGroupId ?? userIdOrGroupId;
   const existing = await db.contactGroup.findFirst({ where: { id: groupId, userId } });
-  if (!existing) throw new Error("ไม่พบกลุ่ม");
+  if (!existing) throw new ApiError(404, "ไม่พบกลุ่ม");
   await db.contactGroup.delete({ where: { id: groupId } });
   revalidatePath("/dashboard/groups");
 }
@@ -94,7 +95,7 @@ export async function getGroupContacts(userIdOrGroupId: string, maybeGroupId?: s
   );
   const groupId = maybeGroupId ?? userIdOrGroupId;
   const group = await db.contactGroup.findFirst({ where: { id: groupId, userId } });
-  if (!group) throw new Error("ไม่พบกลุ่ม");
+  if (!group) throw new ApiError(404, "ไม่พบกลุ่ม");
   return db.contactGroupMember.findMany({
     where: { groupId },
     include: { contact: { select: { id: true, name: true, phone: true, email: true } } },
@@ -113,8 +114,8 @@ export async function addContactToGroup(userIdOrGroupId: string, groupIdOrContac
     db.contactGroup.findFirst({ where: { id: groupId, userId } }),
     db.contact.findFirst({ where: { id: contactId, userId } }),
   ]);
-  if (!group) throw new Error("ไม่พบกลุ่ม");
-  if (!contact) throw new Error("ไม่พบรายชื่อ");
+  if (!group) throw new ApiError(404, "ไม่พบกลุ่ม");
+  if (!contact) throw new ApiError(404, "ไม่พบรายชื่อ");
 
   // Check if already a member (prevent unique constraint error)
   const existing = await db.contactGroupMember.findUnique({
@@ -139,7 +140,7 @@ export async function removeContactFromGroup(userIdOrGroupId: string, groupIdOrC
   const groupId = hasExplicitUserId ? groupIdOrContactId : userIdOrGroupId;
   const contactId = hasExplicitUserId ? maybeContactId as string : groupIdOrContactId;
   const group = await db.contactGroup.findFirst({ where: { id: groupId, userId } });
-  if (!group) throw new Error("ไม่พบกลุ่ม");
+  if (!group) throw new ApiError(404, "ไม่พบกลุ่ม");
   await db.contactGroupMember.delete({
     where: { groupId_contactId: { groupId, contactId } },
   });
@@ -154,8 +155,8 @@ export async function bulkRemoveFromGroup(userIdOrGroupId: string, groupIdOrCont
   const groupId = hasExplicitUserId ? groupIdOrContactIds as string : userIdOrGroupId;
   const contactIds = hasExplicitUserId ? maybeContactIds : groupIdOrContactIds as string[];
   const group = await db.contactGroup.findFirst({ where: { id: groupId, userId } });
-  if (!group) throw new Error("ไม่พบกลุ่ม");
-  if (contactIds.length === 0) throw new Error("กรุณาเลือกรายชื่อ");
+  if (!group) throw new ApiError(404, "ไม่พบกลุ่ม");
+  if (contactIds.length === 0) throw new ApiError(400, "กรุณาเลือกรายชื่อ");
 
   await db.contactGroupMember.deleteMany({
     where: { groupId, contactId: { in: contactIds } },
@@ -176,12 +177,12 @@ export async function importContactsToGroup(
 ) {
   userId = await resolveActionUserId(userId);
   // Rate limit
-  const limit = await checkRateLimit(userId, "import");
+  const limit = await checkRateLimitAsync(userId, "import");
   if (!limit.allowed) throw new Error("นำเข้าบ่อยเกินไป กรุณารอสักครู่");
 
   // Verify group ownership
   const group = await db.contactGroup.findFirst({ where: { id: groupId, userId } });
-  if (!group) throw new Error("ไม่พบกลุ่ม");
+  if (!group) throw new ApiError(404, "ไม่พบกลุ่ม");
 
   if (!Array.isArray(csvData) || csvData.length === 0) throw new Error("ไม่มีรายชื่อที่จะนำเข้า");
   if (csvData.length > MAX_IMPORT_BATCH) throw new Error(`นำเข้าได้สูงสุด ${MAX_IMPORT_BATCH} รายชื่อต่อครั้ง`);
@@ -292,7 +293,7 @@ export async function getContactsNotInGroup(userIdOrGroupId: string, groupIdOrSe
   const groupId = hasExplicitUserId ? groupIdOrSearch as string : userIdOrGroupId;
   const search = hasExplicitUserId ? maybeSearch : groupIdOrSearch;
   const group = await db.contactGroup.findFirst({ where: { id: groupId, userId } });
-  if (!group) throw new Error("ไม่พบกลุ่ม");
+  if (!group) throw new ApiError(404, "ไม่พบกลุ่ม");
 
   const membersInGroup = await db.contactGroupMember.findMany({
     where: { groupId },
