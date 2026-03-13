@@ -37,10 +37,6 @@ export default async function DashboardPage() {
     totalRemaining: quota.totalRemaining,
   };
 
-  // TODO: Determine onboarding state from user profile
-  // const showOnboarding = !user.onboardingCompletedAt;
-  // const completedSteps = await getOnboardingSteps(user.id);
-
   return (
     <DashboardContent
       stats={statsWithQuota}
