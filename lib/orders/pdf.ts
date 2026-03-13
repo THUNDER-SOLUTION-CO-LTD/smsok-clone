@@ -8,6 +8,7 @@ import {
   QuotationPdf,
   type QuotationPdfData,
 } from "@/lib/accounting/pdf/quotation-pdf";
+import { buildDocumentVerificationAssets } from "@/lib/accounting/pdf/document-verification";
 import { numberToThaiText } from "@/lib/accounting/thai-number";
 
 type NumericLike = { toNumber(): number } | number;
@@ -83,20 +84,22 @@ function buildBuyerBranch(order: OrderPdfRecord) {
   return "สำนักงานใหญ่";
 }
 
-function buildOrderInvoicePdfData(
+async function buildOrderInvoicePdfData(
   order: OrderPdfRecord,
   options: {
     documentNumber: string;
     type: InvoicePdfData["type"];
     issuedAt: Date;
     notes?: string | null;
+    isVoid?: boolean;
   },
-): InvoicePdfData {
+): Promise<InvoicePdfData> {
   const subtotal = toNumber(order.netAmount);
   const vatAmount = toNumber(order.vatAmount);
   const total = toNumber(order.totalAmount);
   const whtAmount = order.hasWht ? toNumber(order.whtAmount) : null;
   const netPayable = order.hasWht ? toNumber(order.payAmount) : null;
+  const verification = await buildDocumentVerificationAssets(options.documentNumber);
 
   return {
     invoiceNumber: options.documentNumber,
@@ -121,6 +124,9 @@ function buildOrderInvoicePdfData(
     total,
     netPayable,
     amountInWords: numberToThaiText(netPayable ?? total),
+    verificationUrl: verification.verificationUrl,
+    verificationQrDataUrl: verification.verificationQrDataUrl,
+    isVoid: options.isVoid ?? false,
     notes: options.notes ?? `อ้างอิงคำสั่งซื้อ ${order.orderNumber}`,
   };
 }
@@ -165,7 +171,7 @@ export async function renderOrderInvoicePdf(order: OrderPdfRecord) {
     throw new Error("ไม่พบใบกำกับภาษีสำหรับคำสั่งซื้อนี้");
   }
 
-  const data = buildOrderInvoicePdfData(order, {
+  const data = await buildOrderInvoicePdfData(order, {
     documentNumber: order.invoiceNumber,
     type: "TAX_INVOICE_RECEIPT",
     issuedAt: order.paidAt ?? order.createdAt,
@@ -184,9 +190,10 @@ export async function renderOrderAccountingDocumentPdf(
     type: "INVOICE" | "TAX_INVOICE" | "RECEIPT" | "CREDIT_NOTE";
     issuedAt: Date;
     notes?: string | null;
+    isVoid?: boolean;
   },
 ) {
-  const data = buildOrderInvoicePdfData(order, options);
+  const data = await buildOrderInvoicePdfData(order, options);
   const element = createElement(InvoicePdf, { data });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const buffer = await renderToBuffer(element as any);

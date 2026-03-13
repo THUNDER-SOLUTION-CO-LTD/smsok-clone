@@ -19,6 +19,7 @@ import {
   View,
   StyleSheet,
   Font,
+  Image,
 } from "@react-pdf/renderer";
 
 // ── Register Thai Font (IBM Plex Sans Thai) ─────────────
@@ -172,6 +173,42 @@ const s = StyleSheet.create({
     borderRadius: 4,
     fontSize: 10,
   },
+  verificationBox: {
+    marginTop: 10,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    borderRadius: 4,
+    flexDirection: "row",
+    gap: 12,
+    alignItems: "center",
+  },
+  verificationQr: {
+    width: 64,
+    height: 64,
+  },
+  verificationText: {
+    flex: 1,
+  },
+  verificationUrl: {
+    fontSize: 9,
+    color: "#111827",
+  },
+  watermarkWrap: {
+    position: "absolute" as const,
+    top: 280,
+    left: 70,
+    right: 70,
+    alignItems: "center" as const,
+    transform: "rotate(-24deg)",
+    opacity: 0.14,
+  },
+  watermarkText: {
+    fontSize: 72,
+    fontWeight: "bold",
+    color: "#dc2626",
+    letterSpacing: 6,
+  },
   footer: {
     position: "absolute" as const,
     bottom: 30,
@@ -258,6 +295,9 @@ export type InvoicePdfData = {
   total: number;
   netPayable?: number | null;
   amountInWords: string;
+  verificationUrl?: string | null;
+  verificationQrDataUrl?: string | null;
+  isVoid?: boolean;
   // Notes
   notes?: string | null;
 };
@@ -304,11 +344,15 @@ function formatTaxId(id: string): string {
 
 // ── Main Component ──────────────────────────────────────
 export function InvoicePdf({ data }: { data: InvoicePdfData }) {
-  const payableAmount = data.netPayable ?? data.total;
-
   return (
     <Document>
       <Page size="A4" style={s.page}>
+        {data.isVoid && (
+          <View fixed style={s.watermarkWrap}>
+            <Text style={s.watermarkText}>VOID</Text>
+          </View>
+        )}
+
         {/* ── Header: Document Title + Number ── */}
         <View style={s.header}>
           <View>
@@ -433,6 +477,21 @@ export function InvoicePdf({ data }: { data: InvoicePdfData }) {
             ({data.amountInWords})
           </Text>
         </View>
+
+        {(data.verificationUrl || data.verificationQrDataUrl) && (
+          <View style={s.verificationBox}>
+            {data.verificationQrDataUrl && (
+              <Image src={data.verificationQrDataUrl} style={s.verificationQr} />
+            )}
+            <View style={s.verificationText}>
+              <Text style={s.sectionTitle}>ตรวจสอบเอกสาร / Verification</Text>
+              {data.verificationUrl && (
+                <Text style={s.verificationUrl}>{data.verificationUrl}</Text>
+              )}
+              <Text style={s.infoLabel}>สแกน QR Code เพื่อยืนยันเอกสารฉบับนี้</Text>
+            </View>
+          </View>
+        )}
 
         {/* ── Notes ── */}
         {data.notes && (

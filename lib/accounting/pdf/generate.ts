@@ -6,6 +6,7 @@
 import { renderToBuffer } from "@react-pdf/renderer";
 import { createElement } from "react";
 import { InvoicePdf, type InvoicePdfData } from "./invoice-pdf";
+import { buildDocumentVerificationAssets } from "./document-verification";
 import { prisma as db } from "@/lib/db";
 import { decryptSecret } from "@/lib/two-factor";
 import { z } from "zod";
@@ -75,6 +76,7 @@ export async function generateInvoicePdf(invoiceId: string): Promise<Buffer> {
     throw new Error(`ข้อมูลรายการในใบกำกับภาษีไม่ถูกต้อง (invoice ${invoice.invoiceNumber}): ${itemsParsed.error.message}`);
   }
   const items = itemsParsed.data;
+  const verification = await buildDocumentVerificationAssets(invoice.invoiceNumber);
 
   const pdfData: InvoicePdfData = {
     invoiceNumber: invoice.invoiceNumber,
@@ -92,6 +94,9 @@ export async function generateInvoicePdf(invoiceId: string): Promise<Buffer> {
     total: Number(invoice.total),
     netPayable: invoice.netPayable ? Number(invoice.netPayable) : null,
     amountInWords: invoice.amountInWords || "",
+    verificationUrl: verification.verificationUrl,
+    verificationQrDataUrl: verification.verificationQrDataUrl,
+    isVoid: invoice.status === "VOIDED",
     notes: invoice.notes,
   };
 

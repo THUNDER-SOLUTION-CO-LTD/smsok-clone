@@ -10,6 +10,8 @@ const PREFIX_MAP: Record<string, string> = {
   RECEIPT: "RCP",
   TAX_INVOICE_RECEIPT: "TIR",
   INVOICE: "INV",
+  DEBIT_NOTE: "DN",
+  CREDIT_NOTE: "CN",
   QUOTATION: "QT",
 };
 
