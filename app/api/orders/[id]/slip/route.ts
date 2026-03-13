@@ -102,36 +102,47 @@ export async function POST(req: Request, ctx: RouteContext) {
       }
     }
 
-    // Upload slip to R2 storage
-    const uploadedSlip = await storeUploadedFile({
-      userId: session.id,
-      scope: "orders",
-      resourceId: order.id,
-      kind: "slips",
-      file: slip,
-    });
-    const slipUrl = uploadedSlip.ref;
-    const slipKey = uploadedSlip.key;
-
+    let slipUrl: string | null = null;
+    let slipKey: string | null = null;
     let uploadedWhtCert: { ref: string } | null = null;
     let whtCertUrl: string | null = order.whtCertUrl;
-    if (whtCert && whtCert.size > 0) {
-      uploadedWhtCert = await storeUploadedFile({
-        userId: session.id,
-        scope: "orders",
-        resourceId: order.id,
-        kind: "wht",
-        file: whtCert,
-      });
-      whtCertUrl = uploadedWhtCert.ref;
-    }
 
     const cleanupUploads = async () => {
       await Promise.allSettled([
-        removeStoredFile(slipUrl),
+        slipUrl ? removeStoredFile(slipUrl) : Promise.resolve(),
         uploadedWhtCert ? removeStoredFile(uploadedWhtCert.ref) : Promise.resolve(),
       ]);
     };
+
+    try {
+      const uploadedSlip = await storeUploadedFile({
+        userId: session.id,
+        scope: "orders",
+        resourceId: order.id,
+        kind: "slips",
+        file: slip,
+      });
+      slipUrl = uploadedSlip.ref;
+      slipKey = uploadedSlip.key;
+
+      if (whtCert && whtCert.size > 0) {
+        uploadedWhtCert = await storeUploadedFile({
+          userId: session.id,
+          scope: "orders",
+          resourceId: order.id,
+          kind: "wht",
+          file: whtCert,
+        });
+        whtCertUrl = uploadedWhtCert.ref;
+      }
+    } catch (error) {
+      await cleanupUploads();
+      throw error;
+    }
+
+    if (!slipUrl || !slipKey) {
+      throw new ApiError(500, "ไม่สามารถบันทึกไฟล์สลิปได้");
+    }
 
     // Verify slip via SlipOK — sends the original file directly
     // SlipOK handles duplicate check (1012), amount check (1013), receiver check (1014)
@@ -149,66 +160,71 @@ export async function POST(req: Request, ctx: RouteContext) {
     if (shouldQueueForManualReview(verification)) {
       const pendingReviewMessage = getPendingReviewMessage(verification);
       const reviewNote = getManualReviewNote(verification);
-      const result = await db.$transaction(async (tx) => {
-        const createdSlip = await tx.orderSlip.create({
-          data: {
-            orderId: order.id,
-            fileUrl: slipUrl,
-            fileKey: slipKey,
-            fileSize: slip.size,
-            fileType: slip.type || "image/png",
-          },
-          select: {
-            id: true,
-            fileUrl: true,
-            fileKey: true,
-            transRef: true,
-            fileSize: true,
-            fileType: true,
-            uploadedAt: true,
-            verifiedAt: true,
-            verifiedBy: true,
-            deletedAt: true,
-          },
+      try {
+        const result = await db.$transaction(async (tx) => {
+          const createdSlip = await tx.orderSlip.create({
+            data: {
+              orderId: order.id,
+              fileUrl: slipUrl,
+              fileKey: slipKey,
+              fileSize: slip.size,
+              fileType: slip.type || "image/png",
+            },
+            select: {
+              id: true,
+              fileUrl: true,
+              fileKey: true,
+              transRef: true,
+              fileSize: true,
+              fileType: true,
+              uploadedAt: true,
+              verifiedAt: true,
+              verifiedBy: true,
+              deletedAt: true,
+            },
+          });
+
+          const updatedOrder = await tx.order.update({
+            where: { id: order.id },
+            data: {
+              status: "VERIFYING",
+              slipUrl,
+              slipFileName: slip.name,
+              slipFileSize: slip.size,
+              whtCertUrl,
+              whtCertVerified: whtCertUrl ? null : false,
+              easyslipVerified: false,
+              easyslipResponse: verification as unknown as Prisma.InputJsonValue,
+              adminNote: pendingReviewMessage,
+              rejectReason: null,
+              paidAt: null,
+              completedAt: null,
+            },
+            select: orderSummarySelect,
+          });
+
+          await createOrderHistory(tx, order.id, "VERIFYING", {
+            fromStatus: order.status,
+            changedBy: session.id,
+            note: reviewNote,
+          });
+
+          return { createdSlip, updatedOrder, reviewNote, statusNote: pendingReviewMessage };
         });
 
-        const updatedOrder = await tx.order.update({
-          where: { id: order.id },
-          data: {
-            status: "VERIFYING",
-            slipUrl,
-            slipFileName: slip.name,
-            slipFileSize: slip.size,
-            whtCertUrl,
-            whtCertVerified: whtCertUrl ? null : false,
-            easyslipVerified: false,
-            easyslipResponse: verification as unknown as Prisma.InputJsonValue,
-            adminNote: pendingReviewMessage,
-            rejectReason: null,
-            paidAt: null,
-            completedAt: null,
-          },
-          select: orderSummarySelect,
+        return apiResponse({
+          ...serializeOrderV2(result.updatedOrder),
+          latest_slip: serializeOrderSlip(result.createdSlip),
+          latest_slip_uploaded_at: result.createdSlip.uploadedAt.toISOString(),
+          latest_status_note: result.statusNote,
+          review_note: result.reviewNote,
+          verified: false,
+          pending_review: true,
         });
-
-        await createOrderHistory(tx, order.id, "VERIFYING", {
-          fromStatus: order.status,
-          changedBy: session.id,
-          note: reviewNote,
-        });
-
-        return { createdSlip, updatedOrder, reviewNote, statusNote: pendingReviewMessage };
-      });
-
-      return apiResponse({
-        ...serializeOrderV2(result.updatedOrder),
-        latest_slip: serializeOrderSlip(result.createdSlip),
-        latest_slip_uploaded_at: result.createdSlip.uploadedAt.toISOString(),
-        latest_status_note: result.statusNote,
-        review_note: result.reviewNote,
-        verified: false,
-        pending_review: true,
-      });
+      } catch (error) {
+        await cleanupUploads();
+        throw error;
+      }
     }
     if (!verification.success) {
       await cleanupUploads();

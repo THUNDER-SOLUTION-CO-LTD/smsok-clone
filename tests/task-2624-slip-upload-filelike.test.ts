@@ -43,6 +43,7 @@ vi.mock("@/lib/orders/service", () => ({
 vi.mock("@/lib/storage/service", () => ({
   storeUploadedFile: mocks.storeUploadedFile,
   removeStoredFile: mocks.removeStoredFile,
+  StorageUploadError: class StorageUploadError extends Error {},
 }));
 
 vi.mock("@/lib/rate-limit", () => ({
@@ -238,6 +239,18 @@ describe("Task #2624: slip upload accepts file-like multipart entries", () => {
     expect(mocks.verifySlip).toHaveBeenCalledTimes(1);
     expect(mocks.storeUploadedFile).toHaveBeenCalledTimes(1);
     expect(mocks.applyRateLimit).toHaveBeenCalledWith("user_1", "slip");
+  });
+
+  it("cleans up uploaded files when the manual review transaction fails", async () => {
+    mocks.transaction.mockRejectedValueOnce(new Error("db write failed"));
+
+    const response = await uploadCanonicalOrderSlip(createRequestWithSlip(createFileLikeSlip()), {
+      params: Promise.resolve({ id: "order_1" }),
+    });
+
+    expect(response.status).toBe(500);
+    expect(mocks.removeStoredFile).toHaveBeenCalledWith("r2:users/user_1/orders/order_1/slips/fixture.jpg");
+    expect(mocks.removeStoredFile).toHaveBeenCalledTimes(1);
   });
 
   it("rewrites legacy v1 slip endpoints to the canonical slip route before the v1 middleware branch runs", () => {
