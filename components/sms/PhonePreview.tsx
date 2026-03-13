@@ -41,7 +41,7 @@ function highlightVariablesInPreview(text: string) {
 
 export function PhonePreview({
   message,
-  senderName = "EasySlip",
+  senderName = "SMS",
   showSampleData = true,
 }: {
   message: string;
