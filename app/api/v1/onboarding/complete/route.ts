@@ -6,7 +6,7 @@ import { completeOnboarding } from "@/lib/actions/onboarding";
 export async function POST(req: NextRequest) {
   try {
     const session = await getSession();
-    if (!session?.id) return apiError(new ApiError(401, "Unauthorized"));
+    if (!session?.id) return apiError(new ApiError(401, "กรุณาเข้าสู่ระบบ"));
 
     const result = await completeOnboarding(session.id);
     return apiResponse(result);

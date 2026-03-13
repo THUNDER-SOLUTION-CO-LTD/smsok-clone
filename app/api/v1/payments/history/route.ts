@@ -23,7 +23,7 @@ const historySchema = z.object({
 export async function GET(req: NextRequest) {
   try {
     const session = await getSession();
-    if (!session?.id) return apiError(new ApiError(401, "Unauthorized"));
+    if (!session?.id) return apiError(new ApiError(401, "กรุณาเข้าสู่ระบบ"));
 
     const params = Object.fromEntries(new URL(req.url).searchParams);
     const { page, limit, status } = historySchema.parse(params);

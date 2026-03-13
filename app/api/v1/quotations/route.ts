@@ -8,7 +8,7 @@ import { createQuotation, listQuotations } from "@/lib/actions/quotations";
 export async function GET(req: NextRequest) {
   try {
     const session = await getSession();
-    if (!session?.id) throw new ApiError(401, "Unauthorized");
+    if (!session?.id) throw new ApiError(401, "กรุณาเข้าสู่ระบบ");
 
     const denied = await requireApiPermission(session.id, "read", "invoice");
     if (denied) return denied;
@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const session = await getSession();
-    if (!session?.id) throw new ApiError(401, "Unauthorized");
+    if (!session?.id) throw new ApiError(401, "กรุณาเข้าสู่ระบบ");
 
     const denied = await requireApiPermission(session.id, "create", "invoice");
     if (denied) return denied;

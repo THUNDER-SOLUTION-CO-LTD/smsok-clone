@@ -28,7 +28,7 @@ const taxProfileSchema = z.object({
 export async function GET() {
   try {
     const session = await getSession();
-    if (!session?.id) throw new ApiError(401, "Unauthorized");
+    if (!session?.id) throw new ApiError(401, "กรุณาเข้าสู่ระบบ");
 
     const { applyRateLimit } = await import("@/lib/rate-limit");
     const rl = await applyRateLimit(session.id, "tax_profile");
@@ -64,7 +64,7 @@ export async function GET() {
 export async function PUT(req: NextRequest) {
   try {
     const session = await getSession();
-    if (!session?.id) throw new ApiError(401, "Unauthorized");
+    if (!session?.id) throw new ApiError(401, "กรุณาเข้าสู่ระบบ");
 
     const { applyRateLimit } = await import("@/lib/rate-limit");
     const rl = await applyRateLimit(session.id, "tax_profile");

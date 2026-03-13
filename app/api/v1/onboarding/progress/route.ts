@@ -6,7 +6,7 @@ import { updateOnboardingProgress } from "@/lib/actions/onboarding";
 export async function POST(req: NextRequest) {
   try {
     const session = await getSession();
-    if (!session?.id) return apiError(new ApiError(401, "Unauthorized"));
+    if (!session?.id) return apiError(new ApiError(401, "กรุณาเข้าสู่ระบบ"));
 
     let body: unknown;
     try {

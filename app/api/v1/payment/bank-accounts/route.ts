@@ -16,7 +16,7 @@ const bankAccountSchema = z.object({
 export async function GET(req: NextRequest) {
   try {
     const session = await getSession();
-    if (!session?.id) throw new ApiError(401, "Unauthorized");
+    if (!session?.id) throw new ApiError(401, "กรุณาเข้าสู่ระบบ");
 
     const accounts = await db.bankAccount.findMany({
       where: { userId: session.id },
@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const session = await getSession();
-    if (!session?.id) throw new ApiError(401, "Unauthorized");
+    if (!session?.id) throw new ApiError(401, "กรุณาเข้าสู่ระบบ");
 
     const { applyRateLimit } = await import("@/lib/rate-limit");
     const rl = await applyRateLimit(session.id, "purchase");

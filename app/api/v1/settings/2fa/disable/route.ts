@@ -8,7 +8,7 @@ import { disable2FASchema } from "@/lib/validations";
 export async function POST(req: NextRequest) {
   try {
     const session = await getSession();
-    if (!session?.id) throw new ApiError(401, "Unauthorized");
+    if (!session?.id) throw new ApiError(401, "กรุณาเข้าสู่ระบบ");
 
     const body = await req.json();
     const { password } = disable2FASchema.parse(body);

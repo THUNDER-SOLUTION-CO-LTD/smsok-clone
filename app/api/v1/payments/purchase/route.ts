@@ -13,7 +13,7 @@ const purchaseSchema = z.object({
 export async function POST(req: NextRequest) {
   try {
     const session = await getSession();
-    if (!session?.id) throw new ApiError(401, "Unauthorized");
+    if (!session?.id) throw new ApiError(401, "กรุณาเข้าสู่ระบบ");
 
     const body = await req.json().catch(() => {
       throw new ApiError(400, "กรุณาส่งข้อมูล JSON");

@@ -12,7 +12,7 @@ const usageSearchParams = z.object({
 export async function GET(req: NextRequest) {
   try {
     const session = await getSession();
-    if (!session?.id) throw new ApiError(401, "Unauthorized");
+    if (!session?.id) throw new ApiError(401, "กรุณาเข้าสู่ระบบ");
 
     const { searchParams } = new URL(req.url);
     const { range } = usageSearchParams.parse({

@@ -58,7 +58,7 @@ function hasSmsGatewayCredentials(): boolean {
 async function requireSessionUserId() {
   const user = await getSession();
   if (!user) {
-    throw new Error("Unauthorized");
+    throw new Error("กรุณาเข้าสู่ระบบ");
   }
   return user.id;
 }

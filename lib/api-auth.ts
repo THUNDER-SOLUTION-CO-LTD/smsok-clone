@@ -21,7 +21,7 @@ export async function authenticateApiKey(req: NextRequest) {
   const headerApiKey = req.headers.get("x-api-key")?.trim();
 
   if (authHeader && !authHeader.startsWith("Bearer ")) {
-    throw new ApiError(401, "Missing or invalid Authorization header", ERROR_CODES.AUTH_MISSING);
+    throw new ApiError(401, "กรุณาระบุ API Key", ERROR_CODES.AUTH_MISSING);
   }
 
   const key = authHeader?.startsWith("Bearer ")
@@ -29,11 +29,11 @@ export async function authenticateApiKey(req: NextRequest) {
     : headerApiKey;
 
   if (!key) {
-    throw new ApiError(401, "Missing or invalid Authorization header", ERROR_CODES.AUTH_MISSING);
+    throw new ApiError(401, "กรุณาระบุ API Key", ERROR_CODES.AUTH_MISSING);
   }
 
   if (!key.startsWith("sk_live_") || key.length < 20) {
-    throw new ApiError(401, "Invalid API key format", ERROR_CODES.AUTH_INVALID);
+    throw new ApiError(401, "รูปแบบ API Key ไม่ถูกต้อง", ERROR_CODES.AUTH_INVALID);
   }
 
   const keyHash = hashApiKey(key);
@@ -50,15 +50,15 @@ export async function authenticateApiKey(req: NextRequest) {
   });
 
   if (!apiKey) {
-    throw new ApiError(401, "Invalid API key", ERROR_CODES.AUTH_INVALID);
+    throw new ApiError(401, "API Key ไม่ถูกต้อง", ERROR_CODES.AUTH_INVALID);
   }
 
   if (!apiKey.isActive) {
-    throw new ApiError(401, "API key is disabled", ERROR_CODES.AUTH_DISABLED);
+    throw new ApiError(401, "API Key ถูกปิดใช้งาน", ERROR_CODES.AUTH_DISABLED);
   }
 
   if (!apiKey.user) {
-    throw new ApiError(401, "API key owner not found", ERROR_CODES.AUTH_INVALID);
+    throw new ApiError(401, "API Key ไม่ถูกต้อง", ERROR_CODES.AUTH_INVALID);
   }
 
   const grantedPermissions = normalizeApiKeyPermissions(apiKey.permissions);
@@ -70,7 +70,7 @@ export async function authenticateApiKey(req: NextRequest) {
   if (requiredPermission === "session-only") {
     throw new ApiError(
       403,
-      "This endpoint requires a signed-in session",
+      "ปลายทางนี้ต้องใช้การเข้าสู่ระบบ",
       ERROR_CODES.FORBIDDEN,
     );
   }
@@ -78,7 +78,7 @@ export async function authenticateApiKey(req: NextRequest) {
   if (!requiredPermission) {
     throw new ApiError(
       403,
-      "API key is not allowed for this endpoint",
+      "API Key ไม่สามารถใช้กับปลายทางนี้",
       ERROR_CODES.FORBIDDEN,
     );
   }
@@ -86,7 +86,7 @@ export async function authenticateApiKey(req: NextRequest) {
   if (!hasApiKeyPermission(grantedPermissions, requiredPermission)) {
     throw new ApiError(
       403,
-      "Insufficient API key permissions",
+      "API Key ไม่มีสิทธิ์เข้าถึง",
       ERROR_CODES.FORBIDDEN,
     );
   }
@@ -205,7 +205,7 @@ export function apiError(error: unknown) {
     return Response.json(body, { status });
   }
   console.error("[apiError] unknown error type:", typeof error, error);
-  const body = { error: "Internal server error", code: ERROR_CODES.INTERNAL };
+  const body = { error: "เกิดข้อผิดพลาดภายในระบบ กรุณาลองใหม่", code: ERROR_CODES.INTERNAL };
   finishApiLog(500, body, ERROR_CODES.INTERNAL, body.error);
   return Response.json(body, { status: 500 });
 }

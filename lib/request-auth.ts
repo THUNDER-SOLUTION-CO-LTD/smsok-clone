@@ -12,7 +12,7 @@ export async function authenticateRequestUser(req: NextRequest) {
     return await authenticateApiKey(req);
   } catch (error) {
     if (error instanceof ApiError && error.status === 401) {
-      throw new ApiError(401, "Unauthorized");
+      throw new ApiError(401, "กรุณาเข้าสู่ระบบ");
     }
     throw error;
   }

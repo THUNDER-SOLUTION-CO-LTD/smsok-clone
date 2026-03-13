@@ -20,15 +20,15 @@ describe("API Auth: authenticateApiKey", () => {
   });
 
   it("throws 401 on missing auth header", () => {
-    expect(apiAuth).toContain("Missing or invalid Authorization header");
+    expect(apiAuth).toContain("กรุณาระบุ API Key");
   });
 
   it("throws 401 on invalid key", () => {
-    expect(apiAuth).toContain("Invalid API key");
+    expect(apiAuth).toContain("API Key ไม่ถูกต้อง");
   });
 
   it("throws 401 on inactive key", () => {
-    expect(apiAuth).toContain("API key is disabled");
+    expect(apiAuth).toContain("API Key ถูกปิดใช้งาน");
   });
 
   it("loads API key permissions from DB", () => {
@@ -36,11 +36,11 @@ describe("API Auth: authenticateApiKey", () => {
   });
 
   it("rejects API keys on session-only endpoints", () => {
-    expect(apiAuth).toContain("This endpoint requires a signed-in session");
+    expect(apiAuth).toContain("ปลายทางนี้ต้องใช้การเข้าสู่ระบบ");
   });
 
   it("rejects unsupported API key routes by default", () => {
-    expect(apiAuth).toContain("API key is not allowed for this endpoint");
+    expect(apiAuth).toContain("API Key ไม่สามารถใช้กับปลายทางนี้");
   });
 
   it("returns user with API key permissions", () => {

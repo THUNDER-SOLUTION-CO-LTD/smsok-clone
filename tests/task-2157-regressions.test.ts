@@ -95,7 +95,7 @@ describe("Task #2157: auth route CSRF defense-in-depth", () => {
       sessionsDeleteRoute,
     ]) {
       expect(source).toContain("hasValidCsrfOrigin");
-      expect(source).toContain("CSRF: invalid origin");
+      expect(source).toContain("คำขอไม่ถูกต้อง กรุณาลองใหม่");
     }
   });
 });

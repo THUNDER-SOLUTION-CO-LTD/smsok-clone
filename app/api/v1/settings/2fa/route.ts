@@ -6,7 +6,7 @@ import { get2FAStatus } from "@/lib/actions/two-factor";
 export async function GET() {
   try {
     const session = await getSession();
-    if (!session?.id) throw new ApiError(401, "Unauthorized");
+    if (!session?.id) throw new ApiError(401, "กรุณาเข้าสู่ระบบ");
 
     return apiResponse(await get2FAStatus());
   } catch (error) {

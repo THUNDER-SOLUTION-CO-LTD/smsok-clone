@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   startApiLog(req);
 
   if (!hasValidCsrfOrigin(req)) {
-    return apiError(new ApiError(403, "CSRF: invalid origin", ERROR_CODES.FORBIDDEN));
+    return apiError(new ApiError(403, "คำขอไม่ถูกต้อง กรุณาลองใหม่", ERROR_CODES.FORBIDDEN));
   }
 
   // Rate limit BEFORE any auth logic — prevents brute-force

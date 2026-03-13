@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
 
     // Guard: empty string is falsy — block if not configured OR mismatch
     if (!cronSecret || !auth || auth !== `Bearer ${cronSecret}`) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 });
+      return Response.json({ error: "ไม่ได้รับอนุญาต" }, { status: 401 });
     }
 
     const result = await processScheduledSms();

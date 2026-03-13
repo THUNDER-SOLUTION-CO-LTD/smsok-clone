@@ -6,7 +6,7 @@ import { getOnboardingStatus } from "@/lib/actions/onboarding";
 export async function GET(req: NextRequest) {
   try {
     const session = await getSession();
-    if (!session?.id) return apiError(new ApiError(401, "Unauthorized"));
+    if (!session?.id) return apiError(new ApiError(401, "กรุณาเข้าสู่ระบบ"));
 
     const result = await getOnboardingStatus(session.id);
     return apiResponse(result);

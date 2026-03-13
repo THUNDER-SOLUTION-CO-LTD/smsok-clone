@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
   const secret = req.headers.get("x-webhook-secret");
   const expectedSecret = process.env.STOP_WEBHOOK_SECRET;
   if (!expectedSecret || !secret || !timingSafeEqual(hashForCompare(secret), hashForCompare(expectedSecret))) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
+    return Response.json({ error: "ไม่ได้รับอนุญาต" }, { status: 401 });
   }
 
   let body: unknown;

@@ -22,7 +22,7 @@ export function checkApiKeyPermission(
   requiredPermission: ApiKeyPermission,
 ) {
   if (!hasApiKeyPermission(grantedPermissions, requiredPermission)) {
-    throw new ApiError(403, "Insufficient API key permissions", ERROR_CODES.FORBIDDEN);
+    throw new ApiError(403, "API Key ไม่มีสิทธิ์เข้าถึง", ERROR_CODES.FORBIDDEN);
   }
 }
 

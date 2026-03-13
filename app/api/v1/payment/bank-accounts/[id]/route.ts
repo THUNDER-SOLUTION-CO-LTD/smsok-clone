@@ -19,7 +19,7 @@ export async function PUT(
 ) {
   try {
     const session = await getSession();
-    if (!session?.id) throw new ApiError(401, "Unauthorized");
+    if (!session?.id) throw new ApiError(401, "กรุณาเข้าสู่ระบบ");
 
     const { applyRateLimit } = await import("@/lib/rate-limit");
     const rl = await applyRateLimit(session.id, "purchase");
@@ -79,7 +79,7 @@ export async function DELETE(
 ) {
   try {
     const session = await getSession();
-    if (!session?.id) throw new ApiError(401, "Unauthorized");
+    if (!session?.id) throw new ApiError(401, "กรุณาเข้าสู่ระบบ");
 
     const { applyRateLimit } = await import("@/lib/rate-limit");
     const rl = await applyRateLimit(session.id, "purchase");

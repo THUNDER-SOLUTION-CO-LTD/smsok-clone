@@ -12,7 +12,7 @@ type RouteContext = {
 export async function DELETE(req: Request, ctx: RouteContext) {
   try {
     if (!hasValidCsrfOrigin(req)) {
-      throw new ApiError(403, "CSRF: invalid origin", ERROR_CODES.FORBIDDEN);
+      throw new ApiError(403, "คำขอไม่ถูกต้อง กรุณาลองใหม่", ERROR_CODES.FORBIDDEN);
     }
 
     const result = await verifyOrRefreshSession({ headers: req.headers });

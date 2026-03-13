@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
   // Verify cron secret
   const auth = req.headers.get("authorization");
   if (!CRON_SECRET || auth !== `Bearer ${CRON_SECRET}`) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
+    return Response.json({ error: "ไม่ได้รับอนุญาต" }, { status: 401 });
   }
 
   const now = new Date();

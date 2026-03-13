@@ -11,7 +11,7 @@ import { generateInvoiceNumber } from "@/lib/accounting/invoice-number";
 export async function POST(req: NextRequest) {
   try {
     const session = await getSession();
-    if (!session?.id) throw new ApiError(401, "Unauthorized");
+    if (!session?.id) throw new ApiError(401, "กรุณาเข้าสู่ระบบ");
 
     const { applyRateLimit } = await import("@/lib/rate-limit");
     const rl = await applyRateLimit(session.id, "invoice_create");
@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   try {
     const session = await getSession();
-    if (!session?.id) throw new ApiError(401, "Unauthorized");
+    if (!session?.id) throw new ApiError(401, "กรุณาเข้าสู่ระบบ");
 
     const target = new URL(`/api/invoices${new URL(req.url).search}`, req.url);
     const response = await fetch(target, {

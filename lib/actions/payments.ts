@@ -116,7 +116,7 @@ export async function adminVerifyTransaction(
   const admin = await db.user.findFirst({
     where: { id: adminUserId, role: "admin" },
   });
-  if (!admin) throw new Error("Unauthorized — admin only");
+  if (!admin) throw new Error("ไม่มีสิทธิ์ผู้ดูแลระบบ");
 
   const transaction = await db.transaction.findUnique({
     where: { id: transactionId },

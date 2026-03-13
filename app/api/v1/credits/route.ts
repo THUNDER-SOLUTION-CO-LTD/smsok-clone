@@ -6,7 +6,7 @@ import { getSession } from "@/lib/auth";
 export async function GET(req: NextRequest) {
   try {
     const session = await getSession();
-    if (!session?.id) throw new ApiError(401, "Unauthorized");
+    if (!session?.id) throw new ApiError(401, "กรุณาเข้าสู่ระบบ");
 
     const target = new URL("/api/credits", req.url);
     const response = await fetch(target, {

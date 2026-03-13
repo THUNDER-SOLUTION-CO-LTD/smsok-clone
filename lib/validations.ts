@@ -10,8 +10,8 @@ import { SENDER_NAME_REGEX } from "./sender-name-validation";
 export { passwordSchema, getPasswordStrength, isCommonPassword, PASSWORD_RULES } from "./password-policy";
 
 const CONTROL_CHAR_REGEX = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g;
-const HTML_TAG_REGEX = /<\/?[a-zA-Z][^>]*>/g;
 const INVALID_NAME_CHAR_REGEX = /[<>&"']/;
+const INVALID_WEBHOOK_URL_CHAR_REGEX = /[<>]/;
 const SANITIZED_PHONE_REGEX = /^(0[0-9]{9}|\+66[0-9]{9})$/;
 const MAX_SLIP_BYTES = 5 * 1024 * 1024;
 
@@ -28,7 +28,7 @@ function sanitizeTextInput(value: string) {
 }
 
 function sanitizeNameInput(value: string) {
-  return value.replace(HTML_TAG_REGEX, "").trim();
+  return value.trim();
 }
 
 function isValidEmail(value: string) {
@@ -293,12 +293,21 @@ const webhookEventSchema = z.enum([
 ])
 
 export const createWebhookSchema = z.object({
-  url: z.string().url("URL ไม่ถูกต้อง"),
+  url: z
+    .string()
+    .trim()
+    .url("URL ไม่ถูกต้อง")
+    .refine((value) => !INVALID_WEBHOOK_URL_CHAR_REGEX.test(value), "URL ไม่ถูกต้อง"),
   events: z.array(webhookEventSchema).min(1, "กรุณาเลือก event อย่างน้อย 1 รายการ"),
 })
 
 export const updateWebhookSchema = z.object({
-  url: z.string().url("URL ไม่ถูกต้อง").optional(),
+  url: z
+    .string()
+    .trim()
+    .url("URL ไม่ถูกต้อง")
+    .refine((value) => !INVALID_WEBHOOK_URL_CHAR_REGEX.test(value), "URL ไม่ถูกต้อง")
+    .optional(),
   events: z.array(webhookEventSchema).min(1).optional(),
   active: z.boolean().optional(),
 })

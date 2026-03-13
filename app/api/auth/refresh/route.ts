@@ -7,7 +7,7 @@ import { hasValidCsrfOrigin } from "@/lib/csrf";
 export async function POST(req: Request) {
   try {
     if (!hasValidCsrfOrigin(req)) {
-      throw new ApiError(403, "CSRF: invalid origin", ERROR_CODES.FORBIDDEN);
+      throw new ApiError(403, "คำขอไม่ถูกต้อง กรุณาลองใหม่", ERROR_CODES.FORBIDDEN);
     }
 
     const result = await refreshSession({ headers: req.headers });

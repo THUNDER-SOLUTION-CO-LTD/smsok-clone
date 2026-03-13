@@ -99,7 +99,7 @@ export async function changePassword(userId: string, data: unknown, _currentSess
 export async function changePasswordForSession(data: unknown) {
   const user = await getSession();
   if (!user) {
-    throw new Error("Unauthorized");
+    throw new Error("กรุณาเข้าสู่ระบบ");
   }
 
   return changePassword(user.id, data);

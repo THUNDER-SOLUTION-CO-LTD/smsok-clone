@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
   try {
     await authenticateAdmin(req, ["SUPER_ADMIN"]);
   } catch {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+    return new Response(JSON.stringify({ error: "ไม่ได้รับอนุญาต" }), {
       status: 401,
       headers: { "Content-Type": "application/json" },
     });

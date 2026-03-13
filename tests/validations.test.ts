@@ -16,6 +16,7 @@ import {
   assignContactTagSchema,
   requestSenderNameSchema,
   approveSenderNameSchema,
+  createWebhookSchema,
   purchasePackageSchema,
   uploadSlipSchema,
   verifyTransactionSchema,
@@ -280,6 +281,15 @@ describe("createContactSchema", () => {
       createContactSchema.parse({ name: "Test", phone: "0891234567", email: "bad" })
     ).toThrow();
   });
+
+  it("rejects HTML tags in contact name instead of silently stripping them", () => {
+    expect(() =>
+      createContactSchema.parse({
+        name: "<script>alert(1)</script>",
+        phone: "0891234567",
+      })
+    ).toThrow("ชื่อมีอักขระไม่อนุญาต");
+  });
 });
 
 describe("contactFilterSchema", () => {
@@ -496,6 +506,25 @@ describe("createCampaignSchema", () => {
       scheduledAt: "2026-03-10T03:00:00Z",
     });
     expect(result.scheduledAt).toBeInstanceOf(Date);
+  });
+
+  it("rejects HTML tags in campaign name instead of silently stripping them", () => {
+    expect(() =>
+      createCampaignSchema.parse({
+        name: "<script>alert(1)</script>",
+      })
+    ).toThrow("ชื่อมีอักขระไม่อนุญาต");
+  });
+});
+
+describe("createWebhookSchema", () => {
+  it("rejects angle brackets in webhook URLs", () => {
+    expect(() =>
+      createWebhookSchema.parse({
+        url: "http://evil.com/<script>alert(1)</script>",
+        events: ["sms.sent"],
+      })
+    ).toThrow("URL ไม่ถูกต้อง");
   });
 });
 

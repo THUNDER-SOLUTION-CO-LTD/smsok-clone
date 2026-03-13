@@ -240,7 +240,7 @@ async function resolveTier(input: PackagePurchaseInput): Promise<TierRecord | nu
 export async function POST(req: NextRequest) {
   try {
     const session = await getSession();
-    if (!session?.id) throw new ApiError(401, "Unauthorized");
+    if (!session?.id) throw new ApiError(401, "กรุณาเข้าสู่ระบบ");
 
     const { applyRateLimit } = await import("@/lib/rate-limit");
     const rl = await applyRateLimit(session.id, "topup_verify");

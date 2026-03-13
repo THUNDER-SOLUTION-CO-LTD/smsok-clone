@@ -7,7 +7,7 @@ import { prisma as db } from "@/lib/db";
 export async function GET(req: NextRequest) {
   try {
     const session = await getSession();
-    if (!session?.id) return apiError(new Error("Unauthorized"));
+    if (!session?.id) return apiError(new ApiError(401, "กรุณาเข้าสู่ระบบ"));
 
     // Get user's organization
     const membership = await db.membership.findFirst({
@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const session = await getSession();
-    if (!session?.id) return apiError(new Error("Unauthorized"));
+    if (!session?.id) return apiError(new ApiError(401, "กรุณาเข้าสู่ระบบ"));
 
     // Get user's organization
     const membership = await db.membership.findFirst({

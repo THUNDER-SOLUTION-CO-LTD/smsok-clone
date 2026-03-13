@@ -17,7 +17,7 @@ const BANK_ACCOUNTS = [
 export async function GET(req: NextRequest) {
   try {
     const session = await getSession();
-    if (!session?.id) throw new ApiError(401, "Unauthorized");
+    if (!session?.id) throw new ApiError(401, "กรุณาเข้าสู่ระบบ");
 
     return apiResponse({ account: BANK_ACCOUNTS[0] });
   } catch (error) {
