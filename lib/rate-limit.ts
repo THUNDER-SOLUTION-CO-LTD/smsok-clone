@@ -18,6 +18,7 @@ const DEFAULTS: Record<string, RateLimitConfig> = {
   auth: { windowMs: 15 * 60_000, maxRequests: 10 },
   auth_login: { windowMs: 15 * 60_000, maxRequests: 20 },
   auth_register: { windowMs: 15 * 60_000, maxRequests: 10 },
+  auth_check_duplicate: { windowMs: 15 * 60_000, maxRequests: 10 },
   api: { windowMs: 60_000, maxRequests: 60 },
   slip: { windowMs: 60_000, maxRequests: 5 },
   password: { windowMs: 15 * 60_000, maxRequests: 5 },

@@ -11,7 +11,7 @@ const phoneSchema = z.string().trim().min(9).max(20);
 
 export async function GET(req: NextRequest) {
   const ip = getClientIp(req.headers);
-  const rl = await applyRateLimit(ip, "auth_register");
+  const rl = await applyRateLimit(ip, "auth_check_duplicate");
   if (rl.blocked) return rl.blocked;
 
   try {
