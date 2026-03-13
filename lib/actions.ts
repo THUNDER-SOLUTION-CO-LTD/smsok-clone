@@ -99,7 +99,7 @@ export async function registerWithOtp(data: {
 
   const [existingEmail, existingPhone] = await Promise.all([
     prisma.user.findUnique({ where: { email }, select: { id: true } }),
-    phone ? prisma.user.findFirst({ where: { phone }, select: { id: true } }) : null,
+    phone ? prisma.user.findUnique({ where: { phone }, select: { id: true } }) : null,
   ]);
   if (existingEmail) throw new Error("อีเมลนี้ถูกใช้งานแล้ว");
   if (existingPhone) throw new Error("เบอร์โทรนี้ถูกใช้งานแล้ว");

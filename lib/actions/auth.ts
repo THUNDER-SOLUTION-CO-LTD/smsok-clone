@@ -76,15 +76,23 @@ export async function forgotPassword(input: unknown) {
   const { phone } = forgotPasswordSchema.parse(input);
   const fallbackPhone = alternatePhone(phone);
 
-  const user = await prisma.user.findFirst({
-    where: {
-      OR: [{ phone }, { phone: fallbackPhone }],
-    },
-    select: {
-      id: true,
-      phone: true,
-    },
-  });
+  const user =
+    (await prisma.user.findUnique({
+      where: { phone },
+      select: {
+        id: true,
+        phone: true,
+      },
+    })) ??
+    (fallbackPhone !== phone
+      ? await prisma.user.findUnique({
+          where: { phone: fallbackPhone },
+          select: {
+            id: true,
+            phone: true,
+          },
+        })
+      : null);
 
   if (!user) {
     // Silent return — prevents HTTP status side-channel enumeration

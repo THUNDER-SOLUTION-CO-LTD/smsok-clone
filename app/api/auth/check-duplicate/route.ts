@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
     }
 
     const normalizedPhone = normalizePhone(phoneSchema.parse(phoneRaw));
-    const existing = await prisma.user.findFirst({
+    const existing = await prisma.user.findUnique({
       where: { phone: normalizedPhone },
       select: { id: true },
     });

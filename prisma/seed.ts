@@ -5,10 +5,13 @@ const prisma = new PrismaClient();
 
 const SEED_MESSAGE_PREFIX = "[smsok-seed]";
 const DEFAULT_SEED_EMAIL = "demo@smsok.local";
+const DEFAULT_SEED_PHONE = "+66900000000";
 const DEFAULT_SEED_PASSWORD = "Password123!";
+const DEFAULT_SEED_NAME = "Demo User";
 
 async function resolveSeedUser() {
   const requestedEmail = process.env.SEED_EMAIL?.trim();
+  const requestedPhone = process.env.SEED_PHONE?.trim() || DEFAULT_SEED_PHONE;
   if (requestedEmail) {
     const existing = await prisma.user.findUnique({
       where: { email: requestedEmail },
@@ -22,6 +25,7 @@ async function resolveSeedUser() {
       data: {
         email: requestedEmail,
         name: requestedEmail.split("@")[0],
+        phone: requestedPhone,
         password,
       },
     });
@@ -39,7 +43,8 @@ async function resolveSeedUser() {
   return prisma.user.create({
     data: {
       email: DEFAULT_SEED_EMAIL,
-      name: "Demo User",
+      name: DEFAULT_SEED_NAME,
+      phone: requestedPhone,
       password,
     },
   });

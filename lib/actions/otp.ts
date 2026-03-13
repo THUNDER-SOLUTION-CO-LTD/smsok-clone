@@ -333,7 +333,7 @@ export async function generateOtpForRegister(phone: string, ip: string = "unknow
     throw new Error(rateLimit.reason || "ส่ง OTP มากเกินไป กรุณารอสักครู่");
   }
 
-  const existing = await prisma.user.findFirst({ where: { phone: normalizedPhone }, select: { id: true } });
+  const existing = await prisma.user.findUnique({ where: { phone: normalizedPhone }, select: { id: true } });
   if (existing) throw new Error("เบอร์โทรนี้ถูกใช้งานแล้ว");
 
   // DB-level fallback
