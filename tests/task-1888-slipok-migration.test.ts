@@ -55,7 +55,7 @@ describe("Task #1888 — SlipOK migration for order system", () => {
         path.resolve("app/api/orders/[id]/slip/route.ts"),
         "utf-8",
       );
-      expect(content).toContain("verifySlip(slip");
+      expect(content).toContain("verifySlip(slipBlob");
     });
 
     it("should support pending manual review when SlipOK cannot auto-verify", () => {

@@ -9,12 +9,11 @@ const mocks = vi.hoisted(() => ({
   transaction: vi.fn(),
   orderSlipCreate: vi.fn(),
   orderUpdate: vi.fn(),
-  verifySlipByUrl: vi.fn(),
+  verifySlip: vi.fn(),
   createOrderHistory: vi.fn(),
   storeUploadedFile: vi.fn(),
   removeStoredFile: vi.fn(),
   applyRateLimit: vi.fn(),
-  resolveStoredFileVerificationUrl: vi.fn(),
 }));
 
 vi.mock("@/lib/auth", () => ({
@@ -30,8 +29,8 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
-vi.mock("@/lib/easyslip", () => ({
-  verifySlipByUrl: mocks.verifySlipByUrl,
+vi.mock("@/lib/slipok", () => ({
+  verifySlip: mocks.verifySlip,
 }));
 
 vi.mock("@/lib/orders/service", () => ({
@@ -44,7 +43,6 @@ vi.mock("@/lib/orders/service", () => ({
 vi.mock("@/lib/storage/service", () => ({
   storeUploadedFile: mocks.storeUploadedFile,
   removeStoredFile: mocks.removeStoredFile,
-  resolveStoredFileVerificationUrl: mocks.resolveStoredFileVerificationUrl,
 }));
 
 vi.mock("@/lib/rate-limit", () => ({
@@ -155,12 +153,11 @@ describe("Task #2624: slip upload accepts file-like multipart entries", () => {
       }));
     mocks.orderSlipCreate.mockResolvedValue(createdSlip);
     mocks.orderUpdate.mockResolvedValue(verifyingOrder);
-    mocks.verifySlipByUrl.mockResolvedValue({
+    mocks.verifySlip.mockResolvedValue({
       success: false,
-      error: "EasySlip API key not configured",
+      error: "SlipOK API not configured",
     });
     mocks.applyRateLimit.mockResolvedValue({ blocked: null, headers: {} });
-    mocks.resolveStoredFileVerificationUrl.mockResolvedValue("https://signed.example/slip.jpg");
     mocks.storeUploadedFile.mockResolvedValue({
       key: "users/user_1/orders/order_1/slips/fixture.jpg",
       ref: "r2:users/user_1/orders/order_1/slips/fixture.jpg",
@@ -186,7 +183,7 @@ describe("Task #2624: slip upload accepts file-like multipart entries", () => {
     expect(uploaded?.size).toBe(slipFixture.byteLength);
   });
 
-  it("stores the slip and returns VERIFYING on the v1 route when EasySlip is unavailable", async () => {
+  it("stores the slip and returns VERIFYING on the v1 route when SlipOK cannot auto-verify", async () => {
     const response = await uploadOrderSlip(createRequestWithSlip(createFileLikeSlip()), {
       params: Promise.resolve({ id: "order_1" }),
     });
@@ -196,12 +193,12 @@ describe("Task #2624: slip upload accepts file-like multipart entries", () => {
       status: "VERIFYING",
       verified: false,
       pending_review: true,
-      review_note: "EasySlip: EasySlip API key not configured",
+      review_note: "SlipOK: SlipOK API not configured",
       latest_slip: {
         id: "slip_1",
       },
     });
-    expect(mocks.verifySlipByUrl).toHaveBeenCalledTimes(1);
+    expect(mocks.verifySlip).toHaveBeenCalledTimes(1);
     expect(mocks.orderSlipCreate).toHaveBeenCalledTimes(1);
     expect(mocks.orderUpdate).toHaveBeenCalledTimes(1);
     expect(mocks.storeUploadedFile).toHaveBeenCalledWith(
@@ -217,16 +214,13 @@ describe("Task #2624: slip upload accepts file-like multipart entries", () => {
       "order_1",
       "VERIFYING",
       expect.objectContaining({
-        note: "EasySlip: EasySlip API key not configured",
+        note: "SlipOK: SlipOK API not configured",
       }),
     );
-    expect(mocks.resolveStoredFileVerificationUrl).toHaveBeenCalledWith(
-      "r2:users/user_1/orders/order_1/slips/fixture.jpg",
-    );
-    expect(mocks.verifySlipByUrl).toHaveBeenCalledWith("https://signed.example/slip.jpg");
+    expect(mocks.verifySlip).toHaveBeenCalledTimes(1);
   });
 
-  it("stores the slip and returns VERIFYING on the canonical route when EasySlip is unavailable", async () => {
+  it("stores the slip and returns VERIFYING on the canonical route when SlipOK cannot auto-verify", async () => {
     const response = await uploadCanonicalOrderSlip(createRequestWithSlip(createFileLikeSlip()), {
       params: Promise.resolve({ id: "order_1" }),
     });
@@ -236,13 +230,12 @@ describe("Task #2624: slip upload accepts file-like multipart entries", () => {
       status: "VERIFYING",
       verified: false,
       pending_review: true,
-      review_note: "EasySlip: EasySlip API key not configured",
+      review_note: "SlipOK: SlipOK API not configured",
       latest_slip: {
         id: "slip_1",
       },
     });
-    expect(mocks.verifySlipByUrl).toHaveBeenCalledTimes(1);
-    expect(mocks.verifySlipByUrl).toHaveBeenCalledWith("https://signed.example/slip.jpg");
+    expect(mocks.verifySlip).toHaveBeenCalledTimes(1);
     expect(mocks.storeUploadedFile).toHaveBeenCalledTimes(1);
     expect(mocks.applyRateLimit).toHaveBeenCalledWith("user_1", "slip");
   });
