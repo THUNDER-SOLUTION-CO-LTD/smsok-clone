@@ -1,5 +1,5 @@
 import { Prisma } from "@prisma/client";
-import { type SlipVerifyResult, verifySlipByUrl } from "@/lib/easyslip";
+import { type SlipVerifyResult, verifySlip } from "@/lib/slipok";
 import { ApiError, apiError, apiResponse } from "@/lib/api-auth";
 import { getSession } from "@/lib/auth";
 import { prisma as db } from "@/lib/db";
@@ -12,7 +12,6 @@ import { createOrderHistory, serializeOrderSlip, serializeOrderV2 } from "@/lib/
 import { applyRateLimit } from "@/lib/rate-limit";
 import {
   removeStoredFile,
-  resolveStoredFileVerificationUrl,
   StorageUploadError,
   storeUploadedFile,
 } from "@/lib/storage/service";
@@ -21,30 +20,6 @@ import { coerceUploadedFile } from "@/lib/uploaded-file";
 type RouteContext = {
   params: Promise<{ id: string }>;
 };
-
-function getManualReviewNote(verification: SlipVerifyResult, expectedAmount: number) {
-  if (!verification.success) {
-    return `EasySlip: ${verification.providerCode ?? verification.error ?? "verification pending manual review"}`;
-  }
-
-  if (!verification.data) {
-    return "EasySlip: verification pending manual review";
-  }
-
-  return `EasySlip: amount mismatch (expected ${expectedAmount}, got ${verification.data.amount})`;
-}
-
-function getPendingReviewMessage(verification: SlipVerifyResult) {
-  if (!verification.success) {
-    if (verification.providerCode === "application_expired") {
-      return "ระบบตรวจสอบสลิปอัตโนมัติไม่พร้อม กรุณารอเจ้าหน้าที่ตรวจสลิป";
-    }
-
-    return "กำลังรอเจ้าหน้าที่ตรวจสลิป";
-  }
-
-  return "ยอดสลิปต้องตรวจสอบเพิ่มเติมโดยเจ้าหน้าที่";
-}
 
 export async function POST(req: Request, ctx: RouteContext) {
   try {
@@ -108,6 +83,7 @@ export async function POST(req: Request, ctx: RouteContext) {
       }
     }
 
+    // Upload slip to R2 storage
     const uploadedSlip = await storeUploadedFile({
       userId: session.id,
       scope: "orders",
@@ -117,7 +93,6 @@ export async function POST(req: Request, ctx: RouteContext) {
     });
     const slipUrl = uploadedSlip.ref;
     const slipKey = uploadedSlip.key;
-    const verificationUrl = await resolveStoredFileVerificationUrl(slipUrl);
 
     let uploadedWhtCert: { ref: string } | null = null;
     let whtCertUrl: string | null = order.whtCertUrl;
@@ -132,14 +107,44 @@ export async function POST(req: Request, ctx: RouteContext) {
       whtCertUrl = uploadedWhtCert.ref;
     }
 
-    const verification = await verifySlipByUrl(verificationUrl);
-    const amountMatch =
-      verification.success && verification.data
-        ? Math.abs(verification.data.amount - Number(order.payAmount)) <= 1
-        : false;
+    const cleanupUploads = async () => {
+      await Promise.allSettled([
+        removeStoredFile(slipUrl),
+        uploadedWhtCert ? removeStoredFile(uploadedWhtCert.ref) : Promise.resolve(),
+      ]);
+    };
 
-    const verificationData = verification.data;
-    const autoApprove = Boolean(verification.success && verificationData && amountMatch);
+    // Verify slip via SlipOK — sends the original file directly
+    // SlipOK handles duplicate check (1012), amount check (1013), receiver check (1014)
+    const expectedAmount = Number(order.payAmount);
+    const slipBlob = new Blob([await slip.arrayBuffer()], {
+      type: slip.type || "application/octet-stream",
+    });
+    const verification = await verifySlip(slipBlob, { amount: expectedAmount });
+
+    // SlipOK returned a known error — reject immediately
+    if (verification.isDuplicate) {
+      await cleanupUploads();
+      throw new ApiError(400, "สลิปนี้ถูกใช้แล้ว");
+    }
+    if (!verification.success) {
+      await cleanupUploads();
+      throw new ApiError(400, verification.error ?? "ตรวจสอบสลิปไม่สำเร็จ กรุณาลองใหม่");
+    }
+
+    // SlipOK verified successfully — check our own DB for duplicate transRef
+    const verificationData = verification.data!;
+    const duplicateSlip = await db.orderSlip.findFirst({
+      where: { transRef: verificationData.transRef },
+      select: { id: true },
+    });
+    if (duplicateSlip) {
+      await cleanupUploads();
+      throw new ApiError(400, "สลิปนี้ถูกใช้แล้ว");
+    }
+
+    // All checks passed — mark order as PAID immediately
+    const approvalNote = "SlipOK verified — order paid automatically";
     let result;
     try {
       result = await db.$transaction(async (tx) => {
@@ -148,6 +153,7 @@ export async function POST(req: Request, ctx: RouteContext) {
             orderId: order.id,
             fileUrl: slipUrl,
             fileKey: slipKey,
+            transRef: verificationData.transRef,
             fileSize: slip.size,
             fileType: slip.type || "image/png",
           },
@@ -155,6 +161,7 @@ export async function POST(req: Request, ctx: RouteContext) {
             id: true,
             fileUrl: true,
             fileKey: true,
+            transRef: true,
             fileSize: true,
             fileType: true,
             uploadedAt: true,
@@ -163,37 +170,6 @@ export async function POST(req: Request, ctx: RouteContext) {
             deletedAt: true,
           },
         });
-
-        if (!autoApprove) {
-          const pendingReviewMessage = getPendingReviewMessage(verification);
-          const updatedOrder = await tx.order.update({
-            where: { id: order.id },
-            data: {
-              status: "VERIFYING",
-              slipUrl,
-              slipFileName: slip.name,
-              slipFileSize: slip.size,
-              whtCertUrl,
-              whtCertVerified: whtCertUrl ? null : false,
-              easyslipVerified: verification.success,
-              easyslipResponse: verification as unknown as Prisma.InputJsonValue,
-              adminNote: pendingReviewMessage,
-              rejectReason: null,
-              paidAt: null,
-              completedAt: null,
-            },
-            select: orderSummarySelect,
-          });
-
-          const reviewNote = getManualReviewNote(verification, Number(order.payAmount));
-          await createOrderHistory(tx, order.id, "VERIFYING", {
-            fromStatus: order.status,
-            changedBy: session.id,
-            note: reviewNote,
-          });
-
-          return { createdSlip, updatedOrder, pendingReview: true, reviewNote };
-        }
 
         const updatedOrder = await tx.order.update({
           where: { id: order.id },
@@ -205,7 +181,7 @@ export async function POST(req: Request, ctx: RouteContext) {
             whtCertUrl,
             whtCertVerified: whtCertUrl ? null : false,
             easyslipVerified: true,
-            easyslipResponse: verificationData,
+            easyslipResponse: verificationData as unknown as Prisma.InputJsonValue,
             adminNote: null,
             paidAt: new Date(),
             completedAt: new Date(),
@@ -228,25 +204,31 @@ export async function POST(req: Request, ctx: RouteContext) {
         await createOrderHistory(tx, order.id, "PAID", {
           fromStatus: order.status,
           changedBy: session.id,
-          note: "EasySlip verified — order paid automatically",
+          note: approvalNote,
         });
 
-        return { createdSlip, updatedOrder, pendingReview: false, reviewNote: null };
+        return { createdSlip, updatedOrder };
       });
     } catch (error) {
-      await Promise.allSettled([
-        removeStoredFile(slipUrl),
-        uploadedWhtCert ? removeStoredFile(uploadedWhtCert.ref) : Promise.resolve(),
-      ]);
+      await cleanupUploads();
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        const target = Array.isArray(error.meta?.target)
+          ? error.meta.target.join(",")
+          : String(error.meta?.target ?? "");
+        if (target.includes("trans_ref") || target.includes("transRef")) {
+          throw new ApiError(400, "สลิปนี้ถูกใช้แล้ว");
+        }
+      }
       throw error;
     }
 
     return apiResponse({
       ...serializeOrderV2(result.updatedOrder),
       latest_slip: serializeOrderSlip(result.createdSlip),
-      verified: !result.pendingReview,
-      pending_review: result.pendingReview,
-      review_note: result.reviewNote ?? undefined,
+      latest_slip_uploaded_at: result.createdSlip.uploadedAt.toISOString(),
+      latest_status_note: approvalNote,
+      verified: true,
+      pending_review: false,
     });
   } catch (error) {
     if (error instanceof StorageUploadError) {

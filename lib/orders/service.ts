@@ -422,8 +422,8 @@ export function serializeOrder(order: OrderSerializeInput) {
   );
 }
 
-export function serializeOrderV2(order: OrderRecord) {
-  return {
+export function serializeOrderV2(order: OrderSerializeInput) {
+  const base = {
     id: order.id,
     order_number: order.orderNumber,
     package_tier_id: order.packageTierId,
@@ -460,6 +460,11 @@ export function serializeOrderV2(order: OrderRecord) {
     cancellation_reason: order.cancellationReason ?? undefined,
     created_at: order.createdAt.toISOString(),
   };
+
+  return attachLatestStatusNote(
+    attachLatestSlip(base, order.slips),
+    order.history,
+  );
 }
 
 export function serializeOrderDocument(document: OrderDocumentRecord) {

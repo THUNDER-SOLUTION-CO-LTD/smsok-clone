@@ -1073,6 +1073,7 @@ model OrderSlip {
   orderId    String    @map("order_id")
   fileUrl    String    @map("file_url")
   fileKey    String    @map("file_key")
+  transRef   String?   @unique @map("trans_ref")
   fileSize   Int?      @map("file_size")
   fileType   String?   @map("file_type")
   uploadedAt DateTime  @default(now()) @map("uploaded_at")
