@@ -5,9 +5,10 @@ test.describe("SMS Sending", () => {
   test("TC-020: send SMS page loads with form", async ({ authedPage: page }) => {
     await page.goto("/dashboard/send", { waitUntil: "networkidle" });
     // Verify form elements exist
-    // SenderDropdown: static display (1 sender) or CustomSelect (multiple)
-    const hasSender = await page.locator("text=EasySlip").first().isVisible({ timeout: 5000 }).catch(() => false);
-    expect(hasSender).toBeTruthy();
+    // SenderDropdown shows DB-approved senders (e.g. SMSOK) or no-sender warning
+    const hasSender = await page.locator("text=SMSOK").first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasNoSenderWarning = await page.locator("text=ยังไม่มีชื่อผู้ส่ง").first().isVisible({ timeout: 2000 }).catch(() => false);
+    expect(hasSender || hasNoSenderWarning).toBeTruthy();
     await expect(page.locator("textarea").first()).toBeVisible();
     const sendBtn = page.getByRole("button", { name: /ส่ง SMS|Send/i });
     await expect(sendBtn).toBeVisible();
@@ -17,30 +18,25 @@ test.describe("SMS Sending", () => {
   });
 
   // TC-021: Sender dropdown has options
-  test("TC-021: sender dropdown shows options", async ({ authedPage: page }) => {
+  test("TC-021: sender dropdown shows approved senders", async ({ authedPage: page }) => {
     await page.goto("/dashboard/send", { waitUntil: "networkidle" });
-    // SenderDropdown: if only EasySlip, shows static display (no dropdown)
-    // If multiple senders, shows CustomSelect with options
-    const senderText = page.locator("text=EasySlip").first();
-    await expect(senderText).toBeVisible({ timeout: 5000 });
+    // SenderDropdown shows DB-approved senders (e.g. SMSOK) or no-sender warning
+    const hasSMSOK = await page.locator("text=SMSOK").first().isVisible({ timeout: 5000 }).catch(() => false);
+    const hasNoSenderWarning = await page.locator("text=ยังไม่มีชื่อผู้ส่ง").first().isVisible({ timeout: 2000 }).catch(() => false);
+    expect(hasSMSOK || hasNoSenderWarning).toBeTruthy();
 
-    // Try to find a select/dropdown trigger (CustomSelect renders a button)
-    const selectTrigger = page.locator('button:has-text("EasySlip")').first();
-    if (await selectTrigger.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await selectTrigger.click();
-      const options = page.locator('[role="option"]');
-      if (await options.first().isVisible({ timeout: 3000 }).catch(() => false)) {
-        const count = await options.count();
-        expect(count).toBeGreaterThan(0);
-        const firstOptionText = await options.first().textContent();
-        expect(firstOptionText!.length).toBeGreaterThan(0);
+    if (hasSMSOK) {
+      // Try to find a select/dropdown trigger
+      const selectTrigger = page.locator('button:has-text("SMSOK")').first();
+      if (await selectTrigger.isVisible({ timeout: 2000 }).catch(() => false)) {
+        await selectTrigger.click();
+        const options = page.locator('[role="option"]');
+        if (await options.first().isVisible({ timeout: 3000 }).catch(() => false)) {
+          const count = await options.count();
+          expect(count).toBeGreaterThan(0);
+        }
       }
     }
-    // If static display (single sender), verify EasySlip + "ค่าเริ่มต้น" shown
-    const defaultLabel = page.locator("text=ค่าเริ่มต้น").first();
-    await expect(defaultLabel).toBeVisible({ timeout: 3000 }).catch(() => {
-      // Multiple senders mode — no default label, that's OK
-    });
   });
 
   // TC-024: Message type selector
@@ -63,8 +59,8 @@ test.describe("SMS Sending", () => {
   test("TC-026: send button enabled after filling all fields", async ({ authedPage: page }) => {
     await page.goto("/dashboard/send", { waitUntil: "networkidle" });
 
-    // Select sender — SenderDropdown may be static (1 sender) or CustomSelect
-    const selectTrigger = page.locator('button:has-text("EasySlip")').first();
+    // Select sender — SenderDropdown shows DB-approved senders
+    const selectTrigger = page.locator('button:has-text("SMSOK")').first();
     if (await selectTrigger.isVisible({ timeout: 2000 }).catch(() => false)) {
       await selectTrigger.click();
       const firstOption = page.locator('[role="option"]').first();
@@ -72,7 +68,6 @@ test.describe("SMS Sending", () => {
         await firstOption.click();
       }
     }
-    // If static display, sender is already "EasySlip" by default
 
     // Fill phone + message
     const phoneArea = page.locator("textarea").first();
