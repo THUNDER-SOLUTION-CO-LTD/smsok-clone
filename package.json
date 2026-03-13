@@ -14,7 +14,9 @@
     "db:seed": "bunx prisma db seed",
     "workers:start": "bun workers/start.ts",
     "test": "vitest",
+    "test:ci": "vitest run",
     "test:e2e": "playwright test",
+    "test:all": "vitest run && playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:auth": "playwright test auth.spec.ts",
     "test:e2e:sms": "playwright test sms.spec.ts",
@@ -30,6 +32,7 @@
     "seed": "bun prisma/seed.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1008.0",
     "@base-ui/react": "^1.2.0",
     "@bull-board/api": "^6.20.3",
     "@bull-board/express": "^6.20.3",
