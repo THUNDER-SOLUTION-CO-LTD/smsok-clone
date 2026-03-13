@@ -4,7 +4,6 @@ import {
 } from "@prisma/client";
 import { prisma as db } from "@/lib/db";
 import { generateOrderDocumentNumber } from "@/lib/orders/numbering";
-import type { UploadedFileLike } from "@/lib/uploaded-file";
 
 type TxClient = Parameters<Parameters<typeof db.$transaction>[0]>[0];
 type DbClient = PrismaClient | TxClient;
@@ -128,17 +127,6 @@ const ORDER_DOCUMENT_KIND: Record<
   RECEIPT: "receipt",
   CREDIT_NOTE: "credit-note",
 };
-
-export function buildSlipDataUrl(mimeType: string, buffer: Buffer) {
-  return `data:${mimeType};base64,${buffer.toString("base64")}`;
-}
-
-export function buildSlipFileKey(orderId: string, file: UploadedFileLike, now = new Date()) {
-  const extFromType = file.type.split("/")[1]?.toLowerCase() || "";
-  const extFromName = file.name.split(".").pop()?.toLowerCase() || "";
-  const ext = extFromType || extFromName || "bin";
-  return `slips/${orderId}/${now.getTime()}.${ext}`;
-}
 
 export function documentTypeToApiPath(type: OrderDocumentType) {
   switch (type) {

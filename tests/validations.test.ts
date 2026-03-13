@@ -456,17 +456,17 @@ describe("purchasePackageSchema", () => {
 describe("uploadSlipSchema", () => {
   const validCuid = "clxxxxxxxxxxxxxxxxxxxxxxxxx".slice(0, 25);
 
-  it("accepts valid slip URL", () => {
+  it("accepts valid R2 slip ref", () => {
     const result = uploadSlipSchema.parse({
       transactionId: validCuid,
-      slipUrl: "https://example.com/slip.jpg",
+      slipRef: "r2:users/user_1/payments/payment_1/slips/slip.jpg",
     });
-    expect(result.slipUrl).toContain("https://");
+    expect(result.slipRef).toContain("r2:");
   });
 
-  it("rejects invalid URL", () => {
+  it("rejects non-R2 refs", () => {
     expect(() =>
-      uploadSlipSchema.parse({ transactionId: validCuid, slipUrl: "not-url" })
+      uploadSlipSchema.parse({ transactionId: validCuid, slipRef: "https://example.com/slip.jpg" })
     ).toThrow();
   });
 });

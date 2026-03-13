@@ -109,7 +109,3 @@ export function getStoredFileOwnerId(keyOrRef: string | null | undefined) {
     return null;
   }
 }
-
-export function bufferFromBase64Payload(payload: string) {
-  return Buffer.from(payload.trim(), "base64");
-}

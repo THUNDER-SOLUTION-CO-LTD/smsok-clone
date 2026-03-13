@@ -1714,13 +1714,18 @@ export function generateOpenAPISpec() {
           requestBody: {
             required: true,
             content: {
-              "application/json": {
+              "multipart/form-data": {
                 schema: {
                   type: "object",
-                  required: ["transactionId", "slipUrl"],
+                  required: ["slip"],
                   properties: {
-                    transactionId: { type: "string" },
-                    slipUrl: { type: "string", format: "uri" },
+                    slip: { type: "string", format: "binary" },
+                    packageId: { type: "string" },
+                    credits: { type: "integer" },
+                    amount: { type: "number" },
+                    date: { type: "string" },
+                    time: { type: "string" },
+                    note: { type: "string" },
                   },
                 },
               },

@@ -1,14 +1,6 @@
-
 import { prisma as db } from "../db";
 import { revalidatePath } from "next/cache";
 import { idSchema } from "../validations";
-import { verifySlipByUrl } from "../easyslip";
-import { isObviouslyInternalUrl } from "../url-safety";
-import {
-  removeStoredFile,
-  resolveStoredFileVerificationUrl,
-  storeBase64File,
-} from "../storage/service";
 
 // ==========================================
 // Get active package tiers from DB (for pricing page)
@@ -21,89 +13,8 @@ export async function getPackageTiers() {
   });
 }
 
-// ==========================================
-// Upload slip for verification (package purchase)
-// ==========================================
-
-export async function uploadSlip(userId: string, transactionId: string, slipUrl: string) {
-  idSchema.parse({ id: transactionId });
-
-  // SSRF protection — block internal URLs
-  if (isObviouslyInternalUrl(slipUrl)) {
-    throw new Error("URL ไม่ถูกต้อง — ไม่อนุญาตให้ใช้ internal URL");
-  }
-
-  const transaction = await db.transaction.findUnique({
-    where: { id: transactionId },
-  });
-  if (!transaction) throw new Error("ไม่พบรายการ");
-  if (transaction.userId !== userId) throw new Error("ไม่มีสิทธิ์เข้าถึงรายการนี้");
-  if (transaction.status !== "pending") throw new Error("รายการนี้ดำเนินการแล้ว");
-
-  await db.transaction.update({
-    where: { id: transactionId },
-    data: { slipUrl },
-  });
-
-  // Auto-verify with EasySlip API
-  const slipResult = await verifySlipByUrl(slipUrl);
-
-  if (slipResult.success && slipResult.data) {
-    const slipData = slipResult.data;
-    const slipAmount = Math.round(slipData.amount * 100); // Convert baht to satang
-    const expectedAmount = Number(transaction.amount);
-
-    // Verify amount matches (allow ±1 baht = 100 satang tolerance)
-    if (Math.abs(slipAmount - expectedAmount) <= 100) {
-      // Check reference not already used
-      const existingRef = await db.transaction.findFirst({
-        where: {
-          reference: slipData.transRef,
-          status: "verified",
-          id: { not: transactionId },
-        },
-      });
-
-      if (existingRef) {
-        revalidatePath("/dashboard/topup");
-        return { status: "rejected", transactionId, error: "สลิปนี้ถูกใช้ไปแล้ว" };
-      }
-
-      // Auto-approve: activate package purchase
-      await db.$transaction(async (tx) => {
-        await tx.transaction.update({
-          where: { id: transactionId },
-          data: {
-            status: "verified",
-            reference: slipData.transRef,
-            verifiedAt: new Date(),
-            verifiedBy: "easyslip-auto",
-          },
-        });
-
-        // Activate the associated package purchase if exists
-        if (transaction.packageId) {
-          await tx.packagePurchase.updateMany({
-            where: { userId: transaction.userId, tierId: transaction.packageId, isActive: false },
-            data: { isActive: true },
-          });
-        }
-      });
-
-      revalidatePath("/dashboard/topup");
-      revalidatePath("/dashboard");
-      return { status: "verified", transactionId };
-    } else {
-      // Amount mismatch — needs manual review
-      await db.transaction.update({
-        where: { id: transactionId },
-        data: { reference: slipData.transRef },
-      });
-    }
-  }
-
-  revalidatePath("/dashboard/topup");
-  return { status: "pending_review", transactionId };
+export async function uploadSlip(_userId: string, _transactionId: string, _slipRef: string) {
+  throw new Error("Legacy slip upload was removed. Use the multipart R2 upload routes instead.");
 }
 
 // ==========================================
@@ -114,8 +25,9 @@ export async function adminVerifyTransaction(
   adminUserId: string,
   transactionId: string,
   action: "verify" | "reject",
-  rejectNote?: string
+  rejectNote?: string,
 ) {
+  void rejectNote;
   idSchema.parse({ id: transactionId });
 
   const admin = await db.user.findFirst({
@@ -140,7 +52,6 @@ export async function adminVerifyTransaction(
         },
       });
 
-      // Activate the associated package purchase if exists
       if (transaction.packageId) {
         await tx.packagePurchase.updateMany({
           where: { userId: transaction.userId, tierId: transaction.packageId, isActive: false },
@@ -184,105 +95,8 @@ export async function adminGetPendingTransactions() {
   });
 }
 
-export async function verifyPackagePurchaseSlip(userId: string, payload: string) {
-  if (!payload || typeof payload !== "string") {
-    throw new Error("กรุณาแนบสลิป");
-  }
-
-  const storedSlip = await storeBase64File({
-    userId,
-    scope: "payments",
-    resourceId: `legacy-topup-${Date.now()}`,
-    kind: "slips",
-    payload,
-    contentType: "image/jpeg",
-    fileName: "slip-base64",
-  });
-
-  let slipResult;
-  try {
-    const verificationUrl = await resolveStoredFileVerificationUrl(storedSlip.ref);
-    slipResult = await verifySlipByUrl(verificationUrl);
-  } catch (error) {
-    await removeStoredFile(storedSlip.ref);
-    throw error;
-  }
-
-  if (!slipResult.success || !slipResult.data) {
-    throw new Error(slipResult.error || "ตรวจสอบสลิปไม่สำเร็จ");
-  }
-  const slipData = slipResult.data;
-
-  const duplicate = await db.transaction.findFirst({
-    where: {
-      reference: slipData.transRef,
-      status: "verified",
-    },
-    select: { id: true },
-  });
-  if (duplicate) {
-    throw new Error("สลิปนี้ถูกใช้ไปแล้ว");
-  }
-
-  const amountSatang = Math.round(slipData.amount * 100);
-
-  // Match to a package tier by price
-  const matchedTier = await db.packageTier.findFirst({
-    where: { price: amountSatang, isActive: true, isTrial: false },
-    orderBy: { totalSms: "desc" },
-  });
-
-  let result;
-  try {
-    result = await db.$transaction(async (tx) => {
-      const purchaseTransaction = await tx.transaction.create({
-        data: {
-          userId,
-          packageId: matchedTier?.id ?? null,
-          amount: amountSatang,
-          credits: 0, // legacy field
-          method: "slip_verify",
-          status: "verified",
-          slipUrl: storedSlip.ref,
-          reference: slipData.transRef,
-          verifiedAt: new Date(),
-          verifiedBy: "easyslip-api",
-          expiresAt: new Date(),
-        },
-      });
-
-      // Create package purchase if matched
-      if (matchedTier) {
-        const expiresAt = new Date();
-        expiresAt.setMonth(expiresAt.getMonth() + matchedTier.expiryMonths);
-        await tx.packagePurchase.create({
-          data: {
-            userId,
-            tierId: matchedTier.id,
-            smsTotal: matchedTier.totalSms,
-            smsUsed: 0,
-            expiresAt,
-            isActive: true,
-          },
-        });
-      }
-
-      return {
-        transactionId: purchaseTransaction.id,
-        reference: slipData.transRef,
-        amount: slipData.amount,
-        matchedPackage: matchedTier?.name ?? null,
-        smsAdded: matchedTier?.totalSms ?? 0,
-      };
-    });
-  } catch (error) {
-    await removeStoredFile(storedSlip.ref);
-    throw error;
-  }
-
-  revalidatePath("/dashboard");
-  revalidatePath("/dashboard/topup");
-  return result;
+export async function verifyPackagePurchaseSlip(_userId: string, _payload: string) {
+  throw new Error("Legacy base64 slip verification was removed. Use /api/v1/payments/topup/verify-slip with multipart/form-data.");
 }
 
 export async function verifyTopupSlip(userId: string, payload: string) {

@@ -1,6 +1,5 @@
 import type { UploadedFileLike } from "@/lib/uploaded-file";
 import {
-  bufferFromBase64Payload,
   buildStoredFileKey,
   extractStoredFileKey,
   toStoredFileRef,
@@ -82,32 +81,6 @@ export async function storeUploadedFile(input: {
     ...stored,
     body,
     contentType,
-  };
-}
-
-export async function storeBase64File(input: {
-  userId: string;
-  scope: StoredFileScope;
-  resourceId: string;
-  kind: StoredFileKind;
-  payload: string;
-  contentType: string;
-  fileName?: string | null;
-}) {
-  const body = bufferFromBase64Payload(input.payload);
-  const stored = await storeBufferInR2({
-    userId: input.userId,
-    scope: input.scope,
-    resourceId: input.resourceId,
-    kind: input.kind,
-    body,
-    contentType: input.contentType,
-    fileName: input.fileName,
-  });
-
-  return {
-    ...stored,
-    body,
   };
 }
 

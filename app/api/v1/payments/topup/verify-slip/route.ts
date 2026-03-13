@@ -16,10 +16,10 @@ import {
   storeBufferInR2,
 } from "@/lib/storage/service";
 import { coerceUploadedFile } from "@/lib/uploaded-file";
-import { verifyTopupSlipSchema } from "@/lib/validations";
 import { z } from "zod";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "application/pdf"];
+const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 const PURCHASE_VERIFICATION_STATUSES = [
   "PENDING",
   "PROCESSING",
@@ -68,55 +68,37 @@ async function readUpload(req: NextRequest): Promise<{
 }> {
   const requestContentType = req.headers.get("content-type") || "";
 
-  if (requestContentType.includes("multipart/form-data")) {
-    const formData = await req.formData();
-    const file = coerceUploadedFile(formData.get("slip"));
-    if (!file || file.size === 0) {
-      throw new ApiError(400, "กรุณาแนบไฟล์สลิป");
-    }
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      throw new ApiError(400, "รองรับเฉพาะ JPG, PNG, PDF");
-    }
-
-    const body = Buffer.from(await file.arrayBuffer());
-    const input = packagePurchaseInputSchema.parse({
-      packageId: formData.get("packageId"),
-      credits: formData.get("credits"),
-      amount: formData.get("amount"),
-      date: formData.get("date"),
-      time: formData.get("time"),
-      note: formData.get("note"),
-    });
-
-    return {
-      body,
-      contentType: file.type || "application/octet-stream",
-      fileName: file.name,
-      fileSize: file.size,
-      input,
-    };
+  if (!requestContentType.includes("multipart/form-data")) {
+    throw new ApiError(400, "กรุณาอัปโหลดสลิปแบบ multipart/form-data");
   }
 
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    throw new ApiError(400, "กรุณาส่งข้อมูล JSON หรือ multipart/form-data");
+  const formData = await req.formData();
+  const file = coerceUploadedFile(formData.get("slip"));
+  if (!file || file.size === 0) {
+    throw new ApiError(400, "กรุณาแนบไฟล์สลิป");
+  }
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    throw new ApiError(400, "รองรับเฉพาะ JPG, PNG, PDF");
+  }
+  if (file.size > MAX_UPLOAD_BYTES) {
+    throw new ApiError(400, "ไฟล์สลิปต้องมีขนาดไม่เกิน 5MB");
   }
 
-  const parsedSlip = verifyTopupSlipSchema.parse(body);
-  const input = packagePurchaseInputSchema.parse(body);
-  const approxBytes = parsedSlip.payload.length > 0
-    ? Math.ceil((parsedSlip.payload.length * 3) / 4)
-    : 0;
-  const resolvedContentType = parsedSlip.mimeType || "application/octet-stream";
-  const bodyBuffer = Buffer.from(parsedSlip.payload, "base64");
+  const body = Buffer.from(await file.arrayBuffer());
+  const input = packagePurchaseInputSchema.parse({
+    packageId: formData.get("packageId"),
+    credits: formData.get("credits"),
+    amount: formData.get("amount"),
+    date: formData.get("date"),
+    time: formData.get("time"),
+    note: formData.get("note"),
+  });
 
   return {
-    body: bodyBuffer,
-    contentType: resolvedContentType,
-    fileName: "slip-base64",
-    fileSize: approxBytes,
+    body,
+    contentType: file.type || "application/octet-stream",
+    fileName: file.name,
+    fileSize: file.size,
     input,
   };
 }

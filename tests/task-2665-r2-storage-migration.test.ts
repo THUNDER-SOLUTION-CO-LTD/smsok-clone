@@ -16,6 +16,7 @@ const paymentVerifyRoute = readFileSync(resolve(ROOT, "app/api/payments/[id]/ver
 const paymentDetailRoute = readFileSync(resolve(ROOT, "app/api/payments/[id]/route.ts"), "utf-8");
 const adminPaymentDetailRoute = readFileSync(resolve(ROOT, "app/api/admin/payments/[id]/route.ts"), "utf-8");
 const topupVerifyRoute = readFileSync(resolve(ROOT, "app/api/v1/payments/topup/verify-slip/route.ts"), "utf-8");
+const invoiceWhtRoute = readFileSync(resolve(ROOT, "app/api/v1/invoices/[id]/wht-cert/route.ts"), "utf-8");
 const orderServiceSource = readFileSync(resolve(ROOT, "lib/orders/service.ts"), "utf-8");
 
 describe("Task #2665: R2 storage migration", () => {
@@ -45,8 +46,14 @@ describe("Task #2665: R2 storage migration", () => {
     expect(topupVerifyRoute).toContain("storeBufferInR2");
     expect(topupVerifyRoute).toContain("slipUrl: storedSlip.ref");
     expect(topupVerifyRoute).not.toContain("slipUrl: upload.slipUrl");
+    expect(topupVerifyRoute).not.toContain("verifyTopupSlipSchema");
+    expect(topupVerifyRoute).not.toContain('Buffer.from(parsedSlip.payload, "base64")');
+    expect(invoiceWhtRoute).toContain("storeUploadedFile");
+    expect(invoiceWhtRoute).toContain("fileUrl: uploadedFile.ref");
+    expect(invoiceWhtRoute).not.toContain("fileUrl: input.fileUrl");
     expect(storageServiceSource).not.toContain('storage: "inline"');
     expect(storageServiceSource).not.toContain("falling back to inline data URL");
+    expect(storageServiceSource).not.toContain("storeBase64File");
   });
 
   it("reads stored files back for verification and proxy delivery", () => {
@@ -65,5 +72,6 @@ describe("Task #2665: R2 storage migration", () => {
     expect(paymentDetailRoute).toContain("resolveStoredFileUrl(data.slipUrl)");
     expect(paymentDetailRoute).toContain("resolveStoredFileUrl(data.whtCertUrl)");
     expect(adminPaymentDetailRoute).toContain("resolveStoredFileUrl(payment.slipUrl)");
+    expect(invoiceWhtRoute).toContain("resolveStoredFileUrl(certificate.fileUrl)");
   });
 });

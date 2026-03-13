@@ -13,7 +13,6 @@ const CONTROL_CHAR_REGEX = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g;
 const INVALID_NAME_CHAR_REGEX = /[<>&"']/;
 const INVALID_WEBHOOK_URL_CHAR_REGEX = /[<>]/;
 const SANITIZED_PHONE_REGEX = /^(0[0-9]{9}|\+66[0-9]{9})$/;
-const MAX_SLIP_BYTES = 5 * 1024 * 1024;
 
 function sanitizePhoneInput(value: string) {
   return value.replace(/[^0-9+]/g, "");
@@ -33,28 +32,6 @@ function sanitizeNameInput(value: string) {
 
 function isValidEmail(value: string) {
   return z.string().email("อีเมลไม่ถูกต้อง").safeParse(value).success;
-}
-
-function parseSlipPayloadInput(input: { payload: string; mimeType?: string }) {
-  const trimmedPayload = input.payload.trim();
-  const dataUrlMatch = trimmedPayload.match(/^data:(image\/(?:jpeg|png));base64,([\s\S]+)$/i);
-
-  if (dataUrlMatch) {
-    return {
-      mimeType: dataUrlMatch[1].toLowerCase(),
-      payload: dataUrlMatch[2].replace(/\s+/g, ""),
-    };
-  }
-
-  return {
-    mimeType: input.mimeType?.trim().toLowerCase(),
-    payload: trimmedPayload.replace(/\s+/g, ""),
-  };
-}
-
-function estimateBase64Bytes(base64: string) {
-  const padding = (base64.match(/=*$/)?.[0].length ?? 0);
-  return Math.floor((base64.length * 3) / 4) - padding;
 }
 
 const phoneSchema = z
@@ -472,7 +449,10 @@ export const purchasePackageSchema = z.object({
 
 export const uploadSlipSchema = z.object({
   transactionId: z.string().cuid(),
-  slipUrl: z.string().url("URL สลิปไม่ถูกต้อง"),
+  slipRef: z
+    .string()
+    .trim()
+    .regex(/^r2:[^\s]+$/, "R2 file ref ไม่ถูกต้อง"),
 });
 
 export const adminVerifyTransactionSchema = z.object({
@@ -480,40 +460,6 @@ export const adminVerifyTransactionSchema = z.object({
   action: z.enum(["verify", "reject"]),
   rejectNote: z.string().max(500, "หมายเหตุต้องไม่เกิน 500 ตัวอักษร").optional(),
 });
-
-export const verifyTopupSlipSchema = z
-  .object({
-    payload: z.string().trim().min(1, "กรุณาแนบสลิป"),
-    mimeType: z.string().trim().optional(),
-  })
-  .superRefine((value, ctx) => {
-    const parsed = parseSlipPayloadInput(value);
-
-    if (!parsed.mimeType || !["image/jpeg", "image/png"].includes(parsed.mimeType)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "ไฟล์สลิปต้องเป็น JPEG หรือ PNG เท่านั้น",
-        path: ["payload"],
-      });
-    }
-
-    if (!/^[A-Za-z0-9+/=]+$/.test(parsed.payload)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "ไฟล์สลิป base64 ไม่ถูกต้อง",
-        path: ["payload"],
-      });
-    }
-
-    if (estimateBase64Bytes(parsed.payload) > MAX_SLIP_BYTES) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "ไฟล์สลิปต้องมีขนาดไม่เกิน 5MB",
-        path: ["payload"],
-      });
-    }
-  })
-  .transform((value) => parseSlipPayloadInput(value));
 
 export const verifyTransactionSchema = z.object({
   transactionId: z.string().cuid(),
