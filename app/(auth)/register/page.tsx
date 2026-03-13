@@ -376,11 +376,12 @@ export default function RegisterPage() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-xs font-semibold uppercase tracking-[0.05em] text-[var(--text-secondary)]">
-                            เบอร์โทร <span className="text-[var(--accent)] text-[10px] normal-case">*ใช้รับ OTP</span>
+                            หมายเลขโทรศัพท์
                           </FormLabel>
                           <FormControl>
                             <Input type="tel" inputMode="numeric" maxLength={10} placeholder="0891234567" onKeyDown={blockNonNumeric} className="h-11 bg-[var(--bg-base)] border-[var(--border-subtle)] text-white placeholder:text-[var(--text-muted)] rounded-lg focus:border-[rgba(var(--accent-rgb),0.6)] focus:ring-[rgba(0,255,167,0.12)]" {...field} />
                           </FormControl>
+                          <p className="text-[11px] text-[var(--text-muted)]">ใช้สำหรับรับ OTP ยืนยันตัวตน</p>
                           <FormMessage />
                           {phoneAvailability.status !== "idle" && (
                             <p className={`text-[11px] ${
@@ -497,105 +498,90 @@ export default function RegisterPage() {
                     />
 
                     {/* PDPA Consent */}
-                    <div className="space-y-3 pt-2">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.05em] text-[var(--text-secondary)]">
-                        ความยินยอม
-                      </p>
-
-                      {/* Required Group */}
-                      <div className="rounded-[10px] border border-[var(--border-default)]/50 bg-white/[0.02] p-3.5 space-y-3.5">
-                        {/* 1. Service Terms — Required */}
-                        <FormField
-                          control={form.control}
-                          name="consentService"
-                          render={({ field }) => (
-                            <FormItem className="flex items-start gap-3 space-y-0">
-                              <FormControl>
-                                <Checkbox
-                                  checked={field.value}
-                                  onCheckedChange={field.onChange}
-                                  aria-required="true"
-                                  className="mt-0.5 h-[18px] w-[18px] shrink-0 rounded-[5px] border-[1.5px] border-[#3a4049] data-[state=checked]:border-transparent data-[state=checked]:bg-[var(--accent)] data-[state=checked]:text-[var(--bg-base)]"
-                                />
-                              </FormControl>
-                              <div className="min-w-0 space-y-1">
-                                <FormLabel className="block text-[13px] text-[var(--text-secondary)] font-normal leading-relaxed break-words">
-                                  ฉันยอมรับ{" "}
-                                  <Link
-                                    href="/terms"
-                                    className="font-medium text-[var(--accent-blue)] hover:underline"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                  >
-                                    ข้อกำหนดการใช้งาน
-                                  </Link>
-                                  {" "}และ{" "}
-                                  <Link
-                                    href="/privacy"
-                                    className="font-medium text-[var(--accent-blue)] hover:underline"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                  >
-                                    นโยบายความเป็นส่วนตัว
-                                  </Link>
-                                </FormLabel>
-                                <span className="inline-flex w-fit rounded-full border border-[var(--border-subtle)] bg-[var(--bg-base)] px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.04em] text-[var(--text-muted)]">
-                                  บังคับ
-                                </span>
-                              </div>
-                            </FormItem>
-                          )}
-                        />
-
-                        {/* 2. Third-Party — Required */}
-                        <FormField
-                          control={form.control}
-                          name="consentThirdParty"
-                          render={({ field }) => (
-                            <FormItem className="flex items-start gap-3 space-y-0">
-                              <FormControl>
-                                <Checkbox
-                                  checked={field.value}
-                                  onCheckedChange={field.onChange}
-                                  aria-required="true"
-                                  className="mt-0.5 h-[18px] w-[18px] shrink-0 rounded-[5px] border-[1.5px] border-[#3a4049] data-[state=checked]:border-transparent data-[state=checked]:bg-[var(--accent)] data-[state=checked]:text-[var(--bg-base)]"
-                                />
-                              </FormControl>
-                              <div className="min-w-0 space-y-1">
-                                <FormLabel className="block text-[13px] text-[var(--text-secondary)] font-normal leading-relaxed break-words">
-                                  ฉันยินยอมให้ส่งข้อมูลแก่ผู้ให้บริการ SMS ภายนอกเพื่อจัดส่งข้อความ{" "}
-                                  <Link
-                                    href="/privacy#sharing"
-                                    className="font-medium text-[var(--accent-blue)] hover:underline"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                  >
-                                    อ่านเพิ่มเติม
-                                  </Link>
-                                </FormLabel>
-                                <span className="inline-flex w-fit rounded-full border border-[var(--border-subtle)] bg-[var(--bg-base)] px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.04em] text-[var(--text-muted)]">
-                                  บังคับ
-                                </span>
-                              </div>
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      {/* 3. Marketing — Optional (outside required group) */}
+                    <div className="space-y-2.5 pt-2">
+                      {/* 1. Service Terms — Required */}
                       <FormField
                         control={form.control}
-                        name="consentMarketing"
+                        name="consentService"
                         render={({ field }) => (
-                          <FormItem className="flex items-start gap-3 space-y-0">
+                          <FormItem className="flex items-start gap-2.5 space-y-0">
                             <FormControl>
                               <Checkbox
                                 checked={field.value}
                                 onCheckedChange={field.onChange}
-                                className="mt-0.5 h-[18px] w-[18px] shrink-0 rounded-[5px] border-[1.5px] border-[#3a4049] data-[state=checked]:border-transparent data-[state=checked]:bg-[var(--accent)] data-[state=checked]:text-[var(--bg-base)]"
+                                aria-required="true"
+                                className="mt-0.5 h-4 w-4 shrink-0 rounded-[4px] border-[1.5px] border-[#3a4049] data-[state=checked]:border-transparent data-[state=checked]:bg-[var(--accent)] data-[state=checked]:text-[var(--bg-base)]"
                               />
                             </FormControl>
-                            <FormLabel className="text-[13px] text-[var(--text-muted)] font-normal leading-relaxed">
+                            <FormLabel className="text-xs text-[var(--text-secondary)] font-normal leading-relaxed break-words">
+                              ฉันยอมรับ{" "}
+                              <Link
+                                href="/terms"
+                                className="font-medium text-[var(--accent-blue)] hover:underline"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                ข้อกำหนดการใช้งาน
+                              </Link>
+                              {" "}และ{" "}
+                              <Link
+                                href="/privacy"
+                                className="font-medium text-[var(--accent-blue)] hover:underline"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                นโยบายความเป็นส่วนตัว
+                              </Link>
+                              <span className="text-[var(--error)] text-[10px] ml-0.5">*</span>
+                            </FormLabel>
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* 2. Third-Party — Required */}
+                      <FormField
+                        control={form.control}
+                        name="consentThirdParty"
+                        render={({ field }) => (
+                          <FormItem className="flex items-start gap-2.5 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                aria-required="true"
+                                className="mt-0.5 h-4 w-4 shrink-0 rounded-[4px] border-[1.5px] border-[#3a4049] data-[state=checked]:border-transparent data-[state=checked]:bg-[var(--accent)] data-[state=checked]:text-[var(--bg-base)]"
+                              />
+                            </FormControl>
+                            <FormLabel className="text-xs text-[var(--text-secondary)] font-normal leading-relaxed break-words">
+                              ฉันยินยอมให้ส่งข้อมูลแก่ผู้ให้บริการ SMS ภายนอกเพื่อจัดส่งข้อความ{" "}
+                              <Link
+                                href="/privacy#sharing"
+                                className="font-medium text-[var(--accent-blue)] hover:underline"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                อ่านเพิ่มเติม
+                              </Link>
+                              <span className="text-[var(--error)] text-[10px] ml-0.5">*</span>
+                            </FormLabel>
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* 3. Marketing — Optional */}
+                      <FormField
+                        control={form.control}
+                        name="consentMarketing"
+                        render={({ field }) => (
+                          <FormItem className="flex items-start gap-2.5 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                className="mt-0.5 h-4 w-4 shrink-0 rounded-[4px] border-[1.5px] border-[#3a4049] data-[state=checked]:border-transparent data-[state=checked]:bg-[var(--accent)] data-[state=checked]:text-[var(--bg-base)]"
+                              />
+                            </FormControl>
+                            <FormLabel className="text-xs text-[var(--text-muted)] font-normal leading-relaxed">
                               รับข่าวสาร โปรโมชั่น และข้อเสนอพิเศษทาง SMS/Email จาก SMSOK{" "}
                               <span className="text-[11px] text-[#556677]">(ไม่บังคับ)</span>
                             </FormLabel>
@@ -612,7 +598,7 @@ export default function RegisterPage() {
                       {isSubmitting ? (
                         <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" />กำลังส่ง OTP...</span>
                       ) : (
-                        <span className="flex items-center gap-2">รับ OTP ยืนยัน<ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" /></span>
+                        <span className="flex items-center gap-2">สมัครสมาชิก<ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" /></span>
                       )}
                     </Button>
                   </form>
