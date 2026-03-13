@@ -25,9 +25,9 @@ import SendingHoursWarning, { checkSendingHours } from "@/components/blocks/Send
 
 type MsgType = "english" | "thai" | "unicode";
 
-export default function SendSmsForm({ senderNames: rawNames = ["EasySlip"] }: { senderNames?: string[] }) {
+export default function SendSmsForm({ senderNames: rawNames = [] }: { senderNames?: string[] }) {
   const router = useRouter();
-  const senderNames = rawNames.length > 0 ? rawNames : ["EasySlip"];
+  const senderNames = rawNames.length > 0 ? rawNames : [];
   const [senderName, setSenderName] = useState(senderNames[0]);
   const [recipients, setRecipients] = useState("");
   const [message, setMessage] = useState("");
@@ -75,6 +75,7 @@ export default function SendSmsForm({ senderNames: rawNames = ["EasySlip"] }: { 
 
   const hasInsufficientCredits = smsRemaining !== null && totalSmsCost > 0 && totalSmsCost > smsRemaining;
   const hasNoCredits = smsRemaining !== null && smsRemaining <= 0;
+  const hasNoSenders = senderNames.length === 0;
 
   // Variable insertion into message textarea
   const insertVariable = useCallback((variable: string) => {
@@ -185,6 +186,22 @@ export default function SendSmsForm({ senderNames: rawNames = ["EasySlip"] }: { 
     <div className="p-4 md:p-6 pb-20 md:pb-6 space-y-6">
       {/* Page Header */}
       <h1 className="text-2xl font-bold text-[var(--text-primary)]">ส่ง SMS</h1>
+
+      {/* No Approved Senders Warning */}
+      {hasNoSenders && (
+        <div
+          className="flex items-center gap-3 p-3.5 rounded-xl text-sm border"
+          style={{
+            background: "rgba(var(--warning-rgb,245,158,11),0.06)",
+            borderColor: "rgba(var(--warning-rgb,245,158,11),0.15)",
+          }}
+        >
+          <AlertTriangle size={16} style={{ color: "var(--warning)" }} />
+          <span style={{ color: "var(--warning)" }}>
+            ยังไม่มีชื่อผู้ส่งที่ได้รับอนุมัติ — กรุณาเพิ่มและรออนุมัติก่อนส่ง SMS
+          </span>
+        </div>
+      )}
 
       {/* Insufficient Credits Warning */}
       {(hasNoCredits || hasInsufficientCredits) && (
@@ -335,7 +352,7 @@ export default function SendSmsForm({ senderNames: rawNames = ["EasySlip"] }: { 
           <Card className="bg-[var(--bg-surface)] border-[var(--border-default)] rounded-lg">
             <CardContent className="p-5">
               <h3 className="text-xs font-semibold uppercase tracking-[0.05em] text-[var(--text-muted)] mb-4">ตัวอย่าง</h3>
-              <PhonePreview message={message} senderName={senderName || "EasySlip"} />
+              <PhonePreview message={message} senderName={senderName || "SMS"} />
             </CardContent>
           </Card>
 
@@ -425,7 +442,7 @@ export default function SendSmsForm({ senderNames: rawNames = ["EasySlip"] }: { 
 
               <Button
                 onClick={handleSend}
-                disabled={isPending || !recipients.trim() || !message.trim() || !!phoneError || hasNoCredits || hasInsufficientCredits || isOutsideSendingHours}
+                disabled={isPending || !recipients.trim() || !message.trim() || !!phoneError || hasNoCredits || hasInsufficientCredits || isOutsideSendingHours || hasNoSenders}
                 className="w-full mt-4 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--bg-base)] rounded-lg font-semibold disabled:opacity-50" size="lg"
               >
                 {isPending ? (
@@ -448,7 +465,7 @@ export default function SendSmsForm({ senderNames: rawNames = ["EasySlip"] }: { 
           </div>
           <Button
             onClick={handleSend}
-            disabled={isPending || !recipients.trim() || !message.trim() || !!phoneError || hasNoCredits || hasInsufficientCredits || isOutsideSendingHours}
+            disabled={isPending || !recipients.trim() || !message.trim() || !!phoneError || hasNoCredits || hasInsufficientCredits || isOutsideSendingHours || hasNoSenders}
             className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--bg-base)] rounded-lg font-semibold disabled:opacity-50" size="lg"
           >
             {isPending ? (

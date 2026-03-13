@@ -40,7 +40,7 @@ describe("registerSchema", () => {
     firstName: "สมชาย",
     lastName: "ใจดี",
     email: "test@example.com",
-    password: "Password1",
+    password: "Xk9mR2vB7q",
   };
 
   it("accepts valid registration", () => {
@@ -108,8 +108,9 @@ describe("registerSchema", () => {
     expect(result.phone).toBe("0912345678");
   });
 
-  it("rejects phone starting with 01", () => {
-    expect(() => registerSchema.parse({ ...valid, phone: "0112345678" })).toThrow();
+  it("accepts phone starting with 01", () => {
+    const result = registerSchema.parse({ ...valid, phone: "0112345678" });
+    expect(result.phone).toBe("0112345678");
   });
 });
 
@@ -174,8 +175,13 @@ describe("sendSmsSchema", () => {
     expect(() => sendSmsSchema.parse({ ...valid, senderName: "ABCDEFGHIJKL" })).toThrow();
   });
 
+  it("accepts sender with hyphen", () => {
+    const result = sendSmsSchema.parse({ ...valid, senderName: "MY-SHOP" });
+    expect(result.senderName).toBe("MY-SHOP");
+  });
+
   it("rejects sender with special chars", () => {
-    expect(() => sendSmsSchema.parse({ ...valid, senderName: "MY-SHOP" })).toThrow();
+    expect(() => sendSmsSchema.parse({ ...valid, senderName: "MY@SHOP" })).toThrow();
   });
 
   it("rejects sender with Thai chars", () => {
@@ -390,8 +396,13 @@ describe("requestSenderNameSchema", () => {
     expect(() => requestSenderNameSchema.parse({ name: "ABCDEFGHIJKL" })).toThrow();
   });
 
+  it("accepts hyphens", () => {
+    const result = requestSenderNameSchema.parse({ name: "MY-SHOP" });
+    expect(result.name).toBe("MY-SHOP");
+  });
+
   it("rejects special characters", () => {
-    expect(() => requestSenderNameSchema.parse({ name: "MY-SHOP" })).toThrow();
+    expect(() => requestSenderNameSchema.parse({ name: "MY@SHOP" })).toThrow();
   });
 
   it("rejects spaces", () => {

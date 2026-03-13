@@ -10,9 +10,7 @@ export default async function SendPage() {
 
   try {
     const approved = await getApprovedSenderNames();
-    const names = approved.map(s => s.name);
-    // Always include "EasySlip" as default sender
-    const senderNames = names.includes("EasySlip") ? names : ["EasySlip", ...names];
+    const senderNames = approved.map(s => s.name);
 
     return (
       <SendSmsForm senderNames={senderNames} />
