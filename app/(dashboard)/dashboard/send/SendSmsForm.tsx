@@ -21,15 +21,9 @@ import {
 
 import { toast } from "sonner";
 import { ArrowRight, Loader2, AlertTriangle, Send, FlaskConical } from "lucide-react";
-import SendingHoursWarning from "@/components/blocks/SendingHoursWarning";
+import SendingHoursWarning, { checkSendingHours } from "@/components/blocks/SendingHoursWarning";
 
 type MsgType = "english" | "thai" | "unicode";
-
-const MSG_LIMITS: Record<MsgType, { single: number; multi: number }> = {
-  english: { single: 160, multi: 153 },
-  thai: { single: 70, multi: 67 },
-  unicode: { single: 70, multi: 67 },
-};
 
 export default function SendSmsForm({ senderNames: rawNames = ["EasySlip"] }: { senderNames?: string[] }) {
   const router = useRouter();
@@ -63,12 +57,9 @@ export default function SendSmsForm({ senderNames: rawNames = ["EasySlip"] }: { 
     fetchBalance();
   }, []);
 
-  const charCount = message.length;
   const hasThai = /[\u0E00-\u0E7F]/.test(message);
   const hasNonGsm = /[^\x00-\x7F]/.test(message);
   const isUcs2 = hasThai || hasNonGsm;
-  const detectedType: MsgType = hasThai ? "thai" : hasNonGsm ? "unicode" : "english";
-  const limits = MSG_LIMITS[message ? detectedType : msgType];
   const smsCount = message ? calculateSmsCost(message) : 0;
 
   const recipientList = recipients.split(/[,\n]/).map((r) => r.trim()).filter(Boolean);
@@ -79,6 +70,8 @@ export default function SendSmsForm({ senderNames: rawNames = ["EasySlip"] }: { 
 
   const costPerSms = smsCount;
   const totalSmsCost = costPerSms * recipientCount;
+  const sendingHoursState = checkSendingHours();
+  const isOutsideSendingHours = sendingHoursState.isOutside;
 
   const hasInsufficientCredits = smsRemaining !== null && totalSmsCost > 0 && totalSmsCost > smsRemaining;
   const hasNoCredits = smsRemaining !== null && smsRemaining <= 0;
@@ -128,6 +121,12 @@ export default function SendSmsForm({ senderNames: rawNames = ["EasySlip"] }: { 
 
   const handleSend = () => {
     if (!recipients.trim() || !message.trim()) return;
+    if (isOutsideSendingHours) {
+      const errorMessage = sendingHoursState.message || "ไม่สามารถส่ง SMS นอกเวลาที่กำหนด";
+      setResult({ type: "error", text: errorMessage });
+      toast.error(errorMessage);
+      return;
+    }
     setResult(null);
 
     startTransition(async () => {
@@ -157,6 +156,10 @@ export default function SendSmsForm({ senderNames: rawNames = ["EasySlip"] }: { 
 
   const handleTestSend = async () => {
     if (!testPhone.trim() || !message.trim()) return;
+    if (isOutsideSendingHours) {
+      toast.error(sendingHoursState.message || "ไม่สามารถส่ง SMS นอกเวลาที่กำหนด");
+      return;
+    }
     const cleanPhone = testPhone.replace(/[^0-9]/g, "");
     if (!/^0[0-9]\d{8}$/.test(cleanPhone)) {
       toast.error("เบอร์โทรไม่ถูกต้อง");
@@ -409,7 +412,7 @@ export default function SendSmsForm({ senderNames: rawNames = ["EasySlip"] }: { 
                       <Button
                         type="button"
                         onClick={handleTestSend}
-                        disabled={isTestSending || !testPhone.trim() || !message.trim()}
+                        disabled={isTestSending || !testPhone.trim() || !message.trim() || isOutsideSendingHours}
                         className="h-9 px-3 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--bg-base)] font-semibold text-xs"
                       >
                         {isTestSending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
@@ -422,7 +425,7 @@ export default function SendSmsForm({ senderNames: rawNames = ["EasySlip"] }: { 
 
               <Button
                 onClick={handleSend}
-                disabled={isPending || !recipients.trim() || !message.trim() || !!phoneError || hasNoCredits || hasInsufficientCredits}
+                disabled={isPending || !recipients.trim() || !message.trim() || !!phoneError || hasNoCredits || hasInsufficientCredits || isOutsideSendingHours}
                 className="w-full mt-4 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--bg-base)] rounded-lg font-semibold disabled:opacity-50" size="lg"
               >
                 {isPending ? (
@@ -445,7 +448,7 @@ export default function SendSmsForm({ senderNames: rawNames = ["EasySlip"] }: { 
           </div>
           <Button
             onClick={handleSend}
-            disabled={isPending || !recipients.trim() || !message.trim() || !!phoneError || hasNoCredits || hasInsufficientCredits}
+            disabled={isPending || !recipients.trim() || !message.trim() || !!phoneError || hasNoCredits || hasInsufficientCredits || isOutsideSendingHours}
             className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--bg-base)] rounded-lg font-semibold disabled:opacity-50" size="lg"
           >
             {isPending ? (
