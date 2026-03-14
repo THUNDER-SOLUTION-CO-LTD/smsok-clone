@@ -61,7 +61,6 @@ export type SendOtpResponse = {
   delivery: "sms" | "debug"
   debugCode?: string
   retryAfter: number
-  remainingToday: number
   otpExpiresIn: number
   cooldownState: OtpCooldownState
 }
@@ -69,7 +68,6 @@ export type SendOtpResponse = {
 export type OtpRateLimitResponse = {
   error: string
   retryAfter: number
-  remainingToday: number
   otpExpiresIn: number
   cooldownState: OtpCooldownState
 }

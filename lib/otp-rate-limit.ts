@@ -8,10 +8,10 @@
  *
  * Backoff tiers (after each successful send):
  *   1st send: immediate
- *   2nd send: wait 60s
- *   3rd send: wait 5m (300s)
- *   4th send: wait 15m (900s)
- *   5th send: wait 30m (1800s)
+ *   2nd send: wait 30s
+ *   3rd send: wait 60s
+ *   4th send: wait 120s
+ *   5th send: wait 300s
  *   6th+: blocked by daily quota (5/phone/day)
  *
  * Anti-enumeration: all rate limit responses are identical regardless of phone existence.
@@ -43,9 +43,9 @@ function getRedis(): Redis {
   return _redis
 }
 
-// Backoff tiers in seconds: [0, 60, 300, 900, 1800]
-const BACKOFF_TIERS = [0, 60, 300, 900, 1800]
-const BACKOFF_TTL = 1800 // 30 minutes — covers max backoff window
+// Backoff tiers in seconds: [0, 30, 60, 120, 300]
+const BACKOFF_TIERS = [0, 30, 60, 120, 300]
+const BACKOFF_TTL = 300 // 5 minutes — covers max backoff window
 const DAILY_QUOTA = 5
 const DAILY_TTL = 86400 // 24 hours
 const IP_HOURLY_LIMIT = 10
@@ -57,7 +57,6 @@ export type CooldownState = "ready" | "cooldown" | "backoff" | "blocked"
 export type OtpRateLimitResult = {
   allowed: boolean
   retryAfter: number        // seconds until next send allowed (0 if allowed now)
-  remainingToday: number    // remaining daily quota for this phone
   otpExpiresIn: number      // OTP validity in seconds (constant 300)
   cooldownState: CooldownState  // UI state hint for frontend countdown
   reason?: string           // Thai error message if blocked
@@ -92,7 +91,6 @@ export async function checkOtpRateLimit(
       return {
         allowed: false,
         retryAfter: DAILY_TTL, // try again tomorrow
-        remainingToday: 0,
         otpExpiresIn: OTP_EXPIRES_IN,
         cooldownState: "blocked",
         reason: "ส่ง OTP เกินจำนวนสูงสุดต่อวัน กรุณาลองใหม่พรุ่งนี้",
@@ -104,7 +102,6 @@ export async function checkOtpRateLimit(
       return {
         allowed: false,
         retryAfter: IP_TTL,
-        remainingToday: Math.max(0, DAILY_QUOTA - dailyCount),
         otpExpiresIn: OTP_EXPIRES_IN,
         cooldownState: "blocked",
         reason: "ส่ง OTP มากเกินไป กรุณารอสักครู่",
@@ -122,7 +119,6 @@ export async function checkOtpRateLimit(
         return {
           allowed: false,
           retryAfter: remaining,
-          remainingToday: Math.max(0, DAILY_QUOTA - dailyCount),
           otpExpiresIn: OTP_EXPIRES_IN,
           cooldownState: remaining <= 60 ? "cooldown" : "backoff",
           reason: `กรุณารอ ${formatWait(remaining)} ก่อนส่ง OTP อีกครั้ง`,
@@ -134,7 +130,6 @@ export async function checkOtpRateLimit(
     return {
       allowed: true,
       retryAfter: 0,
-      remainingToday: Math.max(0, DAILY_QUOTA - dailyCount - 1), // -1 for this send
       otpExpiresIn: OTP_EXPIRES_IN,
       cooldownState: "ready",
     }
@@ -145,7 +140,6 @@ export async function checkOtpRateLimit(
     return {
       allowed: true,
       retryAfter: 0,
-      remainingToday: DAILY_QUOTA,
       otpExpiresIn: OTP_EXPIRES_IN,
       cooldownState: "ready",
     }

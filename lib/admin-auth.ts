@@ -11,6 +11,7 @@ import { redis } from "./redis";
 const ADMIN_JWT_SECRET = env.JWT_SECRET + "_admin";
 const ADMIN_SESSION_TTL_SECONDS = 8 * 60 * 60;
 export const ADMIN_SESSION_COOKIE_NAME = "admin_session";
+const DUMMY_HASH = "$2b$12$qF1xea/GGCtjbQ6FC32FAu0YSQWxmgOuBDgvb4IVBhTrnjXPVYwoC";
 
 type AdminPayload = {
   type: "admin";
@@ -160,13 +161,14 @@ export async function authenticateAdmin(req: NextRequest, allowedRoles?: string[
 }
 
 export async function loginAdmin(email: string, password: string) {
-  const admin = await db.adminUser.findUnique({ where: { email } });
-  if (!admin || !admin.isActive) {
-    throw new Error("อีเมลหรือรหัสผ่านไม่ถูกต้อง");
-  }
+  const admin = await db.adminUser.findUnique({
+    where: { email },
+    select: { id: true, email: true, name: true, password: true, role: true, isActive: true },
+  });
+  const passwordHash = admin?.isActive ? admin.password : DUMMY_HASH;
+  const valid = await bcrypt.compare(password, passwordHash);
 
-  const valid = await bcrypt.compare(password, admin.password);
-  if (!valid) {
+  if (!admin || !admin.isActive || !valid) {
     throw new Error("อีเมลหรือรหัสผ่านไม่ถูกต้อง");
   }
 

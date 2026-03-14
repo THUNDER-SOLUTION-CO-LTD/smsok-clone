@@ -8,11 +8,22 @@ import { normalizePhone } from "@/lib/validations";
 
 const emailSchema = z.string().trim().email();
 const phoneSchema = z.string().trim().min(9).max(20);
+const DUPLICATE_CHECK_MIN_DELAY_MS = 150;
+const GENERIC_CHECK_DUPLICATE_MESSAGE = "หากข้อมูลถูกต้อง คุณสามารถดำเนินการต่อได้";
+
+async function waitForMinimumResponseTime(startedAt: number) {
+  const elapsed = Date.now() - startedAt;
+  const remaining = DUPLICATE_CHECK_MIN_DELAY_MS - elapsed;
+  if (remaining > 0) {
+    await new Promise((resolve) => setTimeout(resolve, remaining));
+  }
+}
 
 export async function GET(req: NextRequest) {
   const ip = getClientIp(req.headers);
   const rl = await applyRateLimit(ip, "auth_check_duplicate");
   if (rl.blocked) return rl.blocked;
+  const startedAt = Date.now();
 
   try {
     const emailRaw = req.nextUrl.searchParams.get("email");
@@ -27,28 +38,30 @@ export async function GET(req: NextRequest) {
 
     if (emailRaw) {
       const email = emailSchema.parse(emailRaw);
-      const existing = await prisma.user.findUnique({
+      await prisma.user.findUnique({
         where: { email },
         select: { id: true },
       });
 
+      await waitForMinimumResponseTime(startedAt);
       return apiResponse({
         field: "email",
-        available: !existing,
-        message: existing ? "อีเมลนี้ถูกใช้แล้ว" : "อีเมลนี้ใช้ได้",
+        available: true,
+        message: GENERIC_CHECK_DUPLICATE_MESSAGE,
       });
     }
 
     const normalizedPhone = normalizePhone(phoneSchema.parse(phoneRaw));
-    const existing = await prisma.user.findUnique({
+    await prisma.user.findUnique({
       where: { phone: normalizedPhone },
       select: { id: true },
     });
 
+    await waitForMinimumResponseTime(startedAt);
     return apiResponse({
       field: "phone",
-      available: !existing,
-      message: existing ? "เบอร์นี้ถูกใช้แล้ว" : "เบอร์นี้ใช้ได้",
+      available: true,
+      message: GENERIC_CHECK_DUPLICATE_MESSAGE,
     });
   } catch (error) {
     return apiError(error);

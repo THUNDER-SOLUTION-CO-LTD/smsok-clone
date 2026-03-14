@@ -377,7 +377,6 @@ export async function generateOtpForRegister(phone: string, ip: string = "unknow
   return {
     ref: refCode,
     expiresIn: Math.floor(OTP_EXPIRY_MS / 1000),
-    remainingToday: rateLimit.remainingToday,
     delivery,
     ...(delivery === "debug" ? { debugCode: code } : {}),
   };
