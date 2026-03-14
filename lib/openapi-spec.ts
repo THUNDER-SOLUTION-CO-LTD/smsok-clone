@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
+import { RATE_LIMIT_DEFAULTS } from "@/lib/rate-limit";
 
 /**
  * OpenAPI 3.0.3 Spec Generator for SMSOK API
@@ -14,8 +15,20 @@ const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"] as const;
 type HttpMethod = Lowercase<(typeof HTTP_METHODS)[number]>;
 type OpenApiOperation = Record<string, unknown>;
 type OpenApiPathItem = Partial<Record<HttpMethod, OpenApiOperation>>;
+type RateLimitDoc = {
+  maxRequests?: number;
+  windowMs: number;
+  scope: string;
+  source: string;
+  note?: string;
+};
 
 let cachedAutoDiscoveredPaths: Record<string, OpenApiPathItem> | null = null;
+
+const AUTH_API_SERVERS = [
+  { url: "http://localhost:3000/api", description: "Development auth routes" },
+  { url: "/api", description: "Relative auth routes" },
+];
 
 function walkRouteFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((entry) => {
@@ -163,7 +176,390 @@ function buildPathParameters(pathKey: string) {
   }));
 }
 
-function buildRequestBody(method: HttpMethod) {
+function formatWindowMs(windowMs: number) {
+  if (windowMs % 3_600_000 === 0) {
+    const hours = windowMs / 3_600_000;
+    return `${hours} hour${hours === 1 ? "" : "s"}`;
+  }
+
+  if (windowMs % 60_000 === 0) {
+    const minutes = windowMs / 60_000;
+    return `${minutes} minute${minutes === 1 ? "" : "s"}`;
+  }
+
+  const seconds = Math.ceil(windowMs / 1000);
+  return `${seconds} second${seconds === 1 ? "" : "s"}`;
+}
+
+function parseNumericExpression(raw: string, constants: Record<string, number>) {
+  const normalized = raw.trim();
+  if (constants[normalized] !== undefined) {
+    return constants[normalized];
+  }
+
+  const replaced = normalized
+    .replace(/\b[A-Z][A-Z0-9_]*\b/g, (token) => String(constants[token] ?? token))
+    .replace(/_/g, "");
+
+  if (/^\d+$/.test(replaced)) {
+    return Number(replaced);
+  }
+
+  const parts = replaced.split("*").map((part) => part.trim());
+  if (parts.every((part) => /^\d+$/.test(part))) {
+    return parts.reduce((product, part) => product * Number(part), 1);
+  }
+
+  return undefined;
+}
+
+function extractNumericConstants(source: string) {
+  const constants: Record<string, number> = {};
+
+  for (const match of source.matchAll(/const\s+([A-Z][A-Z0-9_]*)\s*=\s*([^;\n]+)/g)) {
+    const [, name, expression] = match;
+    const value = parseNumericExpression(expression, constants);
+    if (value !== undefined) {
+      constants[name] = value;
+    }
+  }
+
+  return constants;
+}
+
+function inferRateLimitScope(source: string) {
+  if (source.includes("getClientIp(") || source.includes("x-real-ip")) {
+    return "per client IP";
+  }
+
+  if (source.includes("authenticateApiKey(")) {
+    return "per API key";
+  }
+
+  if (source.includes("authenticateRequest(") || source.includes("getSession(")) {
+    return "per authenticated actor";
+  }
+
+  return "per caller";
+}
+
+function inferRateLimit(source: string): RateLimitDoc | null {
+  const constants = extractNumericConstants(source);
+  const customMatch = source.match(
+    /checkCustomRateLimit\([\s\S]*?\{\s*windowMs:\s*([^,]+),\s*maxRequests:\s*([^\}\n]+)\s*\}/
+  );
+  if (customMatch) {
+    const windowMs = parseNumericExpression(customMatch[1], constants);
+    const maxRequests = parseNumericExpression(customMatch[2], constants);
+
+    if (windowMs !== undefined && maxRequests !== undefined) {
+      return {
+        maxRequests,
+        windowMs,
+        scope: inferRateLimitScope(source),
+        source: "checkCustomRateLimit(...)",
+      };
+    }
+  }
+
+  const bucketMatch = source.match(/applyRateLimit\([^,]+,\s*"([^"]+)"\s*\)/);
+  if (bucketMatch) {
+    const bucket = bucketMatch[1] as keyof typeof RATE_LIMIT_DEFAULTS;
+    const config = RATE_LIMIT_DEFAULTS[bucket];
+
+    if (config) {
+      return {
+        maxRequests: config.maxRequests,
+        windowMs: config.windowMs,
+        scope: inferRateLimitScope(source),
+        source: `applyRateLimit("${bucket}")`,
+        note:
+          source.includes("authenticateApiKey(") || source.includes("authenticateRequest(")
+            ? "API key requests also enforce the per-key limit configured on the credential."
+            : undefined,
+      };
+    }
+  }
+
+  if (source.includes("authenticateApiKey(")) {
+    return {
+      windowMs: 60_000,
+      scope: "per API key",
+      source: "authenticateApiKey()",
+      note: "Exact maxRequests depends on the API key's configured rateLimit value.",
+    };
+  }
+
+  return null;
+}
+
+function buildRateLimitDescription(rateLimit: RateLimitDoc | null) {
+  if (!rateLimit) {
+    return "Rate limiting may apply depending on authentication mode and deployment policy.";
+  }
+
+  const summary = rateLimit.maxRequests
+    ? `${rateLimit.maxRequests} requests per ${formatWindowMs(rateLimit.windowMs)} ${rateLimit.scope}`
+    : `Per-${rateLimit.scope} limit over ${formatWindowMs(rateLimit.windowMs)}`;
+
+  return rateLimit.note ? `${summary}. ${rateLimit.note}` : summary;
+}
+
+function buildRequestExample(pathKey: string) {
+  if (/^\/sms\/send$/.test(pathKey)) {
+    return {
+      sender: "EasySlip",
+      to: "0891234567",
+      message: "สวัสดีครับ ข้อความทดสอบจาก SMSOK",
+    };
+  }
+
+  if (/^\/sms\/batch$/.test(pathKey)) {
+    return {
+      sender: "EasySlip",
+      to: ["0891234567", "0812345678"],
+      message: "โปรโมชันใหม่วันนี้ รับส่วนลด 10%",
+    };
+  }
+
+  if (/^\/sms\/scheduled/.test(pathKey)) {
+    return {
+      sender: "EasySlip",
+      to: "0891234567",
+      message: "แจ้งเตือนนัดหมายพรุ่งนี้ 10:00",
+      scheduledAt: "2026-03-15T03:00:00.000Z",
+    };
+  }
+
+  if (/^\/otp\/(send|generate)$/.test(pathKey)) {
+    return {
+      phone: "0891234567",
+      purpose: "login",
+    };
+  }
+
+  if (/^\/otp\/verify$/.test(pathKey)) {
+    return {
+      ref: "ABC123EF",
+      code: "123456",
+    };
+  }
+
+  if (/^\/contacts$/.test(pathKey)) {
+    return {
+      name: "สมชาย ใจดี",
+      phone: "0891234567",
+      email: "somchai@example.com",
+      tags: "vip",
+    };
+  }
+
+  if (/^\/groups$/.test(pathKey)) {
+    return {
+      name: "VIP Customers",
+      description: "High-value customers in Bangkok",
+    };
+  }
+
+  if (/^\/templates/.test(pathKey)) {
+    return {
+      name: "Flash Sale",
+      content: "ลดทันที 10% วันนี้เท่านั้น",
+      category: "marketing",
+    };
+  }
+
+  if (/^\/campaigns$/.test(pathKey)) {
+    return {
+      name: "Songkran Promo",
+      sender: "EasySlip",
+      message: "สุขสันต์วันสงกรานต์ รับคูปองส่วนลดพิเศษ",
+      contactGroupId: "grp_vip_001",
+    };
+  }
+
+  if (/^\/webhooks$/.test(pathKey)) {
+    return {
+      url: "https://example.com/webhooks/smsok",
+      events: ["sms.delivered", "sms.failed"],
+    };
+  }
+
+  if (/^\/webhooks\/stop$/.test(pathKey)) {
+    return {
+      phone: "0812345678",
+      keyword: "STOP",
+    };
+  }
+
+  if (/^\/api-keys$/.test(pathKey)) {
+    return {
+      name: "Server integration",
+      permissions: ["sms:send", "contacts:read"],
+      rateLimit: 60,
+    };
+  }
+
+  if (/^\/(consent|pdpa)\//.test(pathKey)) {
+    return {
+      phone: "0891234567",
+      purpose: "marketing",
+      granted: true,
+      channel: "web",
+    };
+  }
+
+  return {
+    note: `Example payload for ${inferTag(pathKey).toLowerCase()} endpoints.`,
+  };
+}
+
+function buildEntityExample(pathKey: string) {
+  if (/^\/sms/.test(pathKey)) {
+    return {
+      id: "msg_abc123",
+      to: "0891234567",
+      sender: "EasySlip",
+      status: "delivered",
+      createdAt: "2026-03-14T10:30:00.000Z",
+    };
+  }
+
+  if (/^\/contacts/.test(pathKey)) {
+    return {
+      id: "ct_abc123",
+      name: "สมชาย ใจดี",
+      phone: "0891234567",
+      email: "somchai@example.com",
+      createdAt: "2026-03-14T10:30:00.000Z",
+    };
+  }
+
+  if (/^\/groups/.test(pathKey)) {
+    return {
+      id: "grp_vip_001",
+      name: "VIP Customers",
+      memberCount: 128,
+      createdAt: "2026-03-14T10:30:00.000Z",
+    };
+  }
+
+  if (/^\/templates/.test(pathKey)) {
+    return {
+      id: "tpl_flash_sale",
+      name: "Flash Sale",
+      category: "marketing",
+      createdAt: "2026-03-14T10:30:00.000Z",
+    };
+  }
+
+  if (/^\/campaigns/.test(pathKey)) {
+    return {
+      id: "cmp_songkran",
+      name: "Songkran Promo",
+      status: "draft",
+      createdAt: "2026-03-14T10:30:00.000Z",
+    };
+  }
+
+  if (/^\/webhooks/.test(pathKey)) {
+    return {
+      id: "wh_abc123",
+      url: "https://example.com/webhooks/smsok",
+      active: true,
+      createdAt: "2026-03-14T10:30:00.000Z",
+    };
+  }
+
+  if (/^\/api-keys/.test(pathKey)) {
+    return {
+      id: "key_abc123",
+      name: "Server integration",
+      keyMasked: "sk_live_****abcd",
+      active: true,
+      createdAt: "2026-03-14T10:30:00.000Z",
+    };
+  }
+
+  if (/^\/orders/.test(pathKey)) {
+    return {
+      id: "ord_abc123",
+      orderNumber: "ORD-2603-00006",
+      status: "PENDING_PAYMENT",
+      createdAt: "2026-03-14T10:30:00.000Z",
+    };
+  }
+
+  return {
+    id: "res_abc123",
+    status: "ok",
+    createdAt: "2026-03-14T10:30:00.000Z",
+  };
+}
+
+function buildResponseExample(pathKey: string, method: HttpMethod) {
+  if (/^\/credits\/balance$/.test(pathKey)) {
+    return {
+      balance: 5000,
+      totalUsed: 1234,
+      expiryInfo: {
+        nearestExpiry: "2026-06-30T23:59:59.000Z",
+        expiringCredits: 2000,
+      },
+    };
+  }
+
+  if (/^\/sms\/send$/.test(pathKey) && method === "post") {
+    return {
+      id: "msg_abc123",
+      status: "queued",
+      sms_used: 1,
+      sms_remaining: 4999,
+    };
+  }
+
+  if (/^\/otp\/(send|generate)$/.test(pathKey)) {
+    return {
+      ref: "ABC123EF",
+      phone: "+66891234567",
+      purpose: "login",
+      expiresIn: 300,
+    };
+  }
+
+  if (/^\/otp\/verify$/.test(pathKey)) {
+    return {
+      valid: true,
+      verified: true,
+      ref: "ABC123EF",
+      phone: "+66891234567",
+    };
+  }
+
+  if (/^\/webhooks\/stop$/.test(pathKey)) {
+    return { success: true };
+  }
+
+  if (method === "delete") {
+    return { success: true };
+  }
+
+  if (method === "get" && !pathKey.includes("{")) {
+    return {
+      data: [buildEntityExample(pathKey)],
+      pagination: {
+        page: 1,
+        limit: 20,
+        total: 1,
+        totalPages: 1,
+      },
+    };
+  }
+
+  return buildEntityExample(pathKey);
+}
+
+function buildRequestBody(method: HttpMethod, pathKey: string) {
   if (!["post", "put", "patch"].includes(method)) {
     return undefined;
   }
@@ -176,12 +572,14 @@ function buildRequestBody(method: HttpMethod) {
           type: "object",
           additionalProperties: true,
         },
+        example: buildRequestExample(pathKey),
       },
     },
   };
 }
 
-function buildResponses(method: HttpMethod) {
+function buildResponses(method: HttpMethod, pathKey: string, source: string) {
+  const rateLimit = inferRateLimit(source);
   const successStatus = method === "post" ? "201" : "200";
   const successDescription =
     method === "delete"
@@ -190,25 +588,66 @@ function buildResponses(method: HttpMethod) {
         ? "Request completed successfully"
         : "Request completed successfully";
 
+  const successHeaders = rateLimit
+    ? {
+        "X-RateLimit-Limit": { $ref: "#/components/headers/XRateLimitLimit" },
+        "X-RateLimit-Remaining": { $ref: "#/components/headers/XRateLimitRemaining" },
+        "X-RateLimit-Reset": { $ref: "#/components/headers/XRateLimitReset" },
+      }
+    : undefined;
+
   return {
-    [successStatus]: { description: successDescription },
+    [successStatus]: {
+      description: `${successDescription}. ${buildRateLimitDescription(rateLimit)}`,
+      ...(successHeaders ? { headers: successHeaders } : {}),
+      content: {
+        "application/json": {
+          schema: {
+            type: "object",
+            additionalProperties: true,
+          },
+          example: buildResponseExample(pathKey, method),
+        },
+      },
+    },
     "400": { $ref: "#/components/responses/BadRequest" },
     "401": { $ref: "#/components/responses/Unauthorized" },
+    "403": { $ref: "#/components/responses/Forbidden" },
     "404": { $ref: "#/components/responses/NotFound" },
+    "429": { $ref: "#/components/responses/RateLimited" },
     "500": { $ref: "#/components/responses/ServerError" },
+    ...(/^\/(sms|otp|packages|payments|orders)/.test(pathKey)
+      ? { "402": { $ref: "#/components/responses/PaymentRequired" } }
+      : {}),
   };
 }
 
-function buildSecurity(pathKey: string) {
+function buildSecurity(pathKey: string, source: string) {
   if (pathKey.startsWith("/docs")) {
     return [];
   }
 
-  if (pathKey.startsWith("/admin/")) {
-    return [{ AdminAuth: [] }];
+  if (source.includes("x-webhook-secret")) {
+    return [{ WebhookSecret: [] }];
   }
 
-  return [{ BearerAuth: [] }];
+  if (pathKey.startsWith("/admin/") || source.includes("authenticateAdmin(")) {
+    return [{ AdminCookieAuth: [] }, { AdminAuth: [] }];
+  }
+
+  if (source.includes("authenticateApiKey(")) {
+    return [{ ApiKeyAuth: [] }];
+  }
+
+  if (source.includes("authenticateRequest(")) {
+    return [{ CookieAuth: [] }, { ApiKeyAuth: [] }];
+  }
+
+  if (source.includes("getSession(")) {
+    return [{ CookieAuth: [] }];
+  }
+
+  return [];
 }
 
 function buildAutoDiscoveredPaths(): Record<string, OpenApiPathItem> {
@@ -239,11 +678,12 @@ function buildAutoDiscoveredPaths(): Record<string, OpenApiPathItem> {
         {
           tags: [inferTag(pathKey)],
           summary: inferSummary(method, pathKey),
-          description: `Auto-generated baseline documentation for ${pathKey}. Replace with a manual entry when request or response schemas need endpoint-specific detail.`,
-          security: buildSecurity(pathKey),
+          description: `Auto-generated baseline documentation for ${pathKey}. Authentication and rate-limit notes are inferred from the route implementation.`,
+          security: buildSecurity(pathKey, source),
           ...(parameters.length > 0 ? { parameters } : {}),
-          ...(buildRequestBody(method) ? { requestBody: buildRequestBody(method) } : {}),
-          responses: buildResponses(method),
+          ...(buildRequestBody(method, pathKey) ? { requestBody: buildRequestBody(method, pathKey) } : {}),
+          responses: buildResponses(method, pathKey, source),
+          "x-rateLimit": inferRateLimit(source),
         },
       ]),
     ) as OpenApiPathItem;
