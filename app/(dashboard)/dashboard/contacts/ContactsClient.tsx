@@ -1001,9 +1001,97 @@ export default function ContactsClient({
         </Card>
       )}
 
-      {/* Contact Table — Desktop */}
+      {/* Contact Table */}
       {filteredContacts.length > 0 ? (
         <>
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-2">
+            {filteredContacts.map((contact) => {
+              const contactTags = parseTags(contact.tags);
+              return (
+                <Card
+                  key={contact.id}
+                  className="bg-[var(--bg-surface)] border-[var(--border-default)] overflow-hidden"
+                >
+                  <div className="p-4">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Checkbox
+                          checked={selectedIds.has(contact.id)}
+                          onCheckedChange={() => toggleSelect(contact.id)}
+                          className="border-[rgba(var(--accent-rgb),0.4)] data-[state=checked]:bg-[var(--accent)] data-[state=checked]:border-[var(--accent)] data-[state=checked]:text-[var(--bg-base)] shrink-0"
+                        />
+                        <a
+                          href={`/dashboard/contacts/${contact.id}`}
+                          className="text-sm font-medium text-[var(--text-primary)] hover:text-[var(--accent)] truncate"
+                        >
+                          {contact.name}
+                        </a>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openEditDialog(contact)}
+                          className="h-8 w-8 p-0 text-[var(--text-muted)] hover:text-[var(--accent)]"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setDeletingContact(contact);
+                            setShowDeleteAlert(true);
+                          }}
+                          className="h-8 w-8 p-0 text-[var(--text-muted)] hover:text-[var(--error)]"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 mb-2 pl-6">
+                      <span className="text-xs font-mono text-[var(--text-muted)]">
+                        {contact.phone}
+                      </span>
+                      {!contact.smsConsent && (
+                        <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[rgba(var(--error-rgb),0.08)] text-[var(--error)]">
+                          <ShieldOff className="w-2.5 h-2.5" />
+                          Opt-out
+                        </span>
+                      )}
+                    </div>
+                    {(contactTags.length > 0 || contact.groups.length > 0) && (
+                      <div className="flex flex-wrap gap-1 pl-6">
+                        {contact.groups.slice(0, 2).map((g) => (
+                          <Badge
+                            key={g.id}
+                            variant="outline"
+                            className="text-[10px] px-1.5 py-0.5 bg-[rgba(var(--accent-rgb),0.06)] text-[var(--accent)] border-[rgba(var(--accent-rgb),0.15)]"
+                          >
+                            <Users className="w-2.5 h-2.5 mr-0.5" />
+                            {g.name}
+                          </Badge>
+                        ))}
+                        {contactTags.slice(0, 3).map((tag) => (
+                          <TagChip key={tag} tag={tag} size="xs" />
+                        ))}
+                        {contactTags.length > 3 && (
+                          <span className="text-[10px] text-[var(--text-muted)]">
+                            +{contactTags.length - 3}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    <div className="text-[10px] text-[var(--text-muted)] mt-2 pl-6">
+                      {formatThaiDateOnly(contact.createdAt)}
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+
           {/* Desktop Table */}
           <Card className="hidden md:block bg-[var(--bg-surface)] border-[var(--border-default)] rounded-lg overflow-hidden">
             <div className="overflow-x-auto">
