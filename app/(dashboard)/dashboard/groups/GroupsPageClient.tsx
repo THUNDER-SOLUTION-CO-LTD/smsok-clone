@@ -384,6 +384,7 @@ export default function GroupsPageClient({
       {groups.length > 0 ? (
         <>
           <Card className="hidden md:block bg-[var(--bg-surface)] border-[var(--border-default)] rounded-lg overflow-hidden">
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="border-b-0 hover:bg-transparent">
@@ -469,6 +470,7 @@ export default function GroupsPageClient({
                 ))}
               </TableBody>
             </Table>
+            </div>
           </Card>
 
           {/* Mobile Card View */}

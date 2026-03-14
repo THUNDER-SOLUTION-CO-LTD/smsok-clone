@@ -56,6 +56,15 @@ export default function RootLayout({
   return (
     <html lang="th" className={cn("dark", "font-sans")}>
       <head>
+        <link rel="manifest" href="/manifest.json" />
+        <link rel="icon" href="/icons/icon-192.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+        <link rel="alternate" hrefLang="th" href="https://smsok.9phum.me" />
+        <link rel="alternate" hrefLang="en" href="https://smsok.9phum.me?lang=en" />
+        <link rel="alternate" hrefLang="x-default" href="https://smsok.9phum.me" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="SMSOK" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -70,6 +79,11 @@ export default function RootLayout({
             <CookieConsentBanner />
           </TooltipProvider>
         </StoreProviders>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/sw.js')})}`,
+          }}
+        />
       </body>
     </html>
   );

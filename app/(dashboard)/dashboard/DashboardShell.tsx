@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { broadcastLogout } from "@/components/AuthGuard";
 import ReconsentModal from "@/components/reconsent-modal";
+import LanguageSwitcher from "@/components/language-switcher";
 import { cn } from "@/lib/utils";
 
 // shadcn components
@@ -331,6 +332,9 @@ export default function DashboardShell({
           </h1>
 
           <div className="flex items-center gap-2.5">
+            {/* Language Switcher */}
+            <LanguageSwitcher />
+
             {/* CMD+K Search */}
             <Button
               variant="ghost"
