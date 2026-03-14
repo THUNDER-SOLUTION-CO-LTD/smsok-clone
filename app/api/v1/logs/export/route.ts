@@ -3,17 +3,9 @@ import { authenticateRequest, apiError, ApiError } from "@/lib/api-auth";
 import { startApiLog, finishApiLog } from "@/lib/api-log";
 import { prisma } from "@/lib/db";
 import { applyRateLimit } from "@/lib/rate-limit";
+import { toCsvCell } from "@/lib/csv";
 
 const MAX_EXPORT_ROWS = 10000;
-
-function escapeCsv(value: string | null | undefined): string {
-  if (value == null) return "";
-  const str = String(value);
-  if (str.includes(",") || str.includes('"') || str.includes("\n")) {
-    return `"${str.replace(/"/g, '""')}"`;
-  }
-  return str;
-}
 
 // GET /api/v1/logs/export?format=csv&from=2026-03-01&to=2026-03-10&status=400&endpoint=/sms/send
 export async function GET(req: NextRequest) {
@@ -68,17 +60,17 @@ export async function GET(req: NextRequest) {
     // Build CSV
     const headers = ["id", "timestamp", "method", "endpoint", "url", "status", "latency_ms", "ip_address", "source", "error_code", "error_message"];
     const rows = logs.map((log) => [
-      escapeCsv(log.id),
-      escapeCsv(log.createdAt.toISOString()),
-      escapeCsv(log.method),
-      escapeCsv(log.endpoint),
-      escapeCsv(log.url),
+      toCsvCell(log.id),
+      toCsvCell(log.createdAt.toISOString()),
+      toCsvCell(log.method),
+      toCsvCell(log.endpoint),
+      toCsvCell(log.url),
       String(log.resStatus),
       String(log.latencyMs),
-      escapeCsv(log.ipAddress),
-      escapeCsv(log.source),
-      escapeCsv(log.errorCode),
-      escapeCsv(log.errorMsg),
+      toCsvCell(log.ipAddress),
+      toCsvCell(log.source),
+      toCsvCell(log.errorCode),
+      toCsvCell(log.errorMsg),
     ]);
 
     const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
