@@ -26,7 +26,7 @@ describe("Task #1888 — EasySlip verification for order system", () => {
       const content = fs.readFileSync(path.resolve("lib/orders/slip-verification.ts"), "utf-8");
       expect(content).toContain("verifySlipByUrl");
       expect(content).toContain("R2_PUBLIC_URL");
-      expect(content).toContain("verifySlipByUrl(publicUrl)");
+      expect(content).toContain("verifySlipByUrl(publicUrl, expectedAmount)");
     });
 
     it("supports pending manual review when EasySlip cannot auto-verify", () => {
@@ -42,7 +42,7 @@ describe("Task #1888 — EasySlip verification for order system", () => {
       expect(content).toContain('"PAID"');
       expect(content).toContain("activateOrderPurchase");
       expect(content).toContain("ensureOrderDocument");
-      expect(content).toContain("EasySlip verified");
+      expect(content).toContain("SlipOK verified");
     });
 
     it("still checks for duplicate transRef in our DB", () => {

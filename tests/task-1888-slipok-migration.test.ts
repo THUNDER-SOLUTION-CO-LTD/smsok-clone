@@ -2,48 +2,78 @@ import { describe, expect, it } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 
-describe("Task #1888 — EasySlip verification for order system", () => {
-  describe("lib/easyslip.ts adapter", () => {
-    it("should exist and export verifySlipByUrl", async () => {
+describe("Task #1888 — SlipOK migration for order system", () => {
+  describe("lib/slipok.ts adapter", () => {
+    it("should exist and export verifySlipByUrl", () => {
+      const slipokPath = path.resolve("lib/slipok.ts");
+      expect(fs.existsSync(slipokPath)).toBe(true);
+
+      const content = fs.readFileSync(slipokPath, "utf-8");
+      expect(content).toContain("export async function verifySlipByUrl");
+      expect(content).toContain("SLIPOK_API_KEY");
+      expect(content).toContain("SLIPOK_BRANCH_ID");
+    });
+
+    it("should use FormData upload to SlipOK API", () => {
+      const content = fs.readFileSync(path.resolve("lib/slipok.ts"), "utf-8");
+      expect(content).toContain("FormData");
+      expect(content).toContain("x-authorization");
+      expect(content).toContain("api.slipok.com");
+    });
+
+    it("should handle SlipOK error codes 1012, 1013, 1014", () => {
+      const content = fs.readFileSync(path.resolve("lib/slipok.ts"), "utf-8");
+      expect(content).toContain('"1012"');
+      expect(content).toContain('"1013"');
+      expect(content).toContain('"1014"');
+    });
+
+    it("should accept expectedAmount parameter", () => {
+      const content = fs.readFileSync(path.resolve("lib/slipok.ts"), "utf-8");
+      expect(content).toContain("expectedAmount");
+      expect(content).toContain('formData.append("amount"');
+    });
+  });
+
+  describe("lib/easyslip.ts still exists (used by topup flow)", () => {
+    it("should exist and export verifySlipByUrl and SlipVerifyResult type", () => {
       const easyslipPath = path.resolve("lib/easyslip.ts");
       expect(fs.existsSync(easyslipPath)).toBe(true);
 
       const content = fs.readFileSync(easyslipPath, "utf-8");
       expect(content).toContain("export async function verifySlipByUrl");
-      expect(content).toContain("EASYSLIP_API_KEY");
-    });
-
-    it("should NOT have any SlipOK references", () => {
-      const content = fs.readFileSync(
-        path.resolve("lib/easyslip.ts"),
-        "utf-8",
-      );
-      expect(content.toLowerCase()).not.toContain("slipok");
+      expect(content).toContain("export type SlipVerifyResult");
     });
   });
 
-  describe("lib/slipok.ts should NOT exist", () => {
-    it("slipok.ts must be deleted", () => {
-      expect(fs.existsSync(path.resolve("lib/slipok.ts"))).toBe(false);
+  describe("order slip verification uses SlipOK", () => {
+    it("imports verifySlipByUrl from slipok, not easyslip", () => {
+      const content = fs.readFileSync(path.resolve("lib/orders/slip-verification.ts"), "utf-8");
+      expect(content).toContain('from "@/lib/slipok"');
+      expect(content).not.toContain('verifySlipByUrl } from "@/lib/easyslip"');
     });
-  });
 
-  describe("order slip verification flow uses EasySlip through the worker service", () => {
-    it("queues the canonical route instead of verifying inside the request", () => {
+    it("passes expectedAmount to verifySlipByUrl", () => {
+      const content = fs.readFileSync(path.resolve("lib/orders/slip-verification.ts"), "utf-8");
+      expect(content).toContain("verifySlipByUrl(publicUrl, expectedAmount)");
+    });
+
+    it("queues verification via worker, not inline", () => {
       const routePath = path.resolve("app/api/orders/[id]/slip/route.ts");
       const content = fs.readFileSync(routePath, "utf-8");
       expect(content).toContain('from "@/lib/queue/queues"');
       expect(content).toContain("slipVerifyQueue.add");
     });
 
-    it("calls verifySlipByUrl with signed R2 URL inside the worker service", () => {
+    it("auto-pays on successful verification", () => {
       const content = fs.readFileSync(path.resolve("lib/orders/slip-verification.ts"), "utf-8");
-      expect(content).toContain("verifySlipByUrl");
-      expect(content).toContain("getSignedDownloadUrlFromR2");
-      expect(content).not.toContain("from \"@/lib/slipok\"");
+      expect(content).toContain('"PAID"');
+      expect(content).toContain("activateOrderPurchase");
+      expect(content).toContain("ensureOrderDocument");
+      expect(content).toContain("SlipOK verified");
     });
 
-    it("supports pending manual review when EasySlip cannot auto-verify", () => {
+    it("supports pending manual review fallback", () => {
       const content = fs.readFileSync(path.resolve("lib/orders/slip-verification.ts"), "utf-8");
       expect(content).toContain("getPendingReviewMessage");
       expect(content).toContain("getManualReviewNote");
@@ -51,21 +81,7 @@ describe("Task #1888 — EasySlip verification for order system", () => {
       expect(content).toContain("manual_review");
     });
 
-    it("auto-pays on successful verification inside the worker service", () => {
-      const content = fs.readFileSync(path.resolve("lib/orders/slip-verification.ts"), "utf-8");
-      expect(content).toContain('"PAID"');
-      expect(content).toContain("activateOrderPurchase");
-      expect(content).toContain("ensureOrderDocument");
-      expect(content).toContain("EasySlip verified");
-    });
-
-    it("has NO SlipOK references in slip-verification.ts", () => {
-      const content = fs.readFileSync(path.resolve("lib/orders/slip-verification.ts"), "utf-8");
-      expect(content).not.toContain("SlipOK");
-      expect(content).not.toContain("slipok");
-    });
-
-    it("still checks for duplicate transRef in our DB", () => {
+    it("still checks for duplicate transRef in DB", () => {
       const content = fs.readFileSync(path.resolve("lib/orders/slip-verification.ts"), "utf-8");
       expect(content).toContain("orderSlip.findFirst");
       expect(content).toContain("transRef");
@@ -83,39 +99,21 @@ describe("Task #1888 — EasySlip verification for order system", () => {
   });
 
   describe("env configuration", () => {
-    it("should have EASYSLIP_API_KEY in env.ts schema", () => {
-      const content = fs.readFileSync(
-        path.resolve("lib/env.ts"),
-        "utf-8",
-      );
+    it("should have SLIPOK vars in env.ts schema", () => {
+      const content = fs.readFileSync(path.resolve("lib/env.ts"), "utf-8");
+      expect(content).toContain("SLIPOK_BRANCH_ID");
+      expect(content).toContain("SLIPOK_API_KEY");
+    });
+
+    it("should have SLIPOK vars in .env.example", () => {
+      const content = fs.readFileSync(path.resolve(".env.example"), "utf-8");
+      expect(content).toContain("SLIPOK_BRANCH_ID");
+      expect(content).toContain("SLIPOK_API_KEY");
+    });
+
+    it("should still have EasySlip vars (used by topup flow)", () => {
+      const content = fs.readFileSync(path.resolve("lib/env.ts"), "utf-8");
       expect(content).toContain("EASYSLIP_API_KEY");
-    });
-
-    it("should NOT have SLIPOK vars in env.ts schema", () => {
-      const content = fs.readFileSync(
-        path.resolve("lib/env.ts"),
-        "utf-8",
-      );
-      expect(content).not.toContain("SLIPOK_BRANCH_ID");
-      expect(content).not.toContain("SLIPOK_API_KEY");
-    });
-
-    it("should NOT have SLIPOK vars in .env.example", () => {
-      const content = fs.readFileSync(
-        path.resolve(".env.example"),
-        "utf-8",
-      );
-      expect(content).not.toContain("SLIPOK_BRANCH_ID");
-      expect(content).not.toContain("SLIPOK_API_KEY");
-    });
-
-    it("should NOT have SLIPOK vars in docker-compose.prod.yml", () => {
-      const content = fs.readFileSync(
-        path.resolve("docker-compose.prod.yml"),
-        "utf-8",
-      );
-      expect(content).not.toContain("SLIPOK_BRANCH_ID");
-      expect(content).not.toContain("SLIPOK_API_KEY");
     });
   });
 });

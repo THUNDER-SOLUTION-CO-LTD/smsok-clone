@@ -573,6 +573,11 @@ export default function OrderManagementPage() {
                 >
                   {order.package_name} · {order.sms_count.toLocaleString()} SMS
                 </p>
+                {order.status === "REJECTED" && order.reject_reason && (
+                  <p className="text-xs mt-1 line-clamp-1" style={{ color: "var(--error)" }}>
+                    {order.reject_reason}
+                  </p>
+                )}
                 <div className="flex items-center justify-between mt-2">
                   <span
                     className="text-sm font-semibold font-mono tabular-nums"

@@ -23,6 +23,13 @@ import {
   Receipt,
   Package,
   Eye,
+  Ban,
+  ImageOff,
+  DollarSign,
+  Timer,
+  Building2,
+  HelpCircle,
+  LifeBuoy,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -47,6 +54,9 @@ import {
   type Order,
   type OrderStatus,
   type OrderStatusEvent,
+  type SlipRejectCode,
+  REJECT_CODE_CONFIG,
+  MAX_SLIP_ATTEMPTS,
 } from "@/types/order";
 import { OrderStatusBadge } from "@/components/order/OrderStatusBadge";
 import { formatBaht } from "@/types/purchase";
@@ -390,6 +400,78 @@ function OrderTimeline({ order }: { order: Order }) {
   );
 }
 
+// ── Reject Code Icon Map ──
+
+const REJECT_CODE_ICONS: Record<SlipRejectCode, React.ElementType> = {
+  DUPLICATE_SLIP: Ban,
+  INVALID_SLIP: AlertTriangle,
+  AMOUNT_MISMATCH: DollarSign,
+  EXPIRED_SLIP: Timer,
+  WRONG_ACCOUNT: Building2,
+  UNREADABLE_SLIP: ImageOff,
+};
+
+// ── Reject Reason Card ──
+
+function RejectReasonCard({ order }: { order: Order }) {
+  const code = order.reject_code as SlipRejectCode | undefined;
+  const config = code ? REJECT_CODE_CONFIG[code] : null;
+  const Icon = code ? REJECT_CODE_ICONS[code] : HelpCircle;
+  const attempts = order.slip_attempt_count ?? 0;
+  const maxedOut = attempts >= MAX_SLIP_ATTEMPTS;
+
+  return (
+    <div className="mt-4 space-y-3">
+      {/* Reject reason card */}
+      <div className="flex items-start gap-3 p-4 rounded-lg bg-[rgba(var(--error-rgb),0.06)] border border-[rgba(var(--error-rgb),0.15)]">
+        <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-[rgba(var(--error-rgb),0.12)] border border-[rgba(var(--error-rgb),0.2)] flex-shrink-0">
+          <Icon className="w-[18px] h-[18px] text-[var(--error)]" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-[13px] font-semibold text-[var(--error)]">
+            {config?.label ?? "สลิปไม่ผ่านการตรวจสอบ"}
+          </p>
+          <p className="text-[12px] text-[var(--text-secondary)] leading-relaxed mt-0.5">
+            {config?.description ?? order.reject_reason ?? order.reject_message ?? "กรุณาแนบสลิปใหม่อีกครั้ง"}
+          </p>
+          {order.rejected_at && (
+            <p className="text-[11px] text-[var(--text-muted)] mt-1.5 font-mono">
+              ปฏิเสธเมื่อ {formatThaiDateTimeShort(order.rejected_at)}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Attempt counter + action hint */}
+      <div className="flex items-center justify-between p-3 rounded-lg bg-[rgba(var(--accent-rgb),0.04)] border border-[rgba(var(--accent-rgb),0.12)]">
+        <div className="flex items-center gap-2.5">
+          {maxedOut ? (
+            <LifeBuoy className="w-4 h-4 text-[var(--error)] flex-shrink-0" />
+          ) : (
+            <Upload className="w-4 h-4 text-[var(--accent)] flex-shrink-0" />
+          )}
+          <p className="text-[13px] text-[var(--text-secondary)]">
+            {maxedOut
+              ? "ครบจำนวนครั้งแล้ว กรุณาติดต่อ Support"
+              : config?.action ?? "กรุณาตรวจสอบข้อมูลและแนบสลิปใหม่"}
+          </p>
+        </div>
+        <span
+          className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded-full flex-shrink-0"
+          style={{
+            color: maxedOut ? "var(--error)" : "var(--text-secondary)",
+            background: maxedOut
+              ? "rgba(var(--error-rgb),0.1)"
+              : "rgba(var(--text-muted-rgb),0.1)",
+          }}
+        >
+          {attempts}/{MAX_SLIP_ATTEMPTS}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 // ── Status Banner ──
 
 function StatusBanner({ order }: { order: Order }) {
@@ -467,27 +549,9 @@ function StatusBanner({ order }: { order: Order }) {
         </div>
       </div>
 
-      {/* Rejected: show reject reason prominently */}
-      {isRejected && order.reject_reason && (
-        <div className="mt-4 flex items-start gap-2.5 p-3 rounded-md bg-[rgba(var(--error-rgb),0.06)] border border-[rgba(var(--error-rgb),0.15)]">
-          <AlertTriangle className="w-4 h-4 text-[var(--error)] flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="text-[12px] font-semibold text-[var(--error)] mb-0.5">สาเหตุที่ถูกปฏิเสธ</p>
-            <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed">
-              {order.reject_reason}
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Rejected: CTA to re-upload */}
+      {/* Rejected: reject code card + attempt count */}
       {isRejected && (
-        <div className="mt-4 flex items-center gap-3 p-3 rounded-md bg-[rgba(var(--accent-rgb),0.04)] border border-[rgba(var(--accent-rgb),0.12)]">
-          <Upload className="w-4 h-4 text-[var(--accent)] flex-shrink-0" />
-          <p className="text-[13px] text-[var(--text-secondary)]">
-            กรุณาตรวจสอบข้อมูลและ<span className="text-[var(--accent)] font-medium">แนบสลิปใหม่</span>อีกครั้ง
-          </p>
-        </div>
+        <RejectReasonCard order={order} />
       )}
 
       {/* Countdown for pending */}
@@ -512,7 +576,7 @@ function OrderInfoCard({ order }: { order: Order }) {
 
   return (
     <div
-      className="rounded-xl p-5 mb-4"
+      className="rounded-lg p-5 mb-4"
       style={{
         background: "var(--bg-surface)",
         border: "1px solid var(--border-default)",
@@ -594,7 +658,7 @@ function ItemizedTable({ order }: { order: Order }) {
 
   return (
     <div
-      className="rounded-xl overflow-hidden mb-4"
+      className="rounded-lg overflow-hidden mb-4"
       style={{
         background: "var(--bg-surface)",
         border: "1px solid var(--border-default)",
@@ -699,7 +763,7 @@ function PricingCard({ order }: { order: Order }) {
 
   return (
     <div
-      className="rounded-xl p-5 mb-4"
+      className="rounded-lg p-5 mb-4"
       style={{
         background: "var(--bg-surface)",
         border: "1px solid var(--border-default)",
@@ -840,7 +904,7 @@ function DocumentsCard({ order }: { order: Order }) {
 
   return (
     <div
-      className="rounded-xl p-5 mb-4"
+      className="rounded-lg p-5 mb-4"
       style={{
         background: "var(--bg-surface)",
         border: "1px solid var(--border-default)",
@@ -955,7 +1019,7 @@ function BankAccountCard({ bankAccount }: { bankAccount: BankAccount | null }) {
 
   return (
     <div
-      className="rounded-xl p-5 mb-4"
+      className="rounded-lg p-5 mb-4"
       style={{
         background: "var(--bg-surface)",
         border: "1px solid var(--border-default)",
@@ -1021,6 +1085,7 @@ function PaymentProofCard({
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [currentTime] = useState(() => Date.now());
   const isPending = order.status === "PENDING";
+  const isRejected = order.status === "REJECTED";
   const isVerifying =
     order.status === "SLIP_UPLOADED" || order.status === "PENDING_REVIEW";
   const isPaid =
@@ -1030,10 +1095,12 @@ function PaymentProofCard({
   const isTerminal =
     order.status === "EXPIRED" || order.status === "CANCELLED";
   const hasSlip = !!order.slip_url;
+  const attempts = order.slip_attempt_count ?? 0;
+  const maxedOut = isRejected && attempts >= MAX_SLIP_ATTEMPTS;
 
   return (
     <div
-      className="rounded-xl p-5 mb-4"
+      className="rounded-lg p-5 mb-4"
       style={{
         background: "var(--bg-surface)",
         border: "1px solid var(--border-default)",
@@ -1131,7 +1198,7 @@ function PaymentProofCard({
             </div>
           </div>
 
-          {/* Upload more (pending only) */}
+          {/* Upload more (pending) or re-upload (rejected) */}
           {isPending && (
             <Button
               variant="outline"
@@ -1141,6 +1208,17 @@ function PaymentProofCard({
             >
               <Plus size={14} />
               แนบสลิปเพิ่ม
+            </Button>
+          )}
+          {isRejected && !maxedOut && (
+            <Button
+              size="sm"
+              className="gap-1.5"
+              style={{ background: "var(--accent)", color: "var(--bg-base)" }}
+              onClick={onUpload}
+            >
+              <Upload size={14} />
+              แนบสลิปใหม่
             </Button>
           )}
         </div>
@@ -1314,7 +1392,7 @@ function SlipUploadDialog({
 
             {!slipFile ? (
               <div
-                className="rounded-xl text-center cursor-pointer transition-all"
+                className="rounded-lg text-center cursor-pointer transition-all"
                 style={{
                   padding: "40px 24px",
                   border: isDragging
@@ -1365,7 +1443,7 @@ function SlipUploadDialog({
               </div>
             ) : (
               <div
-                className="rounded-xl overflow-hidden"
+                className="rounded-lg overflow-hidden"
                 style={{ border: "1px solid var(--border-default)" }}
               >
                 {slipPreview && (
@@ -1426,7 +1504,7 @@ function SlipUploadDialog({
 
               {!whtFile ? (
                 <div
-                  className="rounded-xl p-6 text-center cursor-pointer transition-all"
+                  className="rounded-lg p-6 text-center cursor-pointer transition-all"
                   style={{
                     border: "2px dashed var(--border-default)",
                   }}
@@ -1528,6 +1606,9 @@ function ActionButtons({
   const status = order.status;
 
   if (status === "PENDING" || status === "REJECTED") {
+    const attempts = order.slip_attempt_count ?? 0;
+    const maxedOut = status === "REJECTED" && attempts >= MAX_SLIP_ATTEMPTS;
+
     return (
       <div
         className="flex items-center justify-between mt-6 pt-6"
@@ -1564,6 +1645,16 @@ function ActionButtons({
           </AlertDialogContent>
         </AlertDialog>
 
+        {maxedOut ? (
+          <Button
+            variant="outline"
+            className="gap-2 h-10 px-5"
+            onClick={() => window.open("https://line.me/ti/p/@smsok", "_blank")}
+          >
+            <LifeBuoy size={16} />
+            ติดต่อ Support
+          </Button>
+        ) : (
         <Button
           className="gap-2 h-10 px-5"
           style={{
@@ -1573,8 +1664,9 @@ function ActionButtons({
           onClick={onUpload}
         >
           <Upload size={16} />
-          แนบสลิปโอนเงิน
+          {status === "REJECTED" ? "แนบสลิปใหม่" : "แนบสลิปโอนเงิน"}
         </Button>
+        )}
       </div>
     );
   }
@@ -1737,6 +1829,25 @@ export default function OrderDetailPage() {
     }
   }
 
+  // Handle resubmit (clear rejection then open upload)
+  async function handleResubmitSlip() {
+    if (!order) return;
+    try {
+      const res = await fetch(`/api/orders/${order.id}/resubmit-slip`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || "ไม่สามารถเริ่มอัปโหลดใหม่ได้");
+      }
+      await fetchOrder();
+      setUploadDialogOpen(true);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "เกิดข้อผิดพลาด");
+    }
+  }
+
   // Submit slip
   async function handleSubmitSlip(slip: File, whtCert?: File) {
     if (!order) return;
@@ -1779,23 +1890,23 @@ export default function OrderDetailPage() {
             style={{ background: "var(--bg-surface)" }}
           />
           <div
-            className="h-40 rounded-xl animate-pulse"
+            className="h-40 rounded-lg animate-pulse"
             style={{ background: "var(--bg-surface)" }}
           />
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6">
             <div className="space-y-4">
               <div
-                className="h-32 rounded-xl animate-pulse"
+                className="h-32 rounded-lg animate-pulse"
                 style={{ background: "var(--bg-surface)" }}
               />
               <div
-                className="h-48 rounded-xl animate-pulse"
+                className="h-48 rounded-lg animate-pulse"
                 style={{ background: "var(--bg-surface)" }}
               />
             </div>
             <div>
               <div
-                className="h-64 rounded-xl animate-pulse"
+                className="h-64 rounded-lg animate-pulse"
                 style={{ background: "var(--bg-surface)" }}
               />
             </div>
@@ -1874,10 +1985,15 @@ export default function OrderDetailPage() {
               <BankAccountCard bankAccount={bankAccount} />
             )}
 
+            {/* Section 5.5: Bank Account (REJECTED — show again for re-upload) */}
+            {order.status === "REJECTED" && (
+              <BankAccountCard bankAccount={bankAccount} />
+            )}
+
             {/* Section 6: Payment Proof */}
             <PaymentProofCard
               order={order}
-              onUpload={() => setUploadDialogOpen(true)}
+              onUpload={order.status === "REJECTED" ? handleResubmitSlip : () => setUploadDialogOpen(true)}
             />
           </div>
 
@@ -1895,7 +2011,7 @@ export default function OrderDetailPage() {
       {/* Section 7: Action Buttons */}
       <ActionButtons
         order={order}
-        onUpload={() => setUploadDialogOpen(true)}
+        onUpload={order.status === "REJECTED" ? handleResubmitSlip : () => setUploadDialogOpen(true)}
         onCancel={handleCancel}
       />
 

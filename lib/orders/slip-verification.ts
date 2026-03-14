@@ -8,7 +8,8 @@ import {
 } from "@/lib/orders/api";
 import { MAX_SLIP_ATTEMPTS, type SlipRejectCode } from "@/lib/orders/rejected-slip";
 import { createOrderHistory } from "@/lib/orders/service";
-import { type SlipVerifyResult, verifySlipByUrl } from "@/lib/easyslip";
+import type { SlipVerifyResult } from "@/lib/easyslip";
+import { verifySlipByUrl } from "@/lib/slipok";
 import { extractStoredFileKey } from "@/lib/storage/files";
 
 const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || "";
@@ -119,7 +120,7 @@ function shouldQueueForManualReview(verification: SlipVerifyResult) {
 }
 
 function getManualReviewNote(verification: SlipVerifyResult) {
-  return `EasySlip: ${verification.error ?? verification.providerCode ?? "manual review required"}`;
+  return `SlipOK: ${verification.error ?? verification.providerCode ?? "manual review required"}`;
 }
 
 function getExpectedSlipAmount(order: QueuedOrderRecord) {
@@ -454,8 +455,8 @@ async function approveQueuedOrderSlip(
   }
 
   const approvalNote = amountDifference > 0
-    ? "EasySlip verified — order paid automatically within ±1 THB tolerance"
-    : "EasySlip verified — order paid automatically";
+    ? "SlipOK verified — order paid automatically within ±1 THB tolerance"
+    : "SlipOK verified — order paid automatically";
 
   return db.$transaction(async (tx) => {
     if (!order.slip) {
@@ -559,17 +560,18 @@ export async function processQueuedOrderSlipVerification(input: {
   }
 
   const publicUrl = `${R2_PUBLIC_URL}/${fileKey}`;
+  const expectedAmount = getExpectedSlipAmount(order);
 
   const verification = await withTimeout(
-    verifySlipByUrl(publicUrl),
+    verifySlipByUrl(publicUrl, expectedAmount),
     SLIP_VERIFY_TIMEOUT_MS,
-    "EasySlip verification timed out",
+    "SlipOK verification timed out",
   ).catch((error) => {
-    console.error("[Slip Worker] EasySlip request failed:", error);
+    console.error("[Slip Worker] SlipOK request failed:", error);
     if (error instanceof SlipVerificationRetryableError) {
       throw error;
     }
-    throw new SlipVerificationRetryableError("EasySlip verification request failed");
+    throw new SlipVerificationRetryableError("SlipOK verification request failed");
   });
 
   if (verification.isDuplicate) {

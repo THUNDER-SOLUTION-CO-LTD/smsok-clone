@@ -1,6 +1,52 @@
 // ── Order-Based Billing Types ──
 // Spec: SMSOK-ORDER-BASED-BILLING-SPEC-v1.md + Wireframes Spec #59
 
+export type SlipRejectCode =
+  | "DUPLICATE_SLIP"
+  | "INVALID_SLIP"
+  | "AMOUNT_MISMATCH"
+  | "EXPIRED_SLIP"
+  | "WRONG_ACCOUNT"
+  | "UNREADABLE_SLIP";
+
+export const REJECT_CODE_CONFIG: Record<
+  SlipRejectCode,
+  { label: string; description: string; action: string }
+> = {
+  DUPLICATE_SLIP: {
+    label: "สลิปซ้ำ",
+    description: "สลิปนี้ถูกใช้กับคำสั่งซื้ออื่นแล้ว กรุณาโอนเงินใหม่และแนบสลิปใหม่",
+    action: "โอนเงินใหม่และแนบสลิปใหม่",
+  },
+  INVALID_SLIP: {
+    label: "สลิปไม่ถูกต้อง",
+    description: "ไม่สามารถยืนยันสลิปนี้ได้ กรุณาตรวจสอบว่าเป็นสลิปโอนเงินจริง",
+    action: "แนบสลิปโอนเงินที่ถูกต้อง",
+  },
+  AMOUNT_MISMATCH: {
+    label: "ยอดเงินไม่ตรง",
+    description: "จำนวนเงินในสลิปไม่ตรงกับยอดที่ต้องชำระ กรุณาโอนเงินให้ครบจำนวน",
+    action: "โอนเงินให้ตรงยอดและแนบสลิปใหม่",
+  },
+  EXPIRED_SLIP: {
+    label: "สลิปหมดอายุ",
+    description: "สลิปนี้เก่าเกินกว่า 48 ชั่วโมง กรุณาโอนเงินใหม่",
+    action: "โอนเงินใหม่และแนบสลิปล่าสุด",
+  },
+  WRONG_ACCOUNT: {
+    label: "บัญชีผิด",
+    description: "เงินถูกโอนไปยังบัญชีอื่น กรุณาโอนเงินไปยังบัญชีที่กำหนด",
+    action: "โอนเงินไปบัญชีที่ถูกต้อง",
+  },
+  UNREADABLE_SLIP: {
+    label: "อ่านสลิปไม่ได้",
+    description: "ภาพสลิปไม่ชัดเจนหรืออ่านข้อมูลไม่ได้ กรุณาถ่ายภาพใหม่ให้ชัด",
+    action: "ถ่ายภาพสลิปใหม่ให้ชัดเจน",
+  },
+};
+
+export const MAX_SLIP_ATTEMPTS = 5;
+
 export type OrderStatus =
   | "PENDING"
   | "SLIP_UPLOADED"
@@ -72,6 +118,10 @@ export interface Order {
   easyslip_verified?: boolean;
 
   reject_reason?: string;
+  reject_code?: SlipRejectCode;
+  reject_message?: string;
+  rejected_at?: string;
+  slip_attempt_count?: number;
   admin_note?: string;
 
   paid_at?: string;
