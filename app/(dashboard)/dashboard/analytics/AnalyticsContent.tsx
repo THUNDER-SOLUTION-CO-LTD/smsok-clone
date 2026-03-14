@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { toCsvCell } from "@/lib/csv";
 import Link from "next/link";
 import {
   Send,
@@ -15,6 +16,10 @@ import {
   ArrowDownRight,
   Download,
   Calendar,
+  ChevronUp,
+  ChevronDown,
+  Image,
+  Table2,
 } from "lucide-react";
 
 type Stats = {
@@ -34,6 +39,21 @@ type DailyDataPoint = {
   delivered: number;
   failed: number;
 };
+
+type CampaignRow = {
+  id: string;
+  name: string;
+  status: string;
+  sentCount: number;
+  deliveredCount: number;
+  failedCount: number;
+  totalRecipients: number;
+  startedAt: string | null;
+  completedAt: string | null;
+};
+
+type SortKey = "name" | "sentCount" | "deliveredRate" | "failedRate" | "duration";
+type SortDir = "asc" | "desc";
 
 // ── Donut Chart ──
 
@@ -327,7 +347,7 @@ export default function AnalyticsContent({ stats }: { stats: Stats }) {
         new Date(msg.createdAt).toLocaleString("th-TH"),
       ]),
     ];
-    const csv = rows.map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
+    const csv = rows.map((r) => r.map(toCsvCell).join(",")).join("\n");
     const bom = "\uFEFF";
     const blob = new Blob([bom + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);

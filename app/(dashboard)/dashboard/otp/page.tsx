@@ -5,6 +5,7 @@ import Link from "next/link";
 import { generateOtpForSession, verifyOtpForSession } from "@/lib/actions/otp";
 import { blockNonNumeric } from "@/lib/form-utils";
 import { safeErrorMessage } from "@/lib/error-messages";
+import { toCsvCell } from "@/lib/csv";
 import { toast } from "sonner";
 
 import { Card, CardContent } from "@/components/ui/card";
@@ -170,7 +171,7 @@ function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: 
   if (!active || !payload) return null;
   return (
     <div
-      className="rounded-xl px-3 py-2 text-xs border border-[var(--border-default)]"
+      className="rounded-lg px-3 py-2 text-xs border border-[var(--border-default)]"
       style={{ backgroundColor: "var(--table-header)" }}
     >
       <p className="text-[var(--text-muted)] mb-1 font-medium">{label}</p>
@@ -346,7 +347,7 @@ function QuickTestPanel() {
               value={phone}
               onChange={(e) => handlePhoneChange(e.target.value)}
               disabled={step === "sent"}
-              className={`h-9 bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] rounded-xl ${phoneError ? "border-[var(--error)]" : ""}`}
+              className={`h-9 bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] rounded-lg ${phoneError ? "border-[var(--error)]" : ""}`}
             />
             {phoneError && (
               <p className="text-[11px] mt-1" style={{ color: "var(--error)" }}>{phoneError}</p>
@@ -355,7 +356,7 @@ function QuickTestPanel() {
           <Button
             onClick={handleSend}
             disabled={loading || isPending || !isPhoneValid || countdown > 0 || hasNoCredits}
-            className="h-9 w-full bg-[var(--accent)] hover:opacity-90 text-[var(--bg-base)] rounded-xl font-semibold text-sm"
+            className="h-9 w-full bg-[var(--accent)] hover:opacity-90 text-[var(--bg-base)] rounded-lg font-semibold text-sm"
           >
             {loading ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -373,7 +374,7 @@ function QuickTestPanel() {
         {/* OTP + Ref display */}
         {step !== "idle" && (
           <div className="mt-4 space-y-2">
-            <div className="flex items-center justify-between rounded-xl bg-[var(--bg-base)] border border-[var(--border-default)] px-3 py-2">
+            <div className="flex items-center justify-between rounded-lg bg-[var(--bg-base)] border border-[var(--border-default)] px-3 py-2">
               <div>
                 <span className="text-[10px] uppercase text-[var(--text-muted)] tracking-wider">OTP</span>
                 <p className="text-lg font-semibold text-[var(--text-primary)]" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
@@ -392,7 +393,7 @@ function QuickTestPanel() {
                 )}
               </button>
             </div>
-            <div className="flex items-center justify-between rounded-xl bg-[var(--bg-base)] border border-[var(--border-default)] px-3 py-2">
+            <div className="flex items-center justify-between rounded-lg bg-[var(--bg-base)] border border-[var(--border-default)] px-3 py-2">
               <div>
                 <span className="text-[10px] uppercase text-[var(--text-muted)] tracking-wider">Ref</span>
                 <p className="text-sm text-[var(--text-primary)]" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
@@ -427,13 +428,13 @@ function QuickTestPanel() {
                 placeholder="กรอก OTP"
                 value={verifyInput}
                 onChange={(e) => setVerifyInput(e.target.value.replace(/\D/g, ""))}
-                className="h-9 bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] rounded-xl text-center tracking-[0.3em]"
+                className="h-9 bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] rounded-lg text-center tracking-[0.3em]"
                 style={{ fontFamily: "'IBM Plex Mono', monospace" }}
               />
               <Button
                 onClick={handleVerify}
                 disabled={verifyLoading || isPending || verifyInput.length < 4}
-                className="h-9 w-full bg-[var(--success)] hover:opacity-90 text-[var(--text-primary)] rounded-xl font-semibold text-sm"
+                className="h-9 w-full bg-[var(--success)] hover:opacity-90 text-[var(--text-primary)] rounded-lg font-semibold text-sm"
               >
                 {verifyLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "ยืนยัน OTP"}
               </Button>
@@ -442,7 +443,7 @@ function QuickTestPanel() {
             {/* Feedback */}
             {feedback && (
               <div
-                className={`mt-2 px-3 py-2 rounded-xl text-xs font-medium border ${
+                className={`mt-2 px-3 py-2 rounded-lg text-xs font-medium border ${
                   feedback.ok
                     ? "bg-[var(--success-bg)] border-[var(--success-bg)] text-[var(--success)]"
                     : "bg-[var(--danger-bg)] border-[var(--danger-bg)] text-[var(--error)]"
@@ -456,7 +457,7 @@ function QuickTestPanel() {
               <Button
                 variant="outline"
                 onClick={handleReset}
-                className="h-9 w-full mt-1 border-[var(--border-default)] text-[var(--text-muted)] hover:text-[var(--text-primary)] rounded-xl text-sm"
+                className="h-9 w-full mt-1 border-[var(--border-default)] text-[var(--text-muted)] hover:text-[var(--text-primary)] rounded-lg text-sm"
               >
                 ทดสอบใหม่
               </Button>
@@ -687,8 +688,8 @@ function HistoryTab({ historyData }: { historyData: OtpHistoryItem[] }) {
 
   const handleExport = (format: "csv" | "json") => {
     const data = format === "json" ? JSON.stringify(filtered, null, 2) : [
-      "phone,ref,otp,status,verifyTime,time",
-      ...filtered.map((r) => `${r.phone},${r.ref},${r.otp},${r.status},${r.verifyTime},${r.time}`),
+      ["phone","ref","otp","status","verifyTime","time"].map(toCsvCell).join(","),
+      ...filtered.map((r) => [r.phone, r.ref, r.otp, r.status, r.verifyTime, r.time].map(toCsvCell).join(",")),
     ].join("\n");
     const blob = new Blob([data], { type: format === "json" ? "application/json" : "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -712,7 +713,7 @@ function HistoryTab({ historyData }: { historyData: OtpHistoryItem[] }) {
               setSearchQuery(e.target.value);
               setCurrentPage(1);
             }}
-            className="h-9 pl-9 bg-[var(--bg-surface)] border-[var(--border-default)] text-[var(--text-primary)] rounded-xl text-sm"
+            className="h-9 pl-9 bg-[var(--bg-surface)] border-[var(--border-default)] text-[var(--text-primary)] rounded-lg text-sm"
           />
         </div>
         <div style={{ width: 160 }}>
@@ -730,14 +731,14 @@ function HistoryTab({ historyData }: { historyData: OtpHistoryItem[] }) {
           <Button
             variant="outline"
             onClick={() => handleExport("csv")}
-            className="h-9 border-[var(--border-default)] text-[var(--text-muted)] hover:text-[var(--text-primary)] rounded-xl text-xs gap-1.5"
+            className="h-9 border-[var(--border-default)] text-[var(--text-muted)] hover:text-[var(--text-primary)] rounded-lg text-xs gap-1.5"
           >
             <Download className="w-3.5 h-3.5" /> CSV
           </Button>
           <Button
             variant="outline"
             onClick={() => handleExport("json")}
-            className="h-9 border-[var(--border-default)] text-[var(--text-muted)] hover:text-[var(--text-primary)] rounded-xl text-xs gap-1.5"
+            className="h-9 border-[var(--border-default)] text-[var(--text-muted)] hover:text-[var(--text-primary)] rounded-lg text-xs gap-1.5"
           >
             <Download className="w-3.5 h-3.5" /> JSON
           </Button>
@@ -929,7 +930,7 @@ function SettingsTab() {
                 max={600}
                 value={expiry}
                 onChange={(e) => setExpiry(e.target.value)}
-                className="h-9 bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] rounded-xl"
+                className="h-9 bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] rounded-lg"
               />
               <p className="text-[11px] text-[var(--text-muted)] mt-1">= {expiryMinutes} นาที</p>
             </div>
@@ -944,7 +945,7 @@ function SettingsTab() {
                   max={20}
                   value={rateLimit}
                   onChange={(e) => setRateLimit(e.target.value)}
-                  className="h-9 bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] rounded-xl pr-24"
+                  className="h-9 bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] rounded-lg pr-24"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-[var(--text-muted)] pointer-events-none">
                   ครั้งต่อชั่วโมง
@@ -965,7 +966,7 @@ function SettingsTab() {
             value={template}
             onChange={(e) => setTemplate(e.target.value)}
             rows={3}
-            className="bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] rounded-xl text-sm resize-none"
+            className="bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] rounded-lg text-sm resize-none"
           />
 
           {/* Variable chips */}
@@ -984,7 +985,7 @@ function SettingsTab() {
           </div>
 
           {/* Preview */}
-          <div className="rounded-xl bg-[var(--bg-base)] border border-[var(--border-default)] p-4">
+          <div className="rounded-lg bg-[var(--bg-base)] border border-[var(--border-default)] p-4">
             <p className="text-[10px] uppercase text-[var(--text-muted)] tracking-wider mb-2 font-medium">
               ตัวอย่างข้อความ
             </p>
@@ -1045,14 +1046,14 @@ function SettingsTab() {
       <div className="flex items-center justify-end gap-3">
         <Button
           variant="outline"
-          className="h-9 border-[var(--border-default)] text-[var(--text-muted)] hover:text-[var(--text-primary)] rounded-xl"
+          className="h-9 border-[var(--border-default)] text-[var(--text-muted)] hover:text-[var(--text-primary)] rounded-lg"
         >
           ยกเลิก
         </Button>
         <Button
           onClick={handleSave}
           disabled={saving}
-          className="h-9 bg-[var(--accent)] hover:opacity-90 text-[var(--bg-base)] rounded-xl font-semibold"
+          className="h-9 bg-[var(--accent)] hover:opacity-90 text-[var(--bg-base)] rounded-lg font-semibold"
         >
           {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1.5" /> : null}
           บันทึกการตั้งค่า

@@ -1,3 +1,4 @@
+import "server-only";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { headers } from "next/headers";
 import { getSession } from "./auth";

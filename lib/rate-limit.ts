@@ -15,18 +15,19 @@ export type RateLimitConfig = {
 export const RATE_LIMIT_DEFAULTS = {
   sms: { windowMs: 60_000, maxRequests: 10 },
   batch: { windowMs: 60_000, maxRequests: 5 },
-  auth: { windowMs: 15 * 60_000, maxRequests: 10 },
-  auth_login: { windowMs: 15 * 60_000, maxRequests: 20 },
-  auth_register: { windowMs: 15 * 60_000, maxRequests: 10 },
-  auth_check_duplicate: { windowMs: 15 * 60_000, maxRequests: 10 },
+  auth: { windowMs: 5 * 60_000, maxRequests: 10 },
+  auth_login: { windowMs: 5 * 60_000, maxRequests: 10 },
+  auth_register: { windowMs: 5 * 60_000, maxRequests: 5 },
+  auth_check_duplicate: { windowMs: 60_000, maxRequests: 10 },
+  auth_2fa: { windowMs: 5 * 60_000, maxRequests: 5 },
   api: { windowMs: 60_000, maxRequests: 60 },
   slip: { windowMs: 60_000, maxRequests: 5 },
-  password: { windowMs: 15 * 60_000, maxRequests: 5 },
+  password: { windowMs: 5 * 60_000, maxRequests: 5 },
   apikey: { windowMs: 60_000, maxRequests: 10 },
   import: { windowMs: 60_000, maxRequests: 5 },
   admin: { windowMs: 60_000, maxRequests: 30 },
   otp_generate: { windowMs: 10 * 60_000, maxRequests: 3 },
-  otp_verify: { windowMs: 15 * 60_000, maxRequests: 10 },
+  otp_verify: { windowMs: 5 * 60_000, maxRequests: 10 },
   // Security-critical — strict limits (per IP)
   admin_login: { windowMs: 60_000, maxRequests: 5 },
   otp_send: { windowMs: 60_000, maxRequests: 3 },
@@ -118,9 +119,12 @@ export async function applyRateLimit(
 
   if (!result.allowed) {
     const retryAfter = Math.ceil(result.resetIn / 1000);
+    const retryMsg = retryAfter >= 60
+      ? `คำขอมากเกินไป กรุณารอ ${Math.ceil(retryAfter / 60)} นาที`
+      : `คำขอมากเกินไป กรุณารอ ${retryAfter} วินาที`;
     return {
       blocked: Response.json(
-        { error: `คำขอมากเกินไป กรุณารอ ${retryAfter} วินาที` },
+        { error: retryMsg },
         {
           status: 429,
           headers: {
