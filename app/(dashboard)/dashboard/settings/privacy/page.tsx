@@ -8,10 +8,13 @@ import {
   Cookie,
   ExternalLink,
   AlertTriangle,
+  Download,
   History,
+  Loader2,
   Lock,
   ChevronDown,
   Check,
+  Trash2,
   X,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
@@ -336,6 +339,147 @@ function ConsentCard({
   );
 }
 
+/* ─── Data Rights Section ─── */
+
+function DataRightsSection() {
+  const [exportLoading, setExportLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [exportResult, setExportResult] = useState<string | null>(null);
+  const [deleteResult, setDeleteResult] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  async function handleExportData() {
+    setExportLoading(true);
+    setExportResult(null);
+    try {
+      const res = await fetch("/api/v1/user/data-export", { method: "POST" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setExportResult("ส่งคำขอสำเร็จ — คุณจะได้รับไฟล์ข้อมูลทาง email ภายใน 24 ชั่วโมง");
+    } catch {
+      setExportResult("เกิดข้อผิดพลาด กรุณาลองใหม่หรือติดต่อ support@smsok.com");
+    } finally {
+      setExportLoading(false);
+    }
+  }
+
+  async function handleDeleteRequest() {
+    setDeleteLoading(true);
+    setDeleteResult(null);
+    try {
+      const res = await fetch("/api/v1/user/data-delete", { method: "POST" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setDeleteResult("ส่งคำขอลบข้อมูลสำเร็จ — ทีมงานจะดำเนินการภายใน 30 วัน ตาม พ.ร.บ. PDPA");
+    } catch {
+      setDeleteResult("เกิดข้อผิดพลาด กรุณาติดต่อ support@smsok.com");
+    } finally {
+      setDeleteLoading(false);
+      setShowDeleteConfirm(false);
+    }
+  }
+
+  return (
+    <div className="mt-8 bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg p-5 space-y-4">
+      <div className="flex items-center gap-3 mb-2">
+        <div className="w-8 h-8 rounded-md bg-[var(--bg-muted)] flex items-center justify-center">
+          <Shield className="w-4 h-4 text-[var(--text-secondary)]" />
+        </div>
+        <div>
+          <h3 className="text-[14px] font-semibold text-[var(--text-primary)]">
+            สิทธิ์ของเจ้าของข้อมูล (PDPA)
+          </h3>
+          <p className="text-[11px] text-[var(--text-muted)]">
+            ขอสำเนาข้อมูลหรือขอลบข้อมูลส่วนบุคคลของคุณ
+          </p>
+        </div>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        {/* Export Data */}
+        <div className="rounded-lg border border-[var(--border-default)] p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Download className="w-4 h-4 text-[var(--accent-blue)]" />
+            <span className="text-[13px] font-semibold text-[var(--text-primary)]">
+              ส่งออกข้อมูล
+            </span>
+          </div>
+          <p className="text-[12px] text-[var(--text-muted)] leading-relaxed">
+            ขอสำเนาข้อมูลส่วนบุคคลทั้งหมดของคุณ (บัญชี, ประวัติ SMS, รายชื่อ, consent logs)
+          </p>
+          <button
+            type="button"
+            onClick={handleExportData}
+            disabled={exportLoading}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-[13px] font-medium rounded-lg border border-[rgba(var(--accent-rgb),0.2)] text-[var(--accent)] hover:bg-[rgba(var(--accent-rgb),0.06)] transition-all cursor-pointer disabled:opacity-50"
+          >
+            {exportLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4" />
+            )}
+            {exportLoading ? "กำลังส่งคำขอ..." : "ขอสำเนาข้อมูล"}
+          </button>
+          {exportResult && (
+            <p className="text-[11px] text-[var(--text-secondary)] bg-[var(--bg-muted)] rounded px-3 py-2">
+              {exportResult}
+            </p>
+          )}
+        </div>
+
+        {/* Delete Data */}
+        <div className="rounded-lg border border-[var(--border-default)] p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Trash2 className="w-4 h-4 text-[var(--error)]" />
+            <span className="text-[13px] font-semibold text-[var(--text-primary)]">
+              ขอลบข้อมูล
+            </span>
+          </div>
+          <p className="text-[12px] text-[var(--text-muted)] leading-relaxed">
+            ขอให้ลบข้อมูลส่วนบุคคลทั้งหมด — บัญชีจะถูกปิดใช้งานหลังดำเนินการ
+          </p>
+          {showDeleteConfirm ? (
+            <div className="space-y-2">
+              <p className="text-[11px] text-[var(--error)] font-medium">
+                การดำเนินการนี้ไม่สามารถยกเลิกได้ ต้องการดำเนินการต่อหรือไม่?
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="flex-1 px-3 py-2 text-[12px] font-medium rounded-lg border border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-hover)] transition-all cursor-pointer"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteRequest}
+                  disabled={deleteLoading}
+                  className="flex-1 px-3 py-2 text-[12px] font-medium rounded-lg bg-[var(--error)] text-white hover:brightness-110 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  {deleteLoading ? "กำลังส่ง..." : "ยืนยันลบข้อมูล"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowDeleteConfirm(true)}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-[13px] font-medium rounded-lg border border-[rgba(var(--error-rgb),0.2)] text-[var(--error)] hover:bg-[rgba(var(--error-rgb),0.06)] transition-all cursor-pointer"
+            >
+              <Trash2 className="w-4 h-4" />
+              ขอลบข้อมูลส่วนบุคคล
+            </button>
+          )}
+          {deleteResult && (
+            <p className="text-[11px] text-[var(--text-secondary)] bg-[var(--bg-muted)] rounded px-3 py-2">
+              {deleteResult}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Main Page ─── */
 
 export default function PrivacySettingsPage() {
@@ -607,6 +751,9 @@ export default function PrivacySettingsPage() {
           </div>
         </div>
       </div>
+
+      {/* ─── Data Rights (PDPA) ─── */}
+      <DataRightsSection />
 
       {/* ─── Confirm Dialog ─── */}
       <ConfirmDialog

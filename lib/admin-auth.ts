@@ -1,42 +1,119 @@
+import { randomUUID } from "crypto";
 import { NextRequest } from "next/server";
 import { prisma as db } from "./db";
 import { ApiError } from "./api-auth";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { env } from "./env";
+import { hasValidCsrfOrigin } from "./csrf";
+import { redis } from "./redis";
 
 const ADMIN_JWT_SECRET = env.JWT_SECRET + "_admin";
+const ADMIN_SESSION_TTL_SECONDS = 8 * 60 * 60;
+export const ADMIN_SESSION_COOKIE_NAME = "admin_session";
 
-type AdminPayload = { adminId: string; role: string };
+type AdminPayload = {
+  type: "admin";
+  adminId: string;
+  role: string;
+  sessionId: string;
+};
 
-export function signAdminToken(adminId: string, role: string) {
-  return jwt.sign({ adminId, role }, ADMIN_JWT_SECRET, { expiresIn: "8h" });
+type AdminSessionRecord = {
+  adminId: string;
+};
+
+export type AuthenticatedAdmin = {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  isActive: boolean;
+  sessionId: string;
+};
+
+function buildAdminSessionKey(sessionId: string) {
+  return `admin_session:${sessionId}`;
+}
+
+export function signAdminToken(adminId: string, role: string, sessionId: string) {
+  return jwt.sign(
+    { type: "admin", adminId, role, sessionId },
+    ADMIN_JWT_SECRET,
+    { expiresIn: `${ADMIN_SESSION_TTL_SECONDS}s` },
+  );
 }
 
 export function verifyAdminToken(token: string): AdminPayload | null {
   try {
-    return jwt.verify(token, ADMIN_JWT_SECRET) as AdminPayload;
+    const payload = jwt.verify(token, ADMIN_JWT_SECRET) as AdminPayload;
+    if (
+      payload?.type !== "admin" ||
+      !payload?.adminId ||
+      !payload?.role ||
+      !payload?.sessionId
+    ) {
+      return null;
+    }
+
+    return payload;
   } catch {
     return null;
   }
 }
 
-/**
- * Authenticate admin via Bearer token or cookie
- * Returns admin user with role
- */
-export async function authenticateAdmin(req: NextRequest, allowedRoles?: string[]) {
-  const authHeader = req.headers.get("authorization");
-  const token = authHeader?.startsWith("Bearer ")
-    ? authHeader.slice(7).trim()
-    : req.cookies.get("admin_session")?.value;
+async function createAdminSession(adminId: string) {
+  const sessionId = randomUUID();
+  await redis.set(
+    buildAdminSessionKey(sessionId),
+    JSON.stringify({ adminId }),
+    "EX",
+    ADMIN_SESSION_TTL_SECONDS,
+  );
+  return sessionId;
+}
 
-  if (!token) {
-    throw new ApiError(401, "Admin authentication required", "ADMIN_AUTH_MISSING");
+async function getAdminSession(sessionId: string): Promise<AdminSessionRecord | null> {
+  const rawSession = await redis.get(buildAdminSessionKey(sessionId));
+  if (!rawSession) {
+    return null;
   }
 
+  try {
+    const session = JSON.parse(rawSession) as AdminSessionRecord;
+    if (!session?.adminId) {
+      return null;
+    }
+    return session;
+  } catch {
+    await redis.del(buildAdminSessionKey(sessionId)).catch(() => undefined);
+    return null;
+  }
+}
+
+async function touchAdminSession(sessionId: string) {
+  await redis.expire(buildAdminSessionKey(sessionId), ADMIN_SESSION_TTL_SECONDS).catch(() => undefined);
+}
+
+export async function revokeAdminSession(sessionId: string) {
+  await redis.del(buildAdminSessionKey(sessionId));
+}
+
+function isSafeMethod(method: string) {
+  return method === "GET" || method === "HEAD" || method === "OPTIONS";
+}
+
+export async function authenticateAdminToken(
+  token: string,
+  allowedRoles?: string[],
+): Promise<AuthenticatedAdmin> {
   const payload = verifyAdminToken(token);
   if (!payload) {
+    throw new ApiError(401, "Invalid or expired admin token", "ADMIN_AUTH_INVALID");
+  }
+
+  const session = await getAdminSession(payload.sessionId);
+  if (!session || session.adminId !== payload.adminId) {
     throw new ApiError(401, "Invalid or expired admin token", "ADMIN_AUTH_INVALID");
   }
 
@@ -53,7 +130,31 @@ export async function authenticateAdmin(req: NextRequest, allowedRoles?: string[
     throw new ApiError(403, "ไม่มีสิทธิ์ดำเนินการนี้", "ADMIN_FORBIDDEN");
   }
 
-  return admin;
+  void touchAdminSession(payload.sessionId);
+  return { ...admin, sessionId: payload.sessionId };
+}
+
+/**
+ * Authenticate admin via Bearer token or cookie
+ * Returns admin user with role
+ */
+export async function authenticateAdmin(req: NextRequest, allowedRoles?: string[]) {
+  const authHeader = req.headers.get("authorization");
+  const bearerToken = authHeader?.startsWith("Bearer ")
+    ? authHeader.slice(7).trim()
+    : null;
+  const cookieToken = req.cookies.get(ADMIN_SESSION_COOKIE_NAME)?.value;
+  const token = bearerToken || cookieToken;
+
+  if (!token) {
+    throw new ApiError(401, "Admin authentication required", "ADMIN_AUTH_MISSING");
+  }
+
+  if (!bearerToken && !isSafeMethod(req.method) && !hasValidCsrfOrigin(req)) {
+    throw new ApiError(403, "CSRF: invalid origin", "ADMIN_CSRF_INVALID");
+  }
+
+  return authenticateAdminToken(token, allowedRoles);
 }
 
 export async function loginAdmin(email: string, password: string) {
@@ -73,6 +174,21 @@ export async function loginAdmin(email: string, password: string) {
     data: { lastLogin: new Date() },
   });
 
-  const token = signAdminToken(admin.id, admin.role);
-  return { token, admin: { id: admin.id, email: admin.email, name: admin.name, role: admin.role } };
+  const sessionId = await createAdminSession(admin.id);
+  const token = signAdminToken(admin.id, admin.role, sessionId);
+  return {
+    token,
+    sessionId,
+    admin: { id: admin.id, email: admin.email, name: admin.name, role: admin.role },
+  };
+}
+
+export function getAdminSessionCookieOptions() {
+  return {
+    httpOnly: true,
+    sameSite: "lax" as const,
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: ADMIN_SESSION_TTL_SECONDS,
+  };
 }

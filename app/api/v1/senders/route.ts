@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { authenticateRequest, apiResponse, apiError, ApiError } from "@/lib/api-auth";
 import { prisma as db } from "@/lib/db";
@@ -174,31 +175,39 @@ export async function POST(req: NextRequest) {
       throw new ApiError(400, "เกินจำนวน Sender Name ที่อนุญาต");
     }
 
-    const sender = await db.$transaction(async (tx) => {
-      const created = await tx.senderName.create({
-        data: {
-          userId: user.id,
-          name: normalizedName,
-          status: "PENDING",
-          accountType: input.type,
-          adminNotes: input.note || null,
-          submittedAt: new Date(),
-        },
-      });
+    let sender;
+    try {
+      sender = await db.$transaction(async (tx) => {
+        const created = await tx.senderName.create({
+          data: {
+            userId: user.id,
+            name: normalizedName,
+            status: "PENDING",
+            accountType: input.type,
+            adminNotes: input.note || null,
+            submittedAt: new Date(),
+          },
+        });
 
-      await tx.senderNameHistory.create({
-        data: {
-          senderNameId: created.id,
-          action: "submitted",
-          fromStatus: "DRAFT",
-          toStatus: "PENDING",
-          note: input.note || null,
-          performedBy: user.id,
-        },
-      });
+        await tx.senderNameHistory.create({
+          data: {
+            senderNameId: created.id,
+            action: "submitted",
+            fromStatus: "DRAFT",
+            toStatus: "PENDING",
+            note: input.note || null,
+            performedBy: user.id,
+          },
+        });
 
-      return created;
-    });
+        return created;
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        throw new ApiError(409, "ชื่อผู้ส่งนี้มีอยู่แล้ว", "DUPLICATE");
+      }
+      throw error;
+    }
 
     return apiResponse({
       sender: {

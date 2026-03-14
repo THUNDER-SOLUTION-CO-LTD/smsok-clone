@@ -7,7 +7,7 @@ import { getRemainingQuota } from "../package/quota";
 import { requestSenderNameSchema, approveSenderNameSchema } from "../validations";
 import { validateSenderName } from "../sender-name-validation";
 import { resolveActionUserId } from "../action-user";
-import { verifyAdminToken } from "../admin-auth";
+import { authenticateAdminToken } from "../admin-auth";
 import { cookies } from "next/headers";
 
 const SENDER_NAME_QUOTA_STATUSES = [
@@ -137,8 +137,8 @@ export async function adminApproveSenderName(adminUserId: string, data: unknown)
   const cookieStore = await cookies();
   const adminToken = cookieStore.get("admin_session")?.value;
   if (!adminToken) throw new ApiError(401, "Admin authentication required");
-  const adminPayload = verifyAdminToken(adminToken);
-  if (!adminPayload || adminPayload.adminId !== adminUserId) {
+  const admin = await authenticateAdminToken(adminToken);
+  if (admin.id !== adminUserId) {
     throw new ApiError(403, "ไม่มีสิทธิ์ดำเนินการนี้");
   }
 
@@ -176,8 +176,7 @@ export async function adminGetPendingSenderNames() {
   const cookieStore = await cookies();
   const adminToken = cookieStore.get("admin_session")?.value;
   if (!adminToken) throw new ApiError(401, "Admin authentication required");
-  const adminPayload = verifyAdminToken(adminToken);
-  if (!adminPayload) throw new ApiError(403, "ไม่มีสิทธิ์ดำเนินการนี้");
+  await authenticateAdminToken(adminToken);
 
   return db.senderName.findMany({
     where: { status: "PENDING" },

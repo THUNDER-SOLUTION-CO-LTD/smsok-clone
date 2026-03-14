@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jwtVerify } from "jose";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { ACCESS_COOKIE_NAME, REFRESH_COOKIE_NAME, verifySessionJwt } from "@/lib/session-jwt";
 import { getAllowedOrigins, hasValidCsrfOrigin } from "@/lib/csrf";
@@ -87,6 +88,29 @@ function shouldVerifySession(pathname: string, hasApiKeyAuth: boolean) {
 
 function shouldVerifyAdminSession(pathname: string) {
   return pathname === "/admin" || pathname.startsWith("/admin/");
+}
+
+async function verifyAdminSessionToken(token: string) {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    return false;
+  }
+
+  try {
+    const { payload } = await jwtVerify(
+      token,
+      new TextEncoder().encode(`${secret}_admin`),
+    );
+
+    return (
+      payload.type === "admin" &&
+      typeof payload.adminId === "string" &&
+      typeof payload.role === "string" &&
+      typeof payload.sessionId === "string"
+    );
+  } catch {
+    return false;
+  }
 }
 
 function isPageNavigation(pathname: string) {
@@ -271,11 +295,16 @@ export async function middleware(req: NextRequest) {
   // --- Admin page protection: require admin_session cookie ---
   if (shouldVerifyAdminSession(pathname)) {
     const adminToken = req.cookies.get("admin_session")?.value;
-    if (!adminToken) {
+    const hasValidAdminToken = adminToken
+      ? await verifyAdminSessionToken(adminToken)
+      : false;
+
+    if (!hasValidAdminToken) {
       const target = new URL("/login", req.url);
       const redirect = NextResponse.redirect(target);
       applySecurityHeaders(redirect, target.pathname);
       redirect.headers.set("X-Request-Id", requestId);
+      redirect.cookies.delete("admin_session");
       return redirect;
     }
   }

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { broadcastLogout } from "@/components/AuthGuard";
+import ReconsentModal from "@/components/reconsent-modal";
 import { cn } from "@/lib/utils";
 
 // shadcn components
@@ -581,6 +582,9 @@ export default function DashboardShell({
           </button>
         </SheetContent>
       </Sheet>
+
+      {/* ── Re-consent Modal (PDPA policy version change) ── */}
+      <ReconsentModal />
 
       {/* ── Mobile Bottom Nav ── */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-[var(--border-default)] bg-[var(--bg-base)] flex items-center justify-around px-2 py-2 safe-area-bottom">

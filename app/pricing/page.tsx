@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   ArrowLeft,
   ArrowRight,
   Check,
   ChevronDown,
   Crown,
+  Loader2,
   MessageSquare,
   Rocket,
   Sparkles,
@@ -19,7 +20,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/* ─── Tier Data ─── */
+/* ─── Types ─── */
 
 interface PricingTier {
   id: string;
@@ -32,9 +33,92 @@ interface PricingTier {
   popular?: boolean;
   features: string[];
   cta: string;
+  ctaHref: string;
 }
 
-const TIERS: PricingTier[] = [
+/* ─── Tier mapping from API ─── */
+
+interface ApiPackage {
+  id: string;
+  name: string;
+  sms: number;
+  price: number;
+  bonus?: number;
+  senders?: number;
+  duration?: string;
+  label?: string;
+}
+
+const TIER_ICON_MAP: Record<string, React.ElementType> = {
+  A: Rocket, B: Rocket,
+  C: Crown, D: Crown,
+  E: Building2, F: Building2, G: Building2, H: Building2,
+};
+
+function mapApiToTiers(packages: ApiPackage[]): PricingTier[] {
+  // Sort by price ascending
+  const sorted = [...packages].sort((a, b) => a.price - b.price);
+
+  // Pick 3 representative tiers: smallest, middle "best value", largest
+  if (sorted.length === 0) return [];
+
+  const picks: ApiPackage[] = [];
+  if (sorted.length <= 3) {
+    picks.push(...sorted);
+  } else {
+    // First, best-value (label or middle), last
+    picks.push(sorted[0]);
+    const bestValue = sorted.find((p) => p.label === "ยอดนิยม") ?? sorted[Math.floor(sorted.length / 2)];
+    if (bestValue !== sorted[0]) picks.push(bestValue);
+    else picks.push(sorted[1]);
+    picks.push(sorted[sorted.length - 1]);
+  }
+
+  return picks.map((pkg, idx) => {
+    const isEnterprise = idx === picks.length - 1 && picks.length >= 3;
+    const isBestValue = idx === 1 && picks.length >= 3;
+    const bonusPct = pkg.bonus ?? 0;
+    const totalSms = pkg.sms;
+    const perSms = totalSms > 0 ? pkg.price / totalSms : 0;
+
+    const features: string[] = [];
+    if (pkg.senders != null) {
+      features.push(pkg.senders === -1 ? "Sender Names ไม่จำกัด" : `${pkg.senders} Sender Names`);
+    }
+    if (pkg.duration) features.push(`อายุ ${pkg.duration}`);
+    if (bonusPct > 0) features.push(`+${bonusPct}% Bonus SMS`);
+    features.push("API Access");
+    features.push("รายงานส่ง SMS");
+    if (isBestValue || isEnterprise) features.push("Delivery-Failure Refund");
+    if (isBestValue) features.push("Priority Support");
+    if (isEnterprise) {
+      features.push("Dedicated Support");
+      features.push("Custom Integration");
+    }
+
+    return {
+      id: pkg.id ?? pkg.name,
+      name: isEnterprise ? "Enterprise" : isBestValue ? "Business" : "Starter",
+      tagline: isEnterprise
+        ? "สำหรับองค์กรขนาดใหญ่"
+        : isBestValue
+          ? "สำหรับธุรกิจที่เติบโต"
+          : "สำหรับธุรกิจเริ่มต้น",
+      icon: TIER_ICON_MAP[pkg.name] ?? (isEnterprise ? Building2 : isBestValue ? Crown : Rocket),
+      sms: totalSms,
+      price: pkg.price,
+      perSms: Math.round(perSms * 100) / 100,
+      popular: isBestValue,
+      features,
+      cta: isEnterprise ? "ติดต่อทีมขาย" : "เริ่มใช้งานฟรี",
+      ctaHref: isEnterprise ? "mailto:sales@smsok.com" : "/register",
+    };
+  });
+}
+
+/* ─── Fallback tiers (shown while loading or on error) ─── */
+
+const FALLBACK_TIERS: PricingTier[] = [
   {
     id: "starter",
     name: "Starter",
@@ -43,14 +127,9 @@ const TIERS: PricingTier[] = [
     sms: 1_100,
     price: 1_000,
     perSms: 0.91,
-    features: [
-      "10 Sender Names",
-      "อายุ 12 เดือน",
-      "+10% Bonus SMS",
-      "API Access",
-      "รายงานส่ง SMS",
-    ],
+    features: ["10 Sender Names", "อายุ 12 เดือน", "+10% Bonus SMS", "API Access", "รายงานส่ง SMS"],
     cta: "เริ่มใช้งานฟรี",
+    ctaHref: "/register",
   },
   {
     id: "business",
@@ -61,16 +140,9 @@ const TIERS: PricingTier[] = [
     price: 50_000,
     perSms: 0.83,
     popular: true,
-    features: [
-      "20 Sender Names",
-      "อายุ 24 เดือน",
-      "+20% Bonus SMS",
-      "API Access",
-      "รายงานส่ง SMS",
-      "Delivery-Failure Refund",
-      "Priority Support",
-    ],
+    features: ["20 Sender Names", "อายุ 24 เดือน", "+20% Bonus SMS", "API Access", "รายงานส่ง SMS", "Delivery-Failure Refund", "Priority Support"],
     cta: "เริ่มใช้งานฟรี",
+    ctaHref: "/register",
   },
   {
     id: "enterprise",
@@ -80,17 +152,9 @@ const TIERS: PricingTier[] = [
     sms: 390_000,
     price: 300_000,
     perSms: 0.77,
-    features: [
-      "Sender Names ไม่จำกัด",
-      "อายุ 36 เดือน",
-      "+30% Bonus SMS",
-      "API Access",
-      "รายงานส่ง SMS",
-      "Delivery-Failure Refund",
-      "Dedicated Support",
-      "Custom Integration",
-    ],
+    features: ["Sender Names ไม่จำกัด", "อายุ 36 เดือน", "+30% Bonus SMS", "API Access", "รายงานส่ง SMS", "Delivery-Failure Refund", "Dedicated Support", "Custom Integration"],
     cta: "ติดต่อทีมขาย",
+    ctaHref: "mailto:sales@smsok.com",
   },
 ];
 
@@ -268,18 +332,31 @@ function PricingCard({ tier }: { tier: PricingTier }) {
       </ul>
 
       {/* CTA */}
-      <Link
-        href="/register"
-        className={cn(
-          "flex w-full items-center justify-center gap-1.5 rounded-md px-6 font-semibold transition-all duration-200",
-          tier.popular
-            ? "h-12 bg-[var(--accent)] text-[var(--text-on-accent)] shadow-[0_0_20px_rgba(var(--accent-rgb),0.25)] hover:shadow-[0_0_28px_rgba(var(--accent-rgb),0.35)] hover:brightness-110"
-            : "h-12 border border-[rgba(var(--accent-rgb),0.25)] bg-transparent text-[var(--accent)] hover:bg-[rgba(var(--accent-rgb),0.08)]"
-        )}
-      >
-        {tier.cta}
-        <ArrowRight className="size-4" />
-      </Link>
+      {tier.ctaHref.startsWith("mailto:") ? (
+        <a
+          href={tier.ctaHref}
+          className={cn(
+            "flex w-full items-center justify-center gap-1.5 rounded-md px-6 font-semibold transition-all duration-200",
+            "h-12 border border-[rgba(var(--accent-rgb),0.25)] bg-transparent text-[var(--accent)] hover:bg-[rgba(var(--accent-rgb),0.08)]"
+          )}
+        >
+          {tier.cta}
+          <ArrowRight className="size-4" />
+        </a>
+      ) : (
+        <Link
+          href={tier.ctaHref}
+          className={cn(
+            "flex w-full items-center justify-center gap-1.5 rounded-md px-6 font-semibold transition-all duration-200",
+            tier.popular
+              ? "h-12 bg-[var(--accent)] text-[var(--text-on-accent)] shadow-[0_0_20px_rgba(var(--accent-rgb),0.25)] hover:shadow-[0_0_28px_rgba(var(--accent-rgb),0.35)] hover:brightness-110"
+              : "h-12 border border-[rgba(var(--accent-rgb),0.25)] bg-transparent text-[var(--accent)] hover:bg-[rgba(var(--accent-rgb),0.08)]"
+          )}
+        >
+          {tier.cta}
+          <ArrowRight className="size-4" />
+        </Link>
+      )}
     </div>
   );
 }
@@ -309,6 +386,31 @@ function TrustBadges() {
 /* ─── Main Page ─── */
 
 export default function PricingPage() {
+  const [tiers, setTiers] = useState<PricingTier[]>(FALLBACK_TIERS);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchPackages() {
+      try {
+        const res = await fetch("/api/v1/packages");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const pkgs: ApiPackage[] = Array.isArray(data) ? data : data.packages ?? [];
+        if (!cancelled && pkgs.length > 0) {
+          const mapped = mapApiToTiers(pkgs);
+          if (mapped.length > 0) setTiers(mapped);
+        }
+      } catch {
+        // Keep fallback tiers on error
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    fetchPackages();
+    return () => { cancelled = true; };
+  }, []);
+
   return (
     <div className="min-h-screen bg-[var(--bg-base)]">
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
@@ -339,11 +441,17 @@ export default function PricingPage() {
         </div>
 
         {/* ═══ Pricing Cards ═══ */}
-        <div className="mb-20 grid grid-cols-1 items-start gap-6 md:grid-cols-3 lg:gap-4">
-          {TIERS.map((tier) => (
-            <PricingCard key={tier.id} tier={tier} />
-          ))}
-        </div>
+        {loading ? (
+          <div className="mb-20 flex items-center justify-center py-20">
+            <Loader2 className="size-8 animate-spin text-[var(--accent)]" />
+          </div>
+        ) : (
+          <div className="mb-20 grid grid-cols-1 items-start gap-6 md:grid-cols-3 lg:gap-4">
+            {tiers.map((tier) => (
+              <PricingCard key={tier.id} tier={tier} />
+            ))}
+          </div>
+        )}
 
         {/* ═══ All Packages Link ═══ */}
         <div className="mb-20 text-center">
