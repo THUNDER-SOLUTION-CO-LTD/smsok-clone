@@ -28,7 +28,7 @@ const OWNER_ALLOWED_TARGETS = new Set(["cancelled"]);
 const ADMIN_ALLOWED_TARGETS = new Set([
   "pending_payment",
   "verifying",
-  "paid",
+  // "paid" removed — use /api/admin/orders/[id]/approve instead (requires slip verification)
   "expired",
   "cancelled",
 ]);

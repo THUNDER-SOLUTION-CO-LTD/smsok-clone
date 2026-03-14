@@ -12,8 +12,14 @@ const purchaseSchema = z.object({
   couponCode: z.string().optional(),
 });
 
-// POST /api/v1/packages/purchase — buy package (+ optional coupon)
-export async function POST(req: NextRequest) {
+// POST /api/v1/packages/purchase — DISABLED (security: direct purchase without payment verification)
+// Use /api/v1/orders flow instead: create order → upload slip → verify → activate
+export async function POST(_req: NextRequest) {
+  return apiError(new ApiError(410, "กรุณาใช้ระบบสั่งซื้อ (Orders) แทน — /api/v1/orders"));
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function _DISABLED_POST(req: NextRequest) {
   try {
     const session = await getSession();
     if (!session?.id) throw new ApiError(401, "กรุณาเข้าสู่ระบบ");
