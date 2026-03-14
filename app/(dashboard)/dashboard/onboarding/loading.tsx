@@ -3,15 +3,15 @@ import { Skeleton } from "@/components/skeletons/Skeleton";
 export default function OnboardingLoading() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6">
-      {/* Step progress bar */}
+      {/* Step progress bar — 3 steps */}
       <div className="flex items-center justify-center mb-8 gap-3">
-        {Array.from({ length: 5 }).map((_, i) => (
+        {Array.from({ length: 3 }).map((_, i) => (
           <div key={i} className="flex items-center gap-3">
             <div className="flex flex-col items-center gap-1">
               <Skeleton className="w-10 h-10 rounded-full" />
               <Skeleton className="h-3 w-14" />
             </div>
-            {i < 4 && <Skeleton className="h-0.5 w-12" />}
+            {i < 2 && <Skeleton className="h-0.5 w-16" />}
           </div>
         ))}
       </div>
@@ -31,6 +31,10 @@ export default function OnboardingLoading() {
           </div>
           <div className="space-y-2">
             <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-10 w-full rounded-lg" />
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-28" />
             <Skeleton className="h-10 w-full rounded-lg" />
           </div>
         </div>

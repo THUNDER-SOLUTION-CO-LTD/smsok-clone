@@ -7,6 +7,7 @@ import { broadcastLogout } from "@/components/AuthGuard";
 import ReconsentModal from "@/components/reconsent-modal";
 import LanguageSwitcher from "@/components/language-switcher";
 import DashboardBreadcrumb from "@/components/DashboardBreadcrumb";
+import DashboardTour from "@/components/DashboardTour";
 import { cn } from "@/lib/utils";
 
 // shadcn components
@@ -595,6 +596,9 @@ export default function DashboardShell({
 
       {/* ── Re-consent Modal (PDPA policy version change) ── */}
       <ReconsentModal />
+
+      {/* ── Dashboard Tour (shown after onboarding) ── */}
+      <DashboardTour />
 
       {/* ── Mobile Bottom Nav ── */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-[var(--border-default)] bg-[var(--bg-base)] flex items-center justify-around px-2 py-2 safe-area-bottom">
