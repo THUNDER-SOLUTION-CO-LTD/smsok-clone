@@ -380,7 +380,7 @@ export default function MessagesClient({
           ctaLabel="ส่ง SMS แรก"
           ctaAction={() => router.push("/dashboard/send")}
           helpLabel="ดูวิธีใช้งาน"
-          helpAction={() => router.push("/help/getting-started")}
+          helpAction={() => router.push("/help")}
         />
       )}
     </div>
