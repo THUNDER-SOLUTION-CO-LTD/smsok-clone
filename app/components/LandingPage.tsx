@@ -218,7 +218,7 @@ export default function LandingPage() {
             <br className="sm:hidden" />
             <span className="gradient-text-mixed"> SMS</span>
             <br />
-            <span className="bg-gradient-to-r from-white/90 via-white/70 to-white/50 bg-clip-text text-transparent">ที่ธุรกิจไว้วางใจ</span>
+            <span className="bg-gradient-to-r from-white via-white/90 to-white/80 bg-clip-text text-transparent">ที่ธุรกิจไว้วางใจ</span>
           </motion.h1>
 
           {/* Subheading */}
@@ -436,19 +436,19 @@ export default function LandingPage() {
               <span className="text-xs text-[var(--text-secondary)] ml-2 font-mono">send-sms.js</span>
             </div>
             <div className="p-5 sm:p-6 font-mono text-xs sm:text-sm leading-relaxed overflow-x-auto">
-              <div><span className="text-[var(--accent)]">const</span> <span className="text-[var(--accent)]">response</span> <span className="text-white/70">=</span> <span className="text-[var(--accent)]">await</span> <span className="text-emerald-400">fetch</span><span className="text-white/60">(</span></div>
-              <div className="pl-4"><span className="text-amber-300">{`"https://api.smsok.com/v1/send"`}</span><span className="text-white/60">,</span></div>
-              <div className="pl-4"><span className="text-white/60">{"{"}</span></div>
-              <div className="pl-8"><span className="text-[var(--accent)]">method</span><span className="text-white/60">:</span> <span className="text-amber-300">{`"POST"`}</span><span className="text-white/60">,</span></div>
-              <div className="pl-8"><span className="text-[var(--accent)]">headers</span><span className="text-white/60">:</span> <span className="text-white/60">{"{"}</span></div>
-              <div className="pl-12"><span className="text-amber-300">{`"Authorization"`}</span><span className="text-white/60">:</span> <span className="text-amber-300">{`"Bearer \${API_KEY}"`}</span></div>
-              <div className="pl-8"><span className="text-white/60">{"}"}</span><span className="text-white/60">,</span></div>
-              <div className="pl-8"><span className="text-[var(--accent)]">body</span><span className="text-white/60">:</span> <span className="text-emerald-400">JSON</span><span className="text-white/60">.</span><span className="text-emerald-400">stringify</span><span className="text-white/60">({"{"}</span></div>
-              <div className="pl-12"><span className="text-[var(--accent)]">to</span><span className="text-white/60">:</span> <span className="text-amber-300">{`"0891234567"`}</span><span className="text-white/60">,</span></div>
-              <div className="pl-12"><span className="text-[var(--accent)]">message</span><span className="text-white/60">:</span> <span className="text-amber-300">{`"Your OTP is 1234"`}</span></div>
-              <div className="pl-8"><span className="text-white/60">{"})"}</span></div>
-              <div className="pl-4"><span className="text-white/60">{"}"}</span></div>
-              <div><span className="text-white/60">)</span><span className="text-white/60">;</span></div>
+              <div><span className="text-[var(--accent)]">const</span> <span className="text-[var(--accent)]">response</span> <span className="text-[var(--text-secondary)]">=</span> <span className="text-[var(--accent)]">await</span> <span className="text-emerald-400">fetch</span><span className="text-[var(--text-secondary)]">(</span></div>
+              <div className="pl-4"><span className="text-amber-300">{`"https://api.smsok.com/v1/send"`}</span><span className="text-[var(--text-secondary)]">,</span></div>
+              <div className="pl-4"><span className="text-[var(--text-secondary)]">{"{"}</span></div>
+              <div className="pl-8"><span className="text-[var(--accent)]">method</span><span className="text-[var(--text-secondary)]">:</span> <span className="text-amber-300">{`"POST"`}</span><span className="text-[var(--text-secondary)]">,</span></div>
+              <div className="pl-8"><span className="text-[var(--accent)]">headers</span><span className="text-[var(--text-secondary)]">:</span> <span className="text-[var(--text-secondary)]">{"{"}</span></div>
+              <div className="pl-12"><span className="text-amber-300">{`"Authorization"`}</span><span className="text-[var(--text-secondary)]">:</span> <span className="text-amber-300">{`"Bearer \${API_KEY}"`}</span></div>
+              <div className="pl-8"><span className="text-[var(--text-secondary)]">{"}"}</span><span className="text-[var(--text-secondary)]">,</span></div>
+              <div className="pl-8"><span className="text-[var(--accent)]">body</span><span className="text-[var(--text-secondary)]">:</span> <span className="text-emerald-400">JSON</span><span className="text-[var(--text-secondary)]">.</span><span className="text-emerald-400">stringify</span><span className="text-[var(--text-secondary)]">({"{"}</span></div>
+              <div className="pl-12"><span className="text-[var(--accent)]">to</span><span className="text-[var(--text-secondary)]">:</span> <span className="text-amber-300">{`"0891234567"`}</span><span className="text-[var(--text-secondary)]">,</span></div>
+              <div className="pl-12"><span className="text-[var(--accent)]">message</span><span className="text-[var(--text-secondary)]">:</span> <span className="text-amber-300">{`"Your OTP is 1234"`}</span></div>
+              <div className="pl-8"><span className="text-[var(--text-secondary)]">{"})"}</span></div>
+              <div className="pl-4"><span className="text-[var(--text-secondary)]">{"}"}</span></div>
+              <div><span className="text-[var(--text-secondary)]">)</span><span className="text-[var(--text-secondary)]">;</span></div>
               <div className="mt-2 text-[var(--text-secondary)]">{"// "}Response: {"{ status: 'sent', id: 'msg_abc123' }"}</div>
             </div>
           </motion.div>
@@ -854,7 +854,7 @@ export default function LandingPage() {
             className="text-center mb-12 sm:mb-16"
           >
             <div className="inline-block text-xs font-semibold text-[var(--accent)] uppercase tracking-[0.2em] mb-3">FAQ</div>
-            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold">คำถาม<span className="neon-cyan">ที่พบบ่อย</span></h2>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-[var(--text-primary)]">คำถาม<span className="gradient-text-mixed">ที่พบบ่อย</span></h2>
           </motion.div>
 
           <motion.div
