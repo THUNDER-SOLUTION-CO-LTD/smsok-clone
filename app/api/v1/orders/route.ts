@@ -189,7 +189,7 @@ export async function POST(req: NextRequest) {
       const quotationNumber = await generateOrderDocumentNumber("quotation", tx);
 
       let taxProfileId: string | null = null;
-      if (input.save_tax_profile && input.customer_type === "COMPANY") {
+      if (input.save_tax_profile) {
         const profile = await upsertDefaultCompanyTaxProfile(tx, user.id, organizationId, {
           companyName,
           taxId: input.tax_id,
