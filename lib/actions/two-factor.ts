@@ -397,6 +397,15 @@ export async function clearRememberTokens(userId: string): Promise<void> {
 
 const RECOVERY_TOKEN_EXPIRY_HOURS = 1
 
+function getRecoveryBaseUrl() {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.trim()
+  if (!baseUrl) {
+    throw new Error("NEXT_PUBLIC_APP_URL ไม่ได้ตั้งค่า")
+  }
+
+  return baseUrl.replace(/\/+$/, "")
+}
+
 // ── Request Recovery Email ──────────────────────────────
 
 export async function requestRecoveryEmail(userId: string): Promise<void> {
@@ -405,6 +414,7 @@ export async function requestRecoveryEmail(userId: string): Promise<void> {
     select: { email: true },
   })
   if (!user) throw new Error("ไม่พบผู้ใช้")
+  const recoveryBaseUrl = getRecoveryBaseUrl()
 
   const tfa = await prisma.twoFactorAuth.findUnique({
     where: { userId },
@@ -426,7 +436,7 @@ export async function requestRecoveryEmail(userId: string): Promise<void> {
     },
   })
 
-  const recoveryLink = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/auth/2fa-recover?token=${token}&userId=${userId}`
+  const recoveryLink = `${recoveryBaseUrl}/auth/2fa-recover?token=${token}&userId=${userId}`
 
   try {
     await sendEmail({
