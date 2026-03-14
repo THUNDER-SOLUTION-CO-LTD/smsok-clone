@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import LandingPage from "./components/LandingPage";
+import LandingPageWrapper from "./components/LandingPageWrapper";
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://smsok.9phum.me";
 
@@ -39,7 +39,7 @@ export default function Home() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <LandingPage />
+      <LandingPageWrapper />
     </>
   );
 }

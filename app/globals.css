@@ -162,7 +162,7 @@
   }
 
   body {
-    font-family: 'IBM Plex Sans Thai', 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: var(--font-ibm-plex-sans-thai), var(--font-ibm-plex-sans), 'IBM Plex Sans Thai', 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
     background: var(--bg-base);
     color: var(--text-primary);
     line-height: 1.6;
@@ -1045,7 +1045,7 @@
 }
 
 @theme inline {
-  --font-sans: 'IBM Plex Sans Thai', 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-sans: var(--font-ibm-plex-sans-thai), var(--font-ibm-plex-sans), 'IBM Plex Sans Thai', 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
 
   /* ── Typography Scale (Design System v1.0) ── */
   --font-size-heading-xl: 20px;
