@@ -35,7 +35,7 @@ export function NavItem({
       title={collapsed ? label : undefined}
       className={cn(
         "flex items-center gap-3 mx-2 rounded-lg text-[13px] font-medium transition-all duration-150",
-        collapsed ? "justify-center px-2 py-2" : "px-3 py-2",
+        collapsed ? "justify-center px-2 py-2" : "px-3 py-2.5 min-h-[44px]",
         active
           ? "text-[var(--accent)] bg-[rgba(var(--accent-rgb),0.06)] font-semibold border-l-2 border-l-[var(--accent)] -ml-0.5"
           : "text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[rgba(255,255,255,0.03)]",

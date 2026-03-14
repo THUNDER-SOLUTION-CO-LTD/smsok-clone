@@ -579,12 +579,14 @@ export default function ApiKeysContent({
           <div className="p-8">
             <EmptyState
               icon={Key}
-              iconColor="var(--accent)"
-              iconBg="rgba(var(--accent-rgb),0.1)"
+              iconColor="#4779FF"
+              iconBg="rgba(71,121,255,0.08)"
               title="ยังไม่มี API Key"
-              description={"สร้าง API key เพื่อเชื่อมต่อระบบ\nส่ง SMS ผ่าน API ได้ทันที"}
-              ctaLabel="+ สร้าง API Key"
+              description="สร้าง API Key เพื่อเชื่อมต่อระบบของคุณกับ SMSOK API"
+              ctaLabel="สร้าง API Key"
               ctaAction={() => setShowCreate(true)}
+              helpLabel="อ่าน API Documentation"
+              helpAction={() => window.open("/docs/api", "_blank")}
             />
           </div>
         )}

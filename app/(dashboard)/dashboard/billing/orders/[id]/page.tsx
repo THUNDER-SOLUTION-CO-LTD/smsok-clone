@@ -56,6 +56,7 @@ import {
   type OrderStatusEvent,
   type SlipRejectCode,
   REJECT_CODE_CONFIG,
+  ORDER_STATUS_CONFIG,
   MAX_SLIP_ATTEMPTS,
 } from "@/types/order";
 import { OrderStatusBadge } from "@/components/order/OrderStatusBadge";
@@ -863,6 +864,8 @@ const DOC_TYPE_LABELS: Record<string, string> = {
 };
 
 function DocumentsCard({ order }: { order: Order }) {
+  const [previewDoc, setPreviewDoc] = useState<{ label: string; url: string } | null>(null);
+
   // Build document list from both old fields and new documents array
   const docs: { label: string; number: string | null; url: string | null }[] = [
     {
@@ -903,102 +906,168 @@ function DocumentsCard({ order }: { order: Order }) {
     order.status === "APPROVED";
 
   return (
-    <div
-      className="rounded-lg p-5 mb-4"
-      style={{
-        background: "var(--bg-surface)",
-        border: "1px solid var(--border-default)",
-      }}
-    >
-      <h3
-        className="text-sm font-semibold mb-4"
-        style={{ color: "var(--text-primary)" }}
+    <>
+      <div
+        className="rounded-lg p-5 mb-4"
+        style={{
+          background: "var(--bg-surface)",
+          border: "1px solid var(--border-default)",
+        }}
       >
-        เอกสาร
-      </h3>
-      <div className="flex flex-col gap-2">
-        {docs.map((doc) => {
-          const hasDoc = !!doc.number;
-          return (
-            <div
-              key={doc.label}
-              className="flex items-center justify-between p-3 rounded-lg"
-              style={{
-                background: "var(--bg-base)",
-                border: "1px solid var(--border-default)",
-                opacity: hasDoc ? 1 : isPaid ? 0.7 : 0.4,
-              }}
-            >
-              <div className="flex items-center gap-2.5">
-                <div
-                  className="flex items-center justify-center rounded-md"
-                  style={{
-                    width: 32,
-                    height: 32,
-                    background: hasDoc
-                      ? "rgba(var(--accent-rgb),0.08)"
-                      : "rgba(var(--text-muted-rgb),0.08)",
+        <h3
+          className="text-sm font-semibold mb-4"
+          style={{ color: "var(--text-primary)" }}
+        >
+          เอกสาร
+        </h3>
+        {!isPaid && (
+          <p className="text-[12px] mb-3" style={{ color: "var(--text-muted)" }}>
+            เอกสารจะออกเมื่อชำระเงินสำเร็จ
+          </p>
+        )}
+        <div className="flex flex-col gap-2">
+          {docs.map((doc) => {
+            const hasDoc = !!doc.number;
+            return (
+              <div
+                key={doc.label}
+                className="flex items-center justify-between p-3 rounded-lg"
+                style={{
+                  background: "var(--bg-base)",
+                  border: "1px solid var(--border-default)",
+                  opacity: hasDoc ? 1 : isPaid ? 0.7 : 0.4,
+                }}
+              >
+                <div className="flex items-center gap-2.5">
+                  <div
+                    className="flex items-center justify-center rounded-md"
+                    style={{
+                      width: 32,
+                      height: 32,
+                      background: hasDoc
+                        ? "rgba(var(--accent-rgb),0.08)"
+                        : "rgba(var(--text-muted-rgb),0.08)",
+                    }}
+                  >
+                    <FileText
+                      size={16}
+                      style={{
+                        color: hasDoc ? "var(--accent)" : "var(--text-muted)",
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <p
+                      className="text-[13px] font-medium"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      {doc.label}
+                    </p>
+                    {hasDoc ? (
+                      <p
+                        className="text-[11px] font-mono"
+                        style={{ color: "var(--text-muted)" }}
+                      >
+                        {doc.number}
+                      </p>
+                    ) : (
+                      <p className="text-[11px]" style={{ color: isPaid ? "var(--warning)" : "var(--text-muted)" }}>
+                        {isPaid ? "กำลังสร้างเอกสาร..." : "ยังไม่ออก"}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                {hasDoc && doc.url && (
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="gap-1 text-xs h-8 px-2"
+                      style={{ color: "var(--text-secondary)" }}
+                      onClick={() => setPreviewDoc({ label: doc.label, url: doc.url! })}
+                      title="ดูตัวอย่าง"
+                    >
+                      <Eye size={14} />
+                      ดู
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="gap-1 text-xs h-8 px-2"
+                      style={{ color: "var(--accent)" }}
+                      onClick={() => openDocument(doc.url! + (doc.url!.includes("?") ? "&" : "?") + "download=1")}
+                      title="ดาวน์โหลด PDF"
+                    >
+                      <Download size={14} />
+                      PDF
+                    </Button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* PDF Preview Dialog */}
+      <Dialog open={!!previewDoc} onOpenChange={() => setPreviewDoc(null)}>
+        <DialogContent
+          className="max-w-4xl h-[85vh] p-0 gap-0 overflow-hidden"
+          style={{
+            background: "var(--bg-surface)",
+            border: "1px solid var(--border-default)",
+          }}
+        >
+          <DialogHeader className="px-5 py-4 border-b" style={{ borderColor: "var(--border-default)" }}>
+            <div className="flex items-center justify-between">
+              <DialogTitle
+                className="flex items-center gap-2 text-sm font-semibold"
+                style={{ color: "var(--text-primary)" }}
+              >
+                <FileText size={16} style={{ color: "var(--accent)" }} />
+                {previewDoc?.label}
+              </DialogTitle>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 text-xs h-8"
+                  onClick={() => {
+                    if (previewDoc?.url) {
+                      openDocument(previewDoc.url + (previewDoc.url.includes("?") ? "&" : "?") + "download=1");
+                    }
                   }}
                 >
-                  <FileText
-                    size={16}
-                    style={{
-                      color: hasDoc ? "var(--accent)" : "var(--text-muted)",
-                    }}
-                  />
-                </div>
-                <div>
-                  <p
-                    className="text-[13px] font-medium"
-                    style={{ color: "var(--text-primary)" }}
-                  >
-                    {doc.label}
-                  </p>
-                  {hasDoc ? (
-                    <p
-                      className="text-[11px] font-mono"
-                      style={{ color: "var(--text-muted)" }}
-                    >
-                      {doc.number}
-                    </p>
-                  ) : (
-                    <p className="text-[11px]" style={{ color: isPaid ? "var(--warning)" : "var(--text-muted)" }}>
-                      {isPaid ? "กำลังสร้างเอกสาร..." : "ยังไม่ออก"}
-                    </p>
-                  )}
-                </div>
+                  <Download size={14} />
+                  ดาวน์โหลด
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 text-xs h-8"
+                  onClick={() => {
+                    if (previewDoc?.url) openDocument(previewDoc.url);
+                  }}
+                >
+                  <Eye size={14} />
+                  เปิดในแท็บใหม่
+                </Button>
               </div>
-              {hasDoc && doc.url && (
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="gap-1 text-xs h-8 px-2"
-                    style={{ color: "var(--text-secondary)" }}
-                    onClick={() => openDocument(doc.url!)}
-                    title="ดูตัวอย่าง"
-                  >
-                    <Eye size={14} />
-                    ดู
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="gap-1 text-xs h-8 px-2"
-                    style={{ color: "var(--accent)" }}
-                    onClick={() => openDocument(doc.url! + (doc.url!.includes("?") ? "&" : "?") + "download=1")}
-                    title="ดาวน์โหลด PDF"
-                  >
-                    <Download size={14} />
-                    PDF
-                  </Button>
-                </div>
-              )}
             </div>
-          );
-        })}
-      </div>
-    </div>
+          </DialogHeader>
+          <div className="flex-1 w-full h-full" style={{ background: "var(--bg-base)" }}>
+            {previewDoc?.url && (
+              <iframe
+                src={previewDoc.url}
+                className="w-full h-full border-0"
+                title={previewDoc.label}
+                style={{ minHeight: "calc(85vh - 65px)" }}
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
@@ -1802,6 +1871,44 @@ export default function OrderDetailPage() {
   useEffect(() => {
     fetchOrder();
   }, [fetchOrder]);
+
+  // Auto-poll for status updates (every 5s when awaiting verification)
+  const prevStatusRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!order) return;
+
+    // Track status changes and notify user
+    if (prevStatusRef.current && prevStatusRef.current !== order.status) {
+      const statusConfig = ORDER_STATUS_CONFIG[order.status];
+      if (order.status === "COMPLETED" || order.status === "APPROVED") {
+        toast.success("ชำระเงินสำเร็จ!", {
+          description: "SMS ถูกเพิ่มเข้าบัญชีแล้ว",
+        });
+      } else if (order.status === "REJECTED") {
+        const rejectLabel = order.reject_code ? REJECT_CODE_CONFIG[order.reject_code]?.label : "";
+        toast.error(`สลิปไม่ผ่านการตรวจสอบ${rejectLabel ? `: ${rejectLabel}` : ""}`, {
+          description: order.reject_code ? REJECT_CODE_CONFIG[order.reject_code]?.action : "กรุณาอัปโหลดสลิปใหม่",
+        });
+      } else if (order.status === "VERIFIED") {
+        toast.success("ตรวจสอบสลิปสำเร็จ", {
+          description: "รอเจ้าหน้าที่อนุมัติ",
+        });
+      } else if (statusConfig) {
+        toast.info(statusConfig.label);
+      }
+    }
+    prevStatusRef.current = order.status;
+
+    // Poll when status is in-flight (awaiting verification)
+    const pollStatuses: OrderStatus[] = ["SLIP_UPLOADED", "PENDING_REVIEW", "VERIFIED"];
+    if (!pollStatuses.includes(order.status)) return;
+
+    const interval = setInterval(() => {
+      fetchOrder();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [order?.status, fetchOrder, order]);
 
   // Cancel order
   async function handleCancel() {

@@ -530,10 +530,10 @@ export default function GroupsPageClient({
         /* Empty state */
         <EmptyState
           icon={FolderOpen}
-          iconColor="var(--accent)"
-          iconBg="rgba(var(--accent-rgb), 0.1)"
+          iconColor="#FACD63"
+          iconBg="rgba(250,205,99,0.08)"
           title="ยังไม่มีกลุ่ม"
-          description="สร้างกลุ่มเพื่อจัดการผู้ติดต่อ"
+          description="สร้างกลุ่มเพื่อจัดระเบียบรายชื่อและส่ง SMS ได้ง่ายขึ้น"
           ctaLabel="สร้างกลุ่ม"
           ctaAction={openCreate}
         />

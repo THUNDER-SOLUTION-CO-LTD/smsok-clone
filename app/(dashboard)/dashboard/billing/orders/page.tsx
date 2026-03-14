@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import type { DateRange } from "react-day-picker";
 import {
   Package,
   Clock,
@@ -19,6 +20,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { StateDisplay } from "@/components/ui/state-display";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -29,19 +31,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-// Tooltip removed — base-ui version doesn't support asChild
 import CustomSelect from "@/components/ui/CustomSelect";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { toast } from "sonner";
 import {
   type Order,
-  type OrderStatus,
   type OrderStats,
 } from "@/types/order";
 import { OrderStatusBadge } from "@/components/order/OrderStatusBadge";
 import { formatBaht } from "@/types/purchase";
 import { formatThaiDateOnly } from "@/lib/format-thai-date";
-
-// OrderStatusBadge imported from @/components/order/OrderStatusBadge
 
 // ── Stat Card ──
 
@@ -111,11 +110,11 @@ function CountdownMini({ expiresAt }: { expiresAt: string }) {
 const STATUS_OPTIONS = [
   { value: "ALL", label: "ทั้งหมด" },
   { value: "PENDING", label: "รอชำระ" },
+  { value: "PENDING_REVIEW", label: "รอตรวจสอบ" },
   { value: "COMPLETED", label: "สำเร็จ" },
+  { value: "REJECTED", label: "ไม่ผ่าน" },
   { value: "EXPIRED", label: "หมดอายุ" },
   { value: "CANCELLED", label: "ยกเลิก" },
-  { value: "PENDING_REVIEW", label: "รอตรวจสอบ" },
-  { value: "REJECTED", label: "ไม่ผ่าน" },
 ];
 
 // ── Main Page ──
@@ -132,8 +131,7 @@ export default function OrderManagementPage() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [searchQuery, setSearchQuery] = useState("");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
@@ -144,8 +142,12 @@ export default function OrderManagementPage() {
       const params = new URLSearchParams();
       if (statusFilter !== "ALL") params.set("status", statusFilter);
       if (searchQuery) params.set("search", searchQuery);
-      if (dateFrom) params.set("from", dateFrom);
-      if (dateTo) params.set("to", dateTo);
+      if (dateRange?.from) {
+        params.set("from", dateRange.from.toISOString().slice(0, 10));
+      }
+      if (dateRange?.to) {
+        params.set("to", dateRange.to.toISOString().slice(0, 10));
+      }
       params.set("page", String(page));
       params.set("limit", "20");
 
@@ -158,7 +160,6 @@ export default function OrderManagementPage() {
       setOrders(data.orders ?? data.data ?? []);
       setTotalPages(data.pagination?.totalPages ?? 1);
 
-      // Derive stats from response or separate call
       if (data.stats) {
         setStats(data.stats);
       } else {
@@ -178,7 +179,7 @@ export default function OrderManagementPage() {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, searchQuery, dateFrom, dateTo, page]);
+  }, [statusFilter, searchQuery, dateRange, page]);
 
   useEffect(() => {
     fetchOrders();
@@ -186,9 +187,9 @@ export default function OrderManagementPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [statusFilter, searchQuery, dateFrom, dateTo]);
+  }, [statusFilter, searchQuery, dateRange]);
 
-  // Clone (reorder) — store tax data in sessionStorage (not URL) to avoid exposing sensitive info
+  // Clone (reorder)
   function handleReorder(orderId: string) {
     const order = orders.find((o) => o.id === orderId);
     if (!order) return;
@@ -214,8 +215,11 @@ export default function OrderManagementPage() {
       toast.error("ยังไม่มีเอกสารสำหรับคำสั่งซื้อนี้");
       return;
     }
-
     window.open(target, "_blank", "noopener,noreferrer");
+  }
+
+  function navigateToOrder(orderId: string) {
+    router.push(`/dashboard/billing/orders/${orderId}`);
   }
 
   // Action button per status
@@ -232,7 +236,7 @@ export default function OrderManagementPage() {
             }}
             onClick={(e) => {
               e.stopPropagation();
-              router.push(`/dashboard/billing/orders/${order.id}`);
+              navigateToOrder(order.id);
             }}
           >
             ชำระ →
@@ -260,7 +264,7 @@ export default function OrderManagementPage() {
                 );
                 return;
               }
-              router.push(`/dashboard/billing/orders/${order.id}`);
+              navigateToOrder(order.id);
             }}
           >
             <FileText
@@ -408,48 +412,43 @@ export default function OrderManagementPage() {
             placeholder="สถานะ"
           />
         </div>
-        <div className="flex items-center gap-2">
-          <Input
-            type="date"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            className="w-full sm:w-[140px] text-xs"
-            title="จากวันที่"
-          />
-          <span className="text-xs" style={{ color: "var(--text-muted)" }}>—</span>
-          <Input
-            type="date"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            className="w-full sm:w-[140px] text-xs"
-            title="ถึงวันที่"
-          />
-        </div>
+        <DateRangePicker
+          value={dateRange}
+          onChange={setDateRange}
+          placeholder="ช่วงวันที่"
+          className="w-full sm:w-auto"
+        />
+        {dateRange?.from && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-xs text-[var(--text-muted)] h-10"
+            onClick={() => setDateRange(undefined)}
+          >
+            ล้างวันที่
+          </Button>
+        )}
       </div>
 
       {/* Empty State */}
-      {orders.length === 0 && statusFilter === "ALL" && !searchQuery ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div
-            className="flex h-16 w-16 items-center justify-center rounded-lg mb-4"
-            style={{ backgroundColor: "rgba(var(--accent-rgb), 0.1)" }}
-          >
-            <ShoppingBag className="h-8 w-8 text-[var(--accent)]" />
-          </div>
-          <h3 className="text-lg font-medium text-[var(--text-primary)] mb-1">
-            ยังไม่มีคำสั่งซื้อ
-          </h3>
-          <p className="text-sm text-[var(--text-muted)] mb-6 max-w-sm">
-            เลือกแพ็กเกจ SMS เพื่อเริ่มต้นใช้งาน
-          </p>
-          <Link
-            href="/dashboard/billing/packages"
-            className="inline-flex items-center justify-center rounded-lg px-5 h-11 text-sm font-medium bg-[var(--accent)] text-[var(--bg-base)]"
-          >
-            เลือกแพ็กเกจ
-            <ArrowRight className="h-4 w-4 ml-1.5" />
-          </Link>
-        </div>
+      {orders.length === 0 && statusFilter === "ALL" && !searchQuery && !dateRange?.from ? (
+        <StateDisplay
+          icon={Package}
+          iconColor="#00FFA7"
+          iconBg="rgba(0,255,167,0.08)"
+          title="ยังไม่มีคำสั่งซื้อ"
+          description="เริ่มต้นใช้งานด้วยการสั่งซื้อแพ็กเกจ SMS ตัวแรก"
+          primaryAction={{
+            label: "สั่งซื้อแพ็กเกจ",
+            icon: Package,
+            href: "/dashboard/billing/packages",
+          }}
+          secondaryAction={{
+            label: "ดูแพ็กเกจทั้งหมด",
+            href: "/pricing",
+          }}
+          size="md"
+        />
       ) : orders.length === 0 ? (
         <div className="text-center py-16">
           <p className="text-sm text-[var(--text-muted)]">
@@ -475,7 +474,10 @@ export default function OrderManagementPage() {
                   <TableHead className="text-[var(--text-muted)] font-medium text-xs w-[130px]">
                     สถานะ
                   </TableHead>
-                  <TableHead className="text-[var(--text-muted)] font-medium text-xs text-right w-[100px]">
+                  <TableHead className="text-[var(--text-muted)] font-medium text-xs w-[120px]">
+                    วันที่
+                  </TableHead>
+                  <TableHead className="text-[var(--text-muted)] font-medium text-xs text-right w-[80px]">
                     Action
                   </TableHead>
                 </TableRow>
@@ -485,9 +487,7 @@ export default function OrderManagementPage() {
                   <TableRow
                     key={order.id}
                     className="border-b border-[var(--border-default)] cursor-pointer hover:bg-[var(--bg-elevated)]/50 transition-colors"
-                    onClick={() =>
-                      router.push(`/dashboard/billing/orders/${order.id}`)
-                    }
+                    onClick={() => navigateToOrder(order.id)}
                   >
                     <TableCell className="py-3">
                       <p
@@ -495,9 +495,6 @@ export default function OrderManagementPage() {
                         style={{ color: "var(--text-primary)" }}
                       >
                         #{order.order_number}
-                      </p>
-                      <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                        {formatThaiDateOnly(order.created_at)}
                       </p>
                     </TableCell>
                     <TableCell>
@@ -526,12 +523,25 @@ export default function OrderManagementPage() {
                           <CountdownMini expiresAt={order.expires_at} />
                         </div>
                       )}
+                      {order.status === "REJECTED" && order.reject_reason && (
+                        <p
+                          className="text-[10px] mt-0.5 line-clamp-1 max-w-[120px]"
+                          style={{ color: "var(--error)" }}
+                        >
+                          {order.reject_reason}
+                        </p>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                        {formatThaiDateOnly(order.created_at)}
+                      </p>
                       {order.status === "COMPLETED" && order.paid_at && (
                         <p
                           className="text-[10px] mt-0.5"
-                          style={{ color: "var(--text-muted)" }}
+                          style={{ color: "var(--success)" }}
                         >
-                          {formatThaiDateOnly(order.paid_at)}
+                          ชำระ {formatThaiDateOnly(order.paid_at)}
                         </p>
                       )}
                     </TableCell>
@@ -547,16 +557,15 @@ export default function OrderManagementPage() {
           {/* Mobile Card Layout */}
           <div className="sm:hidden space-y-3">
             {orders.map((order) => (
-              <div
+              <button
+                type="button"
                 key={order.id}
-                className="rounded-lg p-4 cursor-pointer transition-colors"
+                className="w-full rounded-lg p-4 cursor-pointer transition-colors text-left"
                 style={{
                   background: "var(--bg-surface)",
                   border: "1px solid var(--border-default)",
                 }}
-                onClick={() =>
-                  router.push(`/dashboard/billing/orders/${order.id}`)
-                }
+                onClick={() => navigateToOrder(order.id)}
               >
                 <div className="flex items-start justify-between mb-2">
                   <span
@@ -585,12 +594,17 @@ export default function OrderManagementPage() {
                   >
                     ฿{formatBaht(order.pay_amount)}
                   </span>
-                  {order.status === "PENDING" && (
-                    <CountdownMini expiresAt={order.expires_at} />
-                  )}
+                  <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+                    {formatThaiDateOnly(order.created_at)}
+                  </span>
                 </div>
+                {order.status === "PENDING" && (
+                  <div className="mt-1">
+                    <CountdownMini expiresAt={order.expires_at} />
+                  </div>
+                )}
                 <div className="mt-3">{renderAction(order)}</div>
-              </div>
+              </button>
             ))}
           </div>
 

@@ -196,7 +196,7 @@ export function PaginationBar({
           type="button"
           onClick={() => onPageChange(page - 1)}
           disabled={page <= 1}
-          className="w-8 h-8 rounded-lg border border-[var(--border-default)] flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+          className="w-8 h-8 max-md:w-11 max-md:h-11 rounded-lg border border-[var(--border-default)] flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M15 18l-6-6 6-6" /></svg>
         </button>
@@ -208,7 +208,7 @@ export function PaginationBar({
               key={p}
               type="button"
               onClick={() => onPageChange(p)}
-              className={`w-8 h-8 rounded-lg border text-[13px] font-medium transition-colors cursor-pointer ${
+              className={`w-8 h-8 max-md:w-11 max-md:h-11 rounded-lg border text-[13px] font-medium transition-colors cursor-pointer ${
                 isActive
                   ? "bg-[rgba(var(--accent-rgb),0.08)] border-[rgba(var(--accent-rgb),0.3)] text-[var(--accent)]"
                   : "border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-white"
@@ -225,7 +225,7 @@ export function PaginationBar({
           type="button"
           onClick={() => onPageChange(page + 1)}
           disabled={page >= totalPages}
-          className="w-8 h-8 rounded-lg border border-[var(--border-default)] flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+          className="w-8 h-8 max-md:w-11 max-md:h-11 rounded-lg border border-[var(--border-default)] flex items-center justify-center text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M9 18l6-6-6-6" /></svg>
         </button>

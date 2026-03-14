@@ -176,7 +176,7 @@ export function DataTable<T>({
             <thead>
               <tr className="bg-[var(--bg-elevated)] border-b border-[var(--border-default)]">
                 {selectable && (
-                  <th className="w-10 px-3 py-3">
+                  <th className="w-10 px-3 py-3 sticky left-0 z-10 bg-[var(--bg-elevated)]">
                     <Checkbox
                       checked={allSelected}
                       indeterminate={someSelected}
@@ -185,13 +185,14 @@ export function DataTable<T>({
                     />
                   </th>
                 )}
-                {visibleColumns.map((col) => (
+                {visibleColumns.map((col, colIdx) => (
                   <th
                     key={col.id}
                     className={cn(
                       "px-4 py-3 text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-[0.05em] whitespace-nowrap select-none",
                       col.sortable && "cursor-pointer hover:text-[var(--text-secondary)]",
                       col.hideOnMobile && "max-md:hidden",
+                      colIdx === 0 && !selectable && "sticky left-0 z-10 bg-[var(--bg-elevated)]",
                       col.className,
                     )}
                     style={{ width: col.width }}
@@ -297,7 +298,7 @@ function TableRow<T>({
         onClick={onClick}
       >
         {selectable && (
-          <td className="w-10 px-3 py-3" onClick={(e) => e.stopPropagation()}>
+          <td className="w-10 px-3 py-3 sticky left-0 z-10 bg-[var(--bg-surface)]" onClick={(e) => e.stopPropagation()}>
             <Checkbox
               checked={isSelected}
               onCheckedChange={onSelect}
@@ -305,12 +306,13 @@ function TableRow<T>({
             />
           </td>
         )}
-        {columns.map((col) => (
+        {columns.map((col, colIdx) => (
           <td
             key={col.id}
             className={cn(
               "px-4 py-3 text-[13px] text-[var(--text-secondary)] align-middle",
               col.hideOnMobile && "max-md:hidden",
+              colIdx === 0 && !selectable && "sticky left-0 z-10 bg-[var(--bg-surface)]",
               col.className,
             )}
           >

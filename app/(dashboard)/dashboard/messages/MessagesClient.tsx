@@ -372,13 +372,15 @@ export default function MessagesClient({
         /* Empty state */
         <EmptyState
           icon={MessageSquare}
-          iconColor="var(--accent-secondary)"
-          iconBg="rgba(71,121,255,0.06)"
-          iconBorder="rgba(71,121,255,0.1)"
-          title="ยังไม่มีประวัติการส่ง SMS"
-          description={"เมื่อส่ง SMS แล้ว ประวัติจะแสดงที่นี่\nพร้อมสถานะการส่ง (ส่งแล้ว/ถึง/ไม่ถึง)"}
-          ctaLabel="📱 ส่ง SMS แรก"
+          iconColor="#00FFA7"
+          iconBg="rgba(0,255,167,0.08)"
+          iconBorder="rgba(0,255,167,0.15)"
+          title="ยังไม่เคยส่ง SMS"
+          description="ส่ง SMS ข้อความแรกของคุณเลย!"
+          ctaLabel="ส่ง SMS แรก"
           ctaAction={() => router.push("/dashboard/send")}
+          helpLabel="ดูวิธีใช้งาน"
+          helpAction={() => router.push("/help/getting-started")}
         />
       )}
     </div>
