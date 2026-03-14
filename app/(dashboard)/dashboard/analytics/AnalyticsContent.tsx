@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
   Send,
@@ -13,6 +13,8 @@ import {
   Zap,
   ArrowUpRight,
   ArrowDownRight,
+  Download,
+  Calendar,
 } from "lucide-react";
 
 type Stats = {
@@ -23,7 +25,15 @@ type Stats = {
   smsRemaining?: number;
 };
 
-type Period = "today" | "month";
+type Period = "today" | "7d" | "30d" | "month";
+
+type DailyDataPoint = {
+  date: string;
+  label: string;
+  sent: number;
+  delivered: number;
+  failed: number;
+};
 
 // ── Donut Chart ──
 
@@ -190,10 +200,143 @@ function StatCard({
   );
 }
 
+// ── Line Chart (SVG) ──
+
+function LineChart({ data }: { data: DailyDataPoint[] }) {
+  if (data.length === 0) return null;
+
+  const w = 600;
+  const h = 200;
+  const px = 40;
+  const py = 20;
+  const chartW = w - px * 2;
+  const chartH = h - py * 2;
+
+  const maxVal = Math.max(...data.map((d) => Math.max(d.sent, d.delivered, d.failed)), 1);
+  const stepX = data.length > 1 ? chartW / (data.length - 1) : chartW;
+
+  function toPath(key: "sent" | "delivered" | "failed") {
+    return data
+      .map((d, i) => {
+        const x = px + i * stepX;
+        const y = py + chartH - (d[key] / maxVal) * chartH;
+        return `${i === 0 ? "M" : "L"}${x},${y}`;
+      })
+      .join(" ");
+  }
+
+  const lines: { key: "sent" | "delivered" | "failed"; color: string; label: string }[] = [
+    { key: "sent", color: "var(--accent)", label: "ส่งทั้งหมด" },
+    { key: "delivered", color: "var(--success)", label: "สำเร็จ" },
+    { key: "failed", color: "var(--error)", label: "ล้มเหลว" },
+  ];
+
+  // Y-axis grid lines
+  const gridCount = 4;
+  const gridLines = Array.from({ length: gridCount + 1 }, (_, i) => {
+    const val = Math.round((maxVal / gridCount) * i);
+    const y = py + chartH - (val / maxVal) * chartH;
+    return { val, y };
+  });
+
+  return (
+    <div className="w-full">
+      <svg viewBox={`0 0 ${w} ${h + 30}`} className="w-full h-auto">
+        {/* Grid */}
+        {gridLines.map((g) => (
+          <g key={g.val}>
+            <line x1={px} y1={g.y} x2={w - px} y2={g.y} stroke="rgba(var(--border-default-rgb,40,45,55),0.3)" strokeDasharray="4" />
+            <text x={px - 6} y={g.y + 4} textAnchor="end" fill="var(--text-muted)" fontSize="10">{g.val}</text>
+          </g>
+        ))}
+        {/* Lines */}
+        {lines.map((line) => (
+          <path key={line.key} d={toPath(line.key)} fill="none" stroke={line.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        ))}
+        {/* Dots */}
+        {lines.map((line) =>
+          data.map((d, i) => (
+            <circle key={`${line.key}-${i}`} cx={px + i * stepX} cy={py + chartH - (d[line.key] / maxVal) * chartH} r="3" fill={line.color} />
+          ))
+        )}
+        {/* X labels */}
+        {data.map((d, i) => (
+          <text key={i} x={px + i * stepX} y={h + 20} textAnchor="middle" fill="var(--text-muted)" fontSize="10">{d.label}</text>
+        ))}
+      </svg>
+      {/* Legend */}
+      <div className="flex items-center justify-center gap-5 mt-2">
+        {lines.map((line) => (
+          <div key={line.key} className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: line.color }} />
+            <span className="text-[11px]" style={{ color: "var(--text-muted)" }}>{line.label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Main ──
 
 export default function AnalyticsContent({ stats }: { stats: Stats }) {
   const [period, setPeriod] = useState<Period>("today");
+  const [dailyData, setDailyData] = useState<DailyDataPoint[]>([]);
+  const [chartLoading, setChartLoading] = useState(false);
+
+  // Fetch daily chart data
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchDaily() {
+      setChartLoading(true);
+      try {
+        const days = period === "today" ? 1 : period === "7d" ? 7 : 30;
+        const res = await fetch(`/api/v1/analytics/daily?days=${days}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+        if (!cancelled && Array.isArray(json.data)) {
+          setDailyData(
+            json.data.map((d: { date: string; sent: number; delivered: number; failed: number }) => ({
+              date: d.date,
+              label: new Date(d.date).toLocaleDateString("th-TH", { day: "numeric", month: "short" }),
+              sent: d.sent ?? 0,
+              delivered: d.delivered ?? 0,
+              failed: d.failed ?? 0,
+            }))
+          );
+        }
+      } catch {
+        if (!cancelled) setDailyData([]);
+      } finally {
+        if (!cancelled) setChartLoading(false);
+      }
+    }
+    fetchDaily();
+    return () => { cancelled = true; };
+  }, [period]);
+
+  // Export CSV
+  const handleExportCsv = useCallback(() => {
+    const rows = [
+      ["สถานะ", "เบอร์ผู้รับ", "ผู้ส่ง", "เครดิต (SMS)", "วันที่"],
+      ...stats.recentMessages.map((msg) => [
+        msg.status,
+        msg.recipient,
+        msg.senderName,
+        String(msg.creditCost),
+        new Date(msg.createdAt).toLocaleString("th-TH"),
+      ]),
+    ];
+    const csv = rows.map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
+    const bom = "\uFEFF";
+    const blob = new Blob([bom + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `smsok-report-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [stats.recentMessages]);
 
   const data = period === "today" ? stats.today : stats.thisMonth;
   const totalMessages = data.total;
@@ -219,7 +362,7 @@ export default function AnalyticsContent({ stats }: { stats: Stats }) {
             วิเคราะห์ประสิทธิภาพแคมเปญ SMS แบบ real-time
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           {/* Period Toggle */}
           <div
             className="inline-flex rounded-lg p-0.5"
@@ -227,12 +370,14 @@ export default function AnalyticsContent({ stats }: { stats: Stats }) {
           >
             {([
               { key: "today" as Period, label: "วันนี้" },
+              { key: "7d" as Period, label: "7 วัน" },
+              { key: "30d" as Period, label: "30 วัน" },
               { key: "month" as Period, label: "เดือนนี้" },
             ]).map((p) => (
               <button
                 key={p.key}
                 onClick={() => setPeriod(p.key)}
-                className="px-4 py-2 rounded-md text-[13px] font-medium transition-all"
+                className="px-3 py-2 rounded-md text-[13px] font-medium transition-all cursor-pointer"
                 style={{
                   background: period === p.key ? "rgba(var(--accent-rgb),0.1)" : "transparent",
                   color: period === p.key ? "var(--accent)" : "var(--text-muted)",
@@ -243,6 +388,19 @@ export default function AnalyticsContent({ stats }: { stats: Stats }) {
               </button>
             ))}
           </div>
+          {/* Export CSV */}
+          <button
+            type="button"
+            onClick={handleExportCsv}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-all cursor-pointer"
+            style={{
+              color: "var(--text-secondary)",
+              border: "1px solid var(--border-default)",
+            }}
+          >
+            <Download size={14} />
+            Export CSV
+          </button>
           <Link
             href="/dashboard/campaigns"
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-medium transition-all"
@@ -385,6 +543,35 @@ export default function AnalyticsContent({ stats }: { stats: Stats }) {
             </div>
           )}
         </div>
+      </div>
+
+      {/* ── Daily Trend Chart ── */}
+      <div
+        className="relative rounded-lg p-6 overflow-hidden mb-6"
+        style={{ background: "var(--bg-surface)", border: "1px solid var(--border-default)" }}
+      >
+        <div
+          className="absolute top-0 left-0 right-0 h-[2px]"
+          style={{ background: "linear-gradient(90deg, transparent, var(--accent-blue, var(--accent)), transparent)", opacity: 0.3 }}
+        />
+        <div className="flex items-center gap-2 mb-5">
+          <Calendar size={16} style={{ color: "var(--accent)" }} />
+          <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+            แนวโน้มการส่ง SMS รายวัน
+          </h3>
+        </div>
+        {chartLoading ? (
+          <div className="text-center py-12">
+            <p className="text-[13px]" style={{ color: "var(--text-muted)" }}>กำลังโหลดกราฟ...</p>
+          </div>
+        ) : dailyData.length > 0 ? (
+          <LineChart data={dailyData} />
+        ) : (
+          <div className="text-center py-12">
+            <BarChart3 size={36} style={{ color: "var(--border-default)" }} className="mx-auto mb-3" />
+            <p className="text-[13px]" style={{ color: "var(--text-muted)" }}>ยังไม่มีข้อมูลรายวัน</p>
+          </div>
+        )}
       </div>
 
       {/* ── Recent Activity ── */}

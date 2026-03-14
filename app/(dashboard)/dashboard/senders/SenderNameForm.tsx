@@ -7,9 +7,19 @@ import { requestSenderName } from "@/lib/actions/sender-names";
 import { allowAlphaNumericSpace, fieldCls } from "@/lib/form-utils";
 import { safeErrorMessage } from "@/lib/error-messages";
 
+type SenderType = "general" | "otp" | "marketing";
+
+const SENDER_TYPES: { value: SenderType; label: string; desc: string }[] = [
+  { value: "general", label: "ทั่วไป", desc: "แจ้งเตือน, ข่าวสาร" },
+  { value: "otp", label: "OTP", desc: "ยืนยันตัวตน, รหัส OTP" },
+  { value: "marketing", label: "การตลาด", desc: "โปรโมชัน, แคมเปญ" },
+];
+
 export default function SenderNameForm({ userId }: { userId: string }) {
   const [name, setName] = useState("");
   const [purpose, setPurpose] = useState("");
+  const [senderType, setSenderType] = useState<SenderType>("general");
+  const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
@@ -28,6 +38,8 @@ export default function SenderNameForm({ userId }: { userId: string }) {
       toast.success("ยื่นคำขอ Sender Name สำเร็จ!");
       setName("");
       setPurpose("");
+      setSenderType("general");
+      setDocumentFile(null);
     } catch (e) {
       const msg = safeErrorMessage(e);
       setResult({ type: "error", message: msg });
@@ -76,6 +88,82 @@ export default function SenderNameForm({ userId }: { userId: string }) {
             onChange={(e) => setPurpose(e.target.value)}
           />
           <p className="text-[11px] text-slate-300 mt-2">ระบุเพื่อช่วยให้อนุมัติเร็วขึ้น</p>
+        </div>
+      </div>
+
+      {/* Sender Type */}
+      <div>
+        <label className="block text-xs text-slate-300 uppercase tracking-wider mb-2 font-medium">ประเภทการใช้งาน</label>
+        <div className="grid grid-cols-3 gap-3">
+          {SENDER_TYPES.map((t) => (
+            <button
+              key={t.value}
+              type="button"
+              onClick={() => setSenderType(t.value)}
+              className="rounded-lg p-3 text-left transition-all cursor-pointer"
+              style={{
+                border: senderType === t.value
+                  ? "2px solid var(--accent)"
+                  : "2px solid var(--border-default)",
+                background: senderType === t.value
+                  ? "rgba(var(--accent-rgb),0.06)"
+                  : "var(--bg-surface)",
+              }}
+            >
+              <p className="text-[13px] font-semibold" style={{ color: senderType === t.value ? "var(--accent)" : "var(--text-primary)" }}>
+                {t.label}
+              </p>
+              <p className="text-[11px] mt-0.5" style={{ color: "var(--text-muted)" }}>{t.desc}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Document Upload */}
+      <div>
+        <label className="block text-xs text-slate-300 uppercase tracking-wider mb-2 font-medium">
+          เอกสารประกอบ <span style={{ color: "var(--text-muted)" }}>(ไม่บังคับ)</span>
+        </label>
+        <div
+          className="rounded-lg p-4 text-center transition-all"
+          style={{ border: "2px dashed var(--border-default)", background: "var(--bg-surface)" }}
+        >
+          {documentFile ? (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--accent)" }}>
+                  <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><path d="M14 2v6h6" />
+                </svg>
+                <span className="text-[13px]" style={{ color: "var(--text-primary)" }}>{documentFile.name}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDocumentFile(null)}
+                className="text-[12px] cursor-pointer"
+                style={{ color: "var(--error)" }}
+              >
+                ลบ
+              </button>
+            </div>
+          ) : (
+            <>
+              <p className="text-[12px] mb-2" style={{ color: "var(--text-muted)" }}>
+                อัปโหลดหนังสือรับรองบริษัท หรือเอกสารที่เกี่ยวข้อง (PDF, JPG, PNG)
+              </p>
+              <label className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-[12px] font-medium cursor-pointer transition-colors" style={{ background: "rgba(var(--accent-rgb),0.08)", color: "var(--accent)", border: "1px solid rgba(var(--accent-rgb),0.15)" }}>
+                เลือกไฟล์
+                <input
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) setDocumentFile(file);
+                  }}
+                />
+              </label>
+            </>
+          )}
         </div>
       </div>
 
