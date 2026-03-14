@@ -412,6 +412,7 @@ model SenderName {
   name           String
   status         String               @default("DRAFT")
   accountType    String?              @map("account_type")
+  senderType     String?              @map("sender_type")
   rejectNote     String?              @map("reject_note")
   adminNotes     String?              @map("admin_notes")
   submittedAt    DateTime?            @map("submitted_at")

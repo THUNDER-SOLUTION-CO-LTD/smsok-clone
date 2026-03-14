@@ -483,13 +483,21 @@ export default function PricingPage() {
           <p className="mx-auto mt-3 max-w-lg text-sm text-[var(--text-secondary)]">
             สมัครฟรีวันนี้ รับ 500 SMS ทดลองใช้งาน ไม่ต้องผูกบัตร
           </p>
-          <Link
-            href="/register"
-            className="mt-6 inline-flex h-12 items-center gap-1.5 rounded-md px-8 bg-[var(--accent)] text-[var(--text-on-accent)] font-semibold shadow-[0_0_20px_rgba(var(--accent-rgb),0.25)] hover:shadow-[0_0_28px_rgba(var(--accent-rgb),0.35)] hover:brightness-110 transition-all duration-200"
-          >
-            เริ่มใช้งานฟรี
-            <ArrowRight className="size-4" />
-          </Link>
+          <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Link
+              href="/register"
+              className="inline-flex h-12 items-center gap-1.5 rounded-md px-8 bg-[var(--accent)] text-[var(--text-on-accent)] font-semibold shadow-[0_0_20px_rgba(var(--accent-rgb),0.25)] hover:shadow-[0_0_28px_rgba(var(--accent-rgb),0.35)] hover:brightness-110 transition-all duration-200"
+            >
+              เริ่มใช้งานฟรี
+              <ArrowRight className="size-4" />
+            </Link>
+            <a
+              href="mailto:sales@smsok.com"
+              className="inline-flex h-12 items-center gap-1.5 rounded-md px-8 border border-[rgba(var(--accent-rgb),0.25)] bg-transparent text-[var(--accent)] font-semibold hover:bg-[rgba(var(--accent-rgb),0.08)] transition-all duration-200"
+            >
+              ติดต่อทีมขาย
+            </a>
+          </div>
         </div>
 
         {/* ═══ Footer Notes ═══ */}
