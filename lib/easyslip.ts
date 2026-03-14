@@ -22,12 +22,20 @@ type EasySlipApiResponse = {
     sender?: {
       displayName?: unknown;
       bank?: { short?: unknown };
-      account?: { value?: unknown };
+      account?: {
+        value?: unknown;
+        name?: { th?: unknown; en?: unknown };
+        bank?: { account?: unknown };
+      };
     };
     receiver?: {
       displayName?: unknown;
       bank?: { short?: unknown };
-      account?: { value?: unknown };
+      account?: {
+        value?: unknown;
+        name?: { th?: unknown; en?: unknown };
+        bank?: { account?: unknown };
+      };
     };
   };
 };
@@ -138,12 +146,16 @@ function mapVerifySuccess(payload: EasySlipApiResponse, providerStatus?: number)
     return buildValidationError("EasySlip response amount must be greater than 0", providerStatus);
   }
 
-  const senderAccount = toNonEmptyString(payload.data?.sender?.account?.value);
+  const senderAccount =
+    toNonEmptyString(payload.data?.sender?.account?.bank?.account) ??
+    toNonEmptyString(payload.data?.sender?.account?.value);
   if (!senderAccount) {
     return buildValidationError("EasySlip response missing sender account", providerStatus);
   }
 
-  const receiverAccount = toNonEmptyString(payload.data?.receiver?.account?.value);
+  const receiverAccount =
+    toNonEmptyString(payload.data?.receiver?.account?.bank?.account) ??
+    toNonEmptyString(payload.data?.receiver?.account?.value);
   if (!receiverAccount) {
     return buildValidationError("EasySlip response missing receiver account", providerStatus);
   }
@@ -156,12 +168,14 @@ function mapVerifySuccess(payload: EasySlipApiResponse, providerStatus?: number)
       date,
       amount,
       sender: {
-        name: toNonEmptyString(payload.data?.sender?.displayName) ?? "",
+        name: toNonEmptyString(payload.data?.sender?.account?.name?.th) ??
+              toNonEmptyString(payload.data?.sender?.displayName) ?? "",
         bank: toNonEmptyString(payload.data?.sender?.bank?.short) ?? "",
         account: senderAccount,
       },
       receiver: {
-        name: toNonEmptyString(payload.data?.receiver?.displayName) ?? "",
+        name: toNonEmptyString(payload.data?.receiver?.account?.name?.th) ??
+              toNonEmptyString(payload.data?.receiver?.displayName) ?? "",
         bank: toNonEmptyString(payload.data?.receiver?.bank?.short) ?? "",
         account: receiverAccount,
       },
@@ -170,7 +184,7 @@ function mapVerifySuccess(payload: EasySlipApiResponse, providerStatus?: number)
 }
 
 // ==========================================
-// Verify slip by image URL
+// Verify slip by image URL (download → multipart upload)
 // ==========================================
 
 export async function verifySlipByUrl(imageUrl: string): Promise<SlipVerifyResult> {
@@ -178,15 +192,30 @@ export async function verifySlipByUrl(imageUrl: string): Promise<SlipVerifyResul
     return { success: false, error: "EasySlip API key not configured" };
   }
 
+  let imageBlob: Blob;
+  try {
+    const dlRes = await fetch(imageUrl, { signal: AbortSignal.timeout(10_000) });
+    if (!dlRes.ok) {
+      console.error("[easyslip] failed to download slip image:", dlRes.status);
+      return { success: false, error: "Failed to download slip image" };
+    }
+    imageBlob = await dlRes.blob();
+  } catch (error) {
+    console.error("[easyslip] slip image download failed:", error);
+    return { success: false, error: "Slip image download failed" };
+  }
+
   let res: Response;
   try {
+    const form = new FormData();
+    form.append("file", imageBlob, "slip.jpg");
+
     res = await fetch(`${EASYSLIP_API_URL}/verify`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${EASYSLIP_API_KEY}`,
-        "Content-Type": "application/json",
       },
-      body: JSON.stringify({ url: imageUrl }),
+      body: form,
       signal: AbortSignal.timeout(10_000),
     });
   } catch (error) {
