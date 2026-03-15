@@ -8,7 +8,12 @@ import { normalizePhone } from "@/lib/validations";
 const emailSchema = z.string().trim().email();
 const phoneSchema = z.string().trim().min(9).max(20);
 const DUPLICATE_CHECK_MIN_DELAY_MS = 150;
-const GENERIC_CHECK_DUPLICATE_MESSAGE = "หากข้อมูลถูกต้อง คุณสามารถดำเนินการต่อได้";
+const MESSAGES = {
+  email_available: "อีเมลนี้ใช้ได้",
+  email_taken: "อีเมลนี้ถูกใช้งานแล้ว",
+  phone_available: "เบอร์โทรนี้ใช้ได้",
+  phone_taken: "เบอร์โทรนี้ถูกใช้งานแล้ว",
+};
 
 async function waitForMinimumResponseTime(startedAt: number) {
   const elapsed = Date.now() - startedAt;
@@ -41,10 +46,11 @@ export async function GET(req: NextRequest) {
       });
 
       await waitForMinimumResponseTime(startedAt);
+      const available = !existing;
       return apiResponse({
         field: "email",
-        available: !existing,
-        message: GENERIC_CHECK_DUPLICATE_MESSAGE,
+        available,
+        message: available ? MESSAGES.email_available : MESSAGES.email_taken,
       });
     }
 
@@ -55,10 +61,11 @@ export async function GET(req: NextRequest) {
     });
 
     await waitForMinimumResponseTime(startedAt);
+    const available = !existing;
     return apiResponse({
       field: "phone",
-      available: !existing,
-      message: GENERIC_CHECK_DUPLICATE_MESSAGE,
+      available,
+      message: available ? MESSAGES.phone_available : MESSAGES.phone_taken,
     });
   } catch (error) {
     return apiError(error);
