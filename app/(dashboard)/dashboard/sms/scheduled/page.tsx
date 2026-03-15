@@ -53,6 +53,18 @@ type ScheduledStatus = "pending" | "sent" | "cancelled" | "failed";
 
 type RecipientType = "contacts" | "groups" | "manual";
 
+type ScheduledSmsApi = {
+  id: string;
+  senderName: string;
+  recipient: string;
+  content: string;
+  scheduledAt: string;
+  status: ScheduledStatus;
+  creditCost: number;
+  errorCode?: string;
+  createdAt: string;
+};
+
 type ScheduledSms = {
   id: string;
   message: string;
@@ -194,7 +206,20 @@ export default function ScheduledSmsPage() {
       const res = await fetch("/api/v1/sms/scheduled");
       if (!res.ok) throw new Error();
       const data = await res.json();
-      setItems(Array.isArray(data) ? data : data.data ?? []);
+      const raw: ScheduledSmsApi[] = data.scheduled ?? data.data?.scheduled ?? (Array.isArray(data) ? data : []);
+      setItems(
+        raw.map((item) => ({
+          id: item.id,
+          message: item.content,
+          recipientCount: item.recipient ? item.recipient.split(",").length : 1,
+          recipientType: "manual" as RecipientType,
+          recipientLabel: item.recipient ?? "—",
+          scheduledAt: item.scheduledAt,
+          status: item.status,
+          senderName: item.senderName,
+          createdAt: item.createdAt,
+        }))
+      );
     } catch {
       setItems([]);
     } finally {

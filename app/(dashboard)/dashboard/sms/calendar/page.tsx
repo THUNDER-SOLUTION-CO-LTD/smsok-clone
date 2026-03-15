@@ -239,10 +239,10 @@ export default function ScheduledCalendarPage() {
   // Fetch scheduled SMS
   useEffect(() => {
     setLoading(true);
-    fetch("/api/v1/scheduled-sms")
-      .then((r) => (r.ok ? r.json() : { data: [] }))
+    fetch("/api/v1/sms/scheduled")
+      .then((r) => (r.ok ? r.json() : { scheduled: [] }))
       .then((data) => {
-        setItems(Array.isArray(data) ? data : data.data ?? []);
+        setItems(Array.isArray(data) ? data : data.scheduled ?? data.data?.scheduled ?? []);
       })
       .catch(() => setItems([]))
       .finally(() => setLoading(false));

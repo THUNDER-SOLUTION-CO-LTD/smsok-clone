@@ -92,17 +92,44 @@ export default function ConsentSettingsPage() {
   const fetchConsents = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/v1/user/consent");
-      if (!res.ok) throw new Error("Failed to fetch");
-      const data = await res.json();
+      // Fetch consent status + history in parallel
+      const [statusRes, logsRes] = await Promise.all([
+        fetch("/api/v1/consent/status"),
+        fetch("/api/v1/consent/logs"),
+      ]);
 
-      const userConsents = data.consents ?? {};
-      const consentEntries: ConsentEntry[] = CONSENT_CONFIG.map((c) => ({
-        ...c,
-        enabled: userConsents[c.type] ?? c.required,
-      }));
+      // Parse consent status
+      const statusData = statusRes.ok ? await statusRes.json() : null;
+      const apiConsents: { consentType?: string; type?: string; status?: string }[] =
+        statusData?.consents ?? statusData?.data?.consents ?? [];
+
+      const consentEntries: ConsentEntry[] = CONSENT_CONFIG.map((c) => {
+        // Map local type to API type: service→SERVICE, marketing→MARKETING, thirdParty→THIRD_PARTY
+        const apiType = c.type === "thirdParty" ? "THIRD_PARTY" : c.type.toUpperCase();
+        const match = apiConsents.find(
+          (ac) => (ac.consentType ?? ac.type)?.toUpperCase() === apiType
+        );
+        return {
+          ...c,
+          enabled: match ? match.status === "OPT_IN" : c.required,
+        };
+      });
       setConsents(consentEntries);
-      setHistory(data.history ?? []);
+
+      // Parse consent logs
+      const logsData = logsRes.ok ? await logsRes.json() : null;
+      const rawLogs: { id?: string; consentType?: string; action?: string; createdAt?: string; policyVersion?: string; ipAddress?: string }[] =
+        logsData?.logs ?? logsData?.data?.logs ?? [];
+      setHistory(
+        rawLogs.slice(0, 20).map((l, i) => ({
+          id: l.id ?? `log-${i}`,
+          type: (l.consentType?.toLowerCase() === "third_party" ? "thirdParty" : l.consentType?.toLowerCase() ?? "service") as ConsentType,
+          action: l.action === "OPT_IN" ? "granted" as const : "revoked" as const,
+          date: l.createdAt ?? new Date().toISOString(),
+          policyVersion: l.policyVersion ?? POLICY_VERSION,
+          ipAddress: l.ipAddress ?? "—",
+        }))
+      );
     } catch {
       // API not ready — show defaults
       setConsents(
@@ -143,10 +170,13 @@ export default function ConsentSettingsPage() {
 
     setSaving(type);
     try {
-      const res = await fetch("/api/v1/user/consent", {
-        method: "PUT",
+      const apiType = type === "thirdParty" ? "THIRD_PARTY" : type.toUpperCase();
+      const res = await fetch("/api/v1/consent", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type, enabled: newValue }),
+        body: JSON.stringify({
+          consents: [{ consentType: apiType, action: newValue ? "OPT_IN" : "OPT_OUT" }],
+        }),
       });
 
       if (!res.ok) throw new Error("Failed to update");
