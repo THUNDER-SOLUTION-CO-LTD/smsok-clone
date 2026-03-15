@@ -131,9 +131,18 @@ function normalizeOrderPayload(payload: CanonicalOrderPayload): Order {
     timestamp: entry.created_at ?? null,
   }));
 
+  let status = toLegacyOrderStatus(payload.status);
+
+  // Hybrid state: pending_payment + reject_reason → treat as REJECTED
+  // Backend keeps status=pending_payment for re-upload flow, but frontend
+  // needs to show rejection info + resubmit button
+  if (status === "PENDING" && payload.reject_reason && payload.rejected_at) {
+    status = "REJECTED";
+  }
+
   return {
     ...payload,
-    status: toLegacyOrderStatus(payload.status),
+    status,
     timeline,
   };
 }

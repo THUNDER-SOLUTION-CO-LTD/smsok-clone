@@ -1,8 +1,14 @@
 "use client";
 
-import { type ReactNode, useCallback } from "react";
-import { ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import { type ReactNode, useCallback, useState } from "react";
+import { ArrowUp, ArrowDown, ArrowUpDown, SlidersHorizontal } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { DataTablePagination } from "./DataTablePagination";
 import { DataTableSearch } from "./DataTableSearch";
@@ -47,6 +53,7 @@ export interface DataTableProps<T> {
   onRowClick?: (row: T) => void;
   expandedRow?: string | null;
   renderExpanded?: (row: T) => ReactNode;
+  renderCard?: (row: T) => ReactNode;
   loading?: boolean;
   emptyState?: ReactNode;
   className?: string;
@@ -75,6 +82,7 @@ export function DataTable<T>({
   onRowClick,
   expandedRow,
   renderExpanded,
+  renderCard,
   loading,
   emptyState,
   className,
@@ -83,6 +91,8 @@ export function DataTable<T>({
   const allIds = selectable ? data.map((r) => rowId!(r)) : [];
   const allSelected = selectable && selectedRows!.length > 0 && selectedRows!.length === allIds.length;
   const someSelected = selectable && selectedRows!.length > 0 && !allSelected;
+
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
 
   const getRowId = useCallback((row: T) => rowId?.(row) ?? "", [rowId]);
 
@@ -137,8 +147,38 @@ export function DataTable<T>({
               className="w-64 max-sm:w-full"
             />
           )}
-          {filters}
+          {/* Desktop: show filters inline */}
+          {filters && (
+            <div className="hidden sm:contents">
+              {filters}
+            </div>
+          )}
+          {/* Mobile: show filter button → opens Sheet */}
+          {filters && (
+            <button
+              type="button"
+              onClick={() => setFilterSheetOpen(true)}
+              className="sm:hidden inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--border-default)] text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] transition-colors cursor-pointer"
+            >
+              <SlidersHorizontal size={14} />
+              ตัวกรอง
+            </button>
+          )}
         </div>
+      )}
+
+      {/* Mobile Filter Sheet */}
+      {filters && (
+        <Sheet open={filterSheetOpen} onOpenChange={setFilterSheetOpen}>
+          <SheetContent side="bottom">
+            <SheetHeader>
+              <SheetTitle>ตัวกรอง</SheetTitle>
+            </SheetHeader>
+            <div className="px-4 pb-4 flex flex-col gap-3">
+              {filters}
+            </div>
+          </SheetContent>
+        </Sheet>
       )}
 
       {/* Bulk Actions Bar */}
@@ -160,7 +200,7 @@ export function DataTable<T>({
         </div>
       )}
 
-      {/* Table */}
+      {/* Content: Table (desktop) or Cards (mobile) */}
       <div className="overflow-x-auto">
         {loading ? (
           <DataTableSkeleton columns={visibleColumns.length + (selectable ? 1 : 0)} />
@@ -171,80 +211,104 @@ export function DataTable<T>({
             )}
           </div>
         ) : (
-          <table className="w-full">
-            {/* Header */}
-            <thead>
-              <tr className="bg-[var(--bg-elevated)] border-b border-[var(--border-default)]">
-                {selectable && (
-                  <th className="w-10 px-3 py-3 sticky left-0 z-10 bg-[var(--bg-elevated)]">
-                    <Checkbox
-                      checked={allSelected}
-                      indeterminate={someSelected}
-                      onCheckedChange={handleSelectAll}
-                      aria-label="Select all"
-                    />
-                  </th>
-                )}
-                {visibleColumns.map((col, colIdx) => (
-                  <th
-                    key={col.id}
-                    className={cn(
-                      "px-4 py-3 text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-[0.05em] whitespace-nowrap select-none",
-                      col.sortable && "cursor-pointer hover:text-[var(--text-secondary)]",
-                      col.hideOnMobile && "max-md:hidden",
-                      colIdx === 0 && !selectable && "sticky left-0 z-10 bg-[var(--bg-elevated)] shadow-[2px_0_4px_rgba(0,0,0,0.1)]",
-                      col.className,
-                    )}
-                    style={{ width: col.width }}
-                    onClick={col.sortable ? () => handleSort(col.id) : undefined}
-                    aria-sort={
-                      sort?.column === col.id
-                        ? sort.direction === "asc" ? "ascending" : "descending"
-                        : undefined
-                    }
-                  >
-                    <span className="inline-flex items-center gap-1">
-                      {col.header}
-                      {col.sortable && (
-                        sort?.column === col.id ? (
-                          sort.direction === "asc" ? (
-                            <ArrowUp size={12} className="text-[var(--accent)]" />
-                          ) : (
-                            <ArrowDown size={12} className="text-[var(--accent)]" />
-                          )
-                        ) : (
-                          <ArrowUpDown size={12} className="opacity-30" />
-                        )
+          <>
+            {/* Mobile Card View */}
+            {renderCard && (
+              <div className="md:hidden divide-y divide-[var(--border-default)]">
+                {data.map((row, i) => {
+                  const id = getRowId(row);
+                  return (
+                    <div
+                      key={id || i}
+                      className={cn(
+                        "px-4 py-3",
+                        onRowClick && "cursor-pointer active:bg-[rgba(255,255,255,0.02)]",
                       )}
-                    </span>
-                  </th>
-                ))}
-              </tr>
-            </thead>
+                      onClick={onRowClick ? () => onRowClick(row) : undefined}
+                    >
+                      {renderCard(row)}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
-            {/* Body */}
-            <tbody>
-              {data.map((row, i) => {
-                const id = getRowId(row);
-                const isSelected = selectable && selectedRows?.includes(id);
-                const isExpanded = expandedRow != null && expandedRow === id;
+            {/* Desktop Table */}
+            <table className={cn("w-full", renderCard && "max-md:hidden")}>
+              {/* Header */}
+              <thead>
+                <tr className="bg-[var(--bg-elevated)] border-b border-[var(--border-default)]">
+                  {selectable && (
+                    <th className="w-10 px-3 py-3 sticky left-0 z-10 bg-[var(--bg-elevated)]">
+                      <Checkbox
+                        checked={allSelected}
+                        indeterminate={someSelected}
+                        onCheckedChange={handleSelectAll}
+                        aria-label="Select all"
+                      />
+                    </th>
+                  )}
+                  {visibleColumns.map((col, colIdx) => (
+                    <th
+                      key={col.id}
+                      className={cn(
+                        "px-4 py-3 text-left text-xs font-semibold text-[var(--text-muted)] uppercase tracking-[0.05em] whitespace-nowrap select-none",
+                        col.sortable && "cursor-pointer hover:text-[var(--text-secondary)]",
+                        col.hideOnMobile && "max-md:hidden",
+                        colIdx === 0 && !selectable && "sticky left-0 z-10 bg-[var(--bg-elevated)] shadow-[2px_0_4px_rgba(0,0,0,0.1)]",
+                        col.className,
+                      )}
+                      style={{ width: col.width }}
+                      onClick={col.sortable ? () => handleSort(col.id) : undefined}
+                      aria-sort={
+                        sort?.column === col.id
+                          ? sort.direction === "asc" ? "ascending" : "descending"
+                          : undefined
+                      }
+                    >
+                      <span className="inline-flex items-center gap-1">
+                        {col.header}
+                        {col.sortable && (
+                          sort?.column === col.id ? (
+                            sort.direction === "asc" ? (
+                              <ArrowUp size={12} className="text-[var(--accent)]" />
+                            ) : (
+                              <ArrowDown size={12} className="text-[var(--accent)]" />
+                            )
+                          ) : (
+                            <ArrowUpDown size={12} className="opacity-30" />
+                          )
+                        )}
+                      </span>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
 
-                return (
-                  <TableRow
-                    key={id || i}
-                    row={row}
-                    columns={visibleColumns}
-                    selectable={selectable}
-                    isSelected={isSelected ?? false}
-                    isExpanded={isExpanded}
-                    onSelect={() => handleSelectRow(id)}
-                    onClick={onRowClick ? () => onRowClick(row) : undefined}
-                    renderExpanded={renderExpanded}
-                  />
-                );
-              })}
-            </tbody>
-          </table>
+              {/* Body */}
+              <tbody>
+                {data.map((row, i) => {
+                  const id = getRowId(row);
+                  const isSelected = selectable && selectedRows?.includes(id);
+                  const isExpanded = expandedRow != null && expandedRow === id;
+
+                  return (
+                    <TableRow
+                      key={id || i}
+                      row={row}
+                      columns={visibleColumns}
+                      selectable={selectable}
+                      isSelected={isSelected ?? false}
+                      isExpanded={isExpanded}
+                      onSelect={() => handleSelectRow(id)}
+                      onClick={onRowClick ? () => onRowClick(row) : undefined}
+                      renderExpanded={renderExpanded}
+                    />
+                  );
+                })}
+              </tbody>
+            </table>
+          </>
         )}
       </div>
 

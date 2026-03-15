@@ -2,7 +2,13 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ScrollText } from "lucide-react";
+import { ScrollText, SlidersHorizontal } from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import CustomSelect from "@/components/ui/CustomSelect";
 import PillTabs from "@/components/ui/PillTabs";
 import { Input } from "@/components/ui/input";
@@ -404,6 +410,7 @@ export default function LogsClient() {
   const [ipSearch, setIpSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const [selectedLog, setSelectedLog] = useState<LogEntry | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [isReplaying, setIsReplaying] = useState(false);
@@ -607,19 +614,33 @@ export default function LogsClient() {
       {/* Filter Bar */}
       <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg p-3 mb-4 shrink-0">
         <div className="flex flex-col gap-2">
-          <div className="flex flex-wrap gap-2">
-            <div className="relative flex-1 min-w-[200px]">
+          {/* Row 1: Search + mobile filter button */}
+          <div className="flex gap-2">
+            <div className="relative flex-1 min-w-0">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">
                 <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
               </svg>
               <input
                 type="text"
-                className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg text-[var(--text-primary)] focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] pl-8 text-xs py-1.5"
+                className="w-full bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg text-[var(--text-primary)] focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] pl-8 text-xs py-1.5"
                 placeholder="เบอร์โทร, Message ID, IP, endpoint..."
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setPage(1); }}
               />
             </div>
+            {/* Mobile: filter button */}
+            <button
+              type="button"
+              onClick={() => setFilterSheetOpen(true)}
+              className="sm:hidden inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--border-default)] text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] transition-colors cursor-pointer shrink-0"
+            >
+              <SlidersHorizontal size={14} />
+              ตัวกรอง
+              {hasFilters && <span className="w-2 h-2 rounded-full bg-[var(--accent)]" />}
+            </button>
+          </div>
+          {/* Desktop: inline filters */}
+          <div className="hidden sm:flex flex-wrap gap-2">
             <CustomSelect value={endpointFilter} onChange={(v) => { setEndpointFilter(v); setPage(1); }} options={ENDPOINT_OPTIONS} className="min-w-[140px]" />
             <PillTabs
               value={methodFilter}
@@ -656,7 +677,8 @@ export default function LogsClient() {
             />
             <CustomSelect value={apiKeyFilter} onChange={(v) => { setApiKeyFilter(v); setPage(1); }} options={apiKeyOptions} className="min-w-[170px]" />
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          {/* Desktop: row 2 — IP + dates */}
+          <div className="hidden sm:flex flex-wrap items-center gap-2">
             <div className="relative min-w-[180px]">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">
                 <rect x="2" y="2" width="20" height="20" rx="4" /><path d="M8 12h8M12 8v8" />
@@ -678,12 +700,118 @@ export default function LogsClient() {
               <Input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(1); }} className="text-xs py-1 px-2 w-[130px] h-auto min-h-[40px]" />
             </div>
             {hasFilters && (
-              <button onClick={clearFilters} className="text-[10px] text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors cursor-pointer">ล้าง</button>
+              <button type="button" onClick={clearFilters} className="text-[10px] text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors cursor-pointer">ล้าง</button>
             )}
             <span className="text-[10px] text-[var(--text-muted)] ml-auto">{totalCount} รายการ</span>
           </div>
+          {/* Mobile: total count */}
+          <div className="sm:hidden flex items-center justify-between">
+            <span className="text-[10px] text-[var(--text-muted)]">{totalCount} รายการ</span>
+            {hasFilters && (
+              <button type="button" onClick={clearFilters} className="text-[10px] text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors cursor-pointer">ล้างตัวกรอง</button>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Mobile Filter Sheet */}
+      <Sheet open={filterSheetOpen} onOpenChange={setFilterSheetOpen}>
+        <SheetContent side="bottom">
+          <SheetHeader>
+            <SheetTitle>ตัวกรอง API Logs</SheetTitle>
+          </SheetHeader>
+          <div className="px-4 pb-6 space-y-4">
+            <div>
+              <label className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-2 block">Endpoint</label>
+              <CustomSelect value={endpointFilter} onChange={(v) => { setEndpointFilter(v); setPage(1); }} options={ENDPOINT_OPTIONS} />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-2 block">Method</label>
+              <PillTabs
+                value={methodFilter}
+                onChange={(v) => { setMethodFilter(v); setPage(1); }}
+                label="Filter by HTTP method"
+                options={[
+                  { value: "all", label: "All" },
+                  { value: "GET", label: "GET" },
+                  { value: "POST", label: "POST" },
+                  { value: "PUT", label: "PUT" },
+                  { value: "DELETE", label: "DEL" },
+                ]}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-2 block">Status</label>
+              <PillTabs
+                value={statusFilter}
+                onChange={(v) => { setStatusFilter(v); setPage(1); }}
+                label="Filter by status code"
+                options={[
+                  { value: "all", label: "All" },
+                  { value: "2xx", label: "2xx" },
+                  { value: "4xx", label: "4xx" },
+                  { value: "5xx", label: "5xx" },
+                ]}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-2 block">Source</label>
+              <PillTabs
+                value={sourceFilter}
+                onChange={(v) => { setSourceFilter(v); setPage(1); }}
+                label="Filter by source"
+                options={[
+                  { value: "all", label: "All" },
+                  { value: "WEB", label: "WEB" },
+                  { value: "API", label: "API" },
+                ]}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-2 block">API Key</label>
+              <CustomSelect value={apiKeyFilter} onChange={(v) => { setApiKeyFilter(v); setPage(1); }} options={apiKeyOptions} />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-2 block">IP Address</label>
+              <input
+                type="text"
+                className="w-full bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg text-[var(--text-primary)] focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] px-3 text-xs py-2"
+                placeholder="IP Address..."
+                value={ipSearch}
+                onChange={(e) => { setIpSearch(e.target.value); setPage(1); }}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-2 block">จาก</label>
+                <Input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(1); }} className="text-xs h-11" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-2 block">ถึง</label>
+                <Input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(1); }} className="text-xs h-11" />
+              </div>
+            </div>
+            <div className="flex gap-3 pt-2">
+              {hasFilters && (
+                <button
+                  type="button"
+                  onClick={() => { clearFilters(); }}
+                  className="flex-1 h-11 rounded-lg border border-[var(--border-default)] text-sm text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] transition-colors cursor-pointer"
+                >
+                  ล้างทั้งหมด
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setFilterSheetOpen(false)}
+                className="flex-1 h-11 rounded-lg bg-[var(--accent)] text-sm font-medium text-white hover:bg-[var(--accent-hover)] transition-colors cursor-pointer"
+              >
+                ดูผลลัพธ์
+              </button>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Replay feedback */}
       <AnimatePresence>

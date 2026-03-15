@@ -524,8 +524,9 @@ export default function OrderManagementPage() {
           {/* Mobile Card Layout */}
           <div className="sm:hidden space-y-3">
             {orders.map((order) => (
-              <button
-                type="button"
+              <div
+                role="button"
+                tabIndex={0}
                 key={order.id}
                 className="w-full rounded-lg p-4 cursor-pointer transition-colors text-left"
                 style={{
@@ -533,6 +534,7 @@ export default function OrderManagementPage() {
                   border: "1px solid var(--border-default)",
                 }}
                 onClick={() => navigateToOrder(order.id)}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigateToOrder(order.id); } }}
               >
                 <div className="flex items-start justify-between mb-2">
                   <span
@@ -566,7 +568,7 @@ export default function OrderManagementPage() {
                   </span>
                 </div>
                 <div className="mt-3">{renderAction(order)}</div>
-              </button>
+              </div>
             ))}
           </div>
 

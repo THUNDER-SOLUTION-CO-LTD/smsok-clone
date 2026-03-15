@@ -18,7 +18,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-import { Search, ArrowRight, Inbox, ChevronLeft, ChevronRight, MessageSquare, Download } from "lucide-react";
+import { Search, ArrowRight, Inbox, ChevronLeft, ChevronRight, MessageSquare, Download, SlidersHorizontal } from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import EmptyState from "@/components/EmptyState";
 import { formatThaiDateTimeShort } from "@/lib/format-thai-date";
 import type { MessageItem, PaginationMeta } from "@/lib/types/api-responses";
@@ -56,6 +62,7 @@ export default function MessagesClient({
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
 
   const filtered = messages.filter((msg) => {
     const matchSearch =
@@ -145,37 +152,53 @@ export default function MessagesClient({
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <PillTabs
-            value={typeFilter}
-            onChange={setTypeFilter}
-            label="กรองตามประเภทข้อความ"
-            options={[
-              { value: "all", label: "ทั้งหมด" },
-              { value: "SMS", label: "SMS" },
-              { value: "OTP", label: "OTP" },
-            ]}
-          />
-          <PillTabs
-            value={statusFilter}
-            onChange={setStatusFilter}
-            label="กรองตามสถานะ"
-            options={[
-              { value: "all", label: "ทุกสถานะ" },
-              { value: "delivered", label: "สำเร็จ" },
-              { value: "sent", label: "ส่งแล้ว" },
-              { value: "pending", label: "รอส่ง" },
-              { value: "failed", label: "ล้มเหลว" },
-            ]}
-          />
+          {/* Mobile: Filter button → Sheet */}
+          <button
+            type="button"
+            onClick={() => setFilterSheetOpen(true)}
+            className="sm:hidden inline-flex items-center justify-center gap-1.5 h-11 px-4 rounded-lg border border-[var(--border-default)] text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-surface)] transition-colors cursor-pointer"
+          >
+            <SlidersHorizontal size={16} />
+            ตัวกรอง
+            {hasFilters && (
+              <span className="w-2 h-2 rounded-full bg-[var(--accent)]" />
+            )}
+          </button>
+          {/* Desktop: inline filters */}
+          <div className="hidden sm:contents">
+            <PillTabs
+              value={typeFilter}
+              onChange={setTypeFilter}
+              label="กรองตามประเภทข้อความ"
+              options={[
+                { value: "all", label: "ทั้งหมด" },
+                { value: "SMS", label: "SMS" },
+                { value: "OTP", label: "OTP" },
+              ]}
+            />
+            <PillTabs
+              value={statusFilter}
+              onChange={setStatusFilter}
+              label="กรองตามสถานะ"
+              options={[
+                { value: "all", label: "ทุกสถานะ" },
+                { value: "delivered", label: "สำเร็จ" },
+                { value: "sent", label: "ส่งแล้ว" },
+                { value: "pending", label: "รอส่ง" },
+                { value: "failed", label: "ล้มเหลว" },
+              ]}
+            />
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
+        {/* Desktop: date filters */}
+        <div className="hidden sm:flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
             <label className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider font-medium">ตั้งแต่</label>
-            <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 text-sm w-full sm:w-[150px] bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] rounded-lg" />
+            <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 text-sm w-[150px] bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] rounded-lg" />
           </div>
           <div className="flex items-center gap-2">
             <label className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider font-medium">ถึง</label>
-            <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 text-sm w-full sm:w-[150px] bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] rounded-lg" />
+            <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 text-sm w-[150px] bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] rounded-lg" />
           </div>
           {hasFilters && (
             <Button
@@ -189,6 +212,72 @@ export default function MessagesClient({
           )}
         </div>
       </div>
+
+      {/* Mobile Filter Sheet */}
+      <Sheet open={filterSheetOpen} onOpenChange={setFilterSheetOpen}>
+        <SheetContent side="bottom">
+          <SheetHeader>
+            <SheetTitle>ตัวกรอง</SheetTitle>
+          </SheetHeader>
+          <div className="px-4 pb-6 space-y-4">
+            <div>
+              <label className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-2 block">ประเภท</label>
+              <PillTabs
+                value={typeFilter}
+                onChange={setTypeFilter}
+                label="กรองตามประเภทข้อความ"
+                options={[
+                  { value: "all", label: "ทั้งหมด" },
+                  { value: "SMS", label: "SMS" },
+                  { value: "OTP", label: "OTP" },
+                ]}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-2 block">สถานะ</label>
+              <PillTabs
+                value={statusFilter}
+                onChange={setStatusFilter}
+                label="กรองตามสถานะ"
+                options={[
+                  { value: "all", label: "ทุกสถานะ" },
+                  { value: "delivered", label: "สำเร็จ" },
+                  { value: "sent", label: "ส่งแล้ว" },
+                  { value: "pending", label: "รอส่ง" },
+                  { value: "failed", label: "ล้มเหลว" },
+                ]}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-2 block">ตั้งแต่</label>
+                <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-11 text-sm bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] rounded-lg" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider mb-2 block">ถึง</label>
+                <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-11 text-sm bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] rounded-lg" />
+              </div>
+            </div>
+            <div className="flex gap-3 pt-2">
+              {hasFilters && (
+                <Button
+                  variant="ghost"
+                  className="flex-1 text-[var(--text-muted)]"
+                  onClick={() => { setStatusFilter("all"); setTypeFilter("all"); setDateFrom(""); setDateTo(""); }}
+                >
+                  ล้างทั้งหมด
+                </Button>
+              )}
+              <Button
+                className="flex-1 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--text-on-accent)]"
+                onClick={() => setFilterSheetOpen(false)}
+              >
+                ดูผลลัพธ์
+              </Button>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Data — Mobile Cards + Desktop Table */}
       {filtered.length > 0 ? (
