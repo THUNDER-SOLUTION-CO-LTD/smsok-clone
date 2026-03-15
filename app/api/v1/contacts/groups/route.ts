@@ -1,11 +1,17 @@
 import { NextRequest } from "next/server";
 import { authenticateRequest, apiResponse, apiError } from "@/lib/api-auth";
+import { requireApiPermission } from "@/lib/rbac";
 import { createContactGroup, getContactsByGroup, addContactsToGroup } from "@/lib/actions/contacts";
 import { addContactsToGroupSchema, createContactGroupSchema } from "@/lib/validations";
 
+// DEPRECATED: Use POST /api/v1/groups instead
 export async function POST(req: NextRequest) {
   try {
     const user = await authenticateRequest(req);
+
+    const denied = await requireApiPermission(user.id, "create", "group");
+    if (denied) return denied;
+
     const body = await req.json();
 
     if (body.action === "add_contacts") {
@@ -25,6 +31,10 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   try {
     const user = await authenticateRequest(req);
+
+    const denied = await requireApiPermission(user.id, "read", "group");
+    if (denied) return denied;
+
     const { searchParams } = new URL(req.url);
     const groupId = searchParams.get("groupId");
 

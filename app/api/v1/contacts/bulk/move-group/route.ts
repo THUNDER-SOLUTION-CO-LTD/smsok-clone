@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { authenticateRequest, apiResponse, apiError } from "@/lib/api-auth";
+import { requireApiPermission } from "@/lib/rbac";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
 
@@ -13,6 +14,10 @@ const schema = z.object({
 export async function POST(req: NextRequest) {
   try {
     const user = await authenticateRequest(req);
+
+    const denied = await requireApiPermission(user.id, "update", "group");
+    if (denied) return denied;
+
     const body = await req.json();
     const input = schema.parse(body);
 
@@ -35,7 +40,7 @@ export async function POST(req: NextRequest) {
 
     const contactIds = contacts.map((c) => c.id);
 
-    await prisma.$transaction([
+    const [removed, added] = await prisma.$transaction([
       // Remove from old group
       prisma.contactGroupMember.deleteMany({
         where: { groupId: input.fromGroupId, contactId: { in: contactIds } },
@@ -50,7 +55,11 @@ export async function POST(req: NextRequest) {
       }),
     ]);
 
-    return apiResponse({ moved: contactIds.length });
+    return apiResponse({
+      moved: added.count,
+      removedFromSource: removed.count,
+      alreadyInTarget: contactIds.length - added.count,
+    });
   } catch (error) {
     return apiError(error);
   }

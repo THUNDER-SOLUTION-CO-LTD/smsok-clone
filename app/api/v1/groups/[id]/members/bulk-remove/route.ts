@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { authenticateRequest, apiResponse, apiError, ApiError } from "@/lib/api-auth";
+import { requireApiPermission } from "@/lib/rbac";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
 
@@ -14,6 +15,10 @@ export async function POST(
 ) {
   try {
     const user = await authenticateRequest(req);
+
+    const denied = await requireApiPermission(user.id, "update", "group");
+    if (denied) return denied;
+
     const { id: groupId } = await params;
     const body = await req.json();
     const input = schema.parse(body);

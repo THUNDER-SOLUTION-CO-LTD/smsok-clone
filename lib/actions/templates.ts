@@ -41,6 +41,14 @@ export async function createTemplate(userIdOrData: string | unknown, maybeData?:
     throw new Error("สร้างเทมเพลตได้สูงสุด 50 รายการ");
   }
 
+  // Duplicate name check
+  const duplicate = await db.messageTemplate.findFirst({
+    where: { userId, name: input.name, deletedAt: null },
+  });
+  if (duplicate) {
+    throw new Error("มีเทมเพลตชื่อนี้อยู่แล้ว");
+  }
+
   const variables = extractVariables(input.content);
   const segmentCount = calculateSmsSegments(input.content);
 

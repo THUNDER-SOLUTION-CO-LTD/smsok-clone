@@ -391,7 +391,7 @@ model ContactGroup {
   organization   Organization?        @relation(fields: [organizationId], references: [id])
   user           User                 @relation(fields: [userId], references: [id])
 
-  @@index([userId])
+  @@unique([userId, name])
   @@index([organizationId])
   @@map("contact_groups")
 }
@@ -486,7 +486,7 @@ model MessageTemplate {
   organizationId String?       @map("organization_id")
   name           String
   content        String
-  category       String        @default("GENERAL")
+  category       String        @default("general")
   variables      String[]      @default([])
   segmentCount   Int           @default(1) @map("segment_count")
   isPublic       Boolean       @default(false) @map("is_public")

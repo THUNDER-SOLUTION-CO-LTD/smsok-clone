@@ -24,22 +24,6 @@ export async function GET(
         _count: {
           select: { members: true },
         },
-        members: {
-          select: {
-            id: true,
-            contactId: true,
-            contact: {
-              select: {
-                id: true,
-                name: true,
-                phone: true,
-                email: true,
-                createdAt: true,
-              },
-            },
-          },
-          orderBy: { contact: { name: "asc" } },
-        },
       },
     });
 
@@ -50,7 +34,6 @@ export async function GET(
       name: group.name,
       createdAt: group.createdAt,
       memberCount: group._count.members,
-      members: group.members.map((member) => member.contact),
     });
   } catch (error) {
     return apiError(error);

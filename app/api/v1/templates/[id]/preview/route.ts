@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { ApiError, apiResponse, apiError, authenticateRequest } from "@/lib/api-auth";
 import { prisma as db } from "@/lib/db";
 import { z } from "zod";
-import { substituteVariables } from "@/lib/template-utils";
+import { substituteVariables, extractVariables } from "@/lib/template-utils";
 import { getSmsSegmentMetrics } from "@/lib/package/quota";
 
 const previewSchema = z.object({
@@ -28,11 +28,15 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       throw new ApiError(403, "ไม่มีสิทธิ์เข้าถึง Template นี้");
     }
 
+    const requiredVars = extractVariables(template.content);
     const rendered = substituteVariables(template.content, input.variables);
+    const missingVars = requiredVars.filter((v) => !(v in input.variables));
     const metrics = getSmsSegmentMetrics(rendered);
 
     return apiResponse({
       rendered,
+      variables: requiredVars,
+      missing: missingVars,
       encoding: metrics.encoding,
       charCount: metrics.charCount,
       charsPerSegment: metrics.segments > 1 ? metrics.multiLimit : metrics.singleLimit,

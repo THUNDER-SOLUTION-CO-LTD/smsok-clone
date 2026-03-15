@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
       charCount: metrics.charCount,
       encoding: metrics.encoding,
       charsPerSegment: metrics.segments > 1 ? metrics.multiLimit : metrics.singleLimit,
-      smsCount: metrics.segments,
+      segmentCount: metrics.segments,
     });
   } catch (error) {
     return apiError(error);

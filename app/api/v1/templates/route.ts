@@ -7,7 +7,7 @@ import { templateSchema } from "@/lib/validations";
 import { z } from "zod";
 
 const listSchema = z.object({
-  category: z.enum(["OTP", "TRANSACTIONAL", "MARKETING", "NOTIFICATION", "GENERAL"]).optional(),
+  category: z.enum(["otp", "transactional", "marketing", "notification", "general"]).optional(),
   search: z.string().max(100).optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),

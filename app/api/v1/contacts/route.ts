@@ -51,6 +51,9 @@ export async function GET(req: NextRequest) {
           groups: {
             include: { group: { select: { id: true, name: true } } },
           },
+          contactTags: {
+            include: { tag: { select: { id: true, name: true, color: true } } },
+          },
         },
         orderBy: { createdAt: "desc" },
         skip,
@@ -64,7 +67,7 @@ export async function GET(req: NextRequest) {
       name: c.name,
       phone: c.phone,
       email: c.email,
-      tags: c.tags,
+      tags: c.contactTags.map((ct) => ct.tag),
       smsConsent: c.smsConsent,
       groups: c.groups.map((g) => ({ id: g.group.id, name: g.group.name })),
       createdAt: c.createdAt,

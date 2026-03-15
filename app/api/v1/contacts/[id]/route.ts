@@ -29,6 +29,9 @@ export async function GET(
         groups: {
           include: { group: { select: { id: true, name: true } } },
         },
+        contactTags: {
+          include: { tag: { select: { id: true, name: true, color: true } } },
+        },
       },
     });
 
@@ -39,7 +42,7 @@ export async function GET(
       name: contact.name,
       phone: contact.phone,
       email: contact.email,
-      tags: contact.tags,
+      tags: contact.contactTags.map((ct) => ct.tag),
       smsConsent: contact.smsConsent,
       groups: contact.groups.map((g) => ({ id: g.group.id, name: g.group.name })),
       createdAt: contact.createdAt,

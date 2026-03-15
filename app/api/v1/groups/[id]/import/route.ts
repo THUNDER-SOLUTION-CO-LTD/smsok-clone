@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { authenticateRequest, apiResponse, apiError, ApiError } from "@/lib/api-auth";
+import { requireApiPermission } from "@/lib/rbac";
 import { prisma } from "@/lib/db";
 import { normalizePhone } from "@/lib/validations";
 import { z } from "zod";
@@ -30,6 +31,10 @@ export async function POST(
 ) {
   try {
     const user = await authenticateRequest(req);
+
+    const denied = await requireApiPermission(user.id, "create", "group");
+    if (denied) return denied;
+
     const { id: groupId } = await params;
     // Verify group ownership
     const group = await prisma.contactGroup.findFirst({

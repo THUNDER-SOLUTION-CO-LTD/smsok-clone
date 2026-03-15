@@ -1,11 +1,12 @@
 import { NextRequest } from "next/server";
 import { apiResponse, apiError, authenticateRequest } from "@/lib/api-auth";
+import { requireApiPermission } from "@/lib/rbac";
 import { prisma as db } from "@/lib/db";
 import { getSmsSegmentMetrics } from "@/lib/package/quota";
 import { z } from "zod";
 
 const validateSchema = z.object({
-  content: z.string().min(1).max(5000),
+  content: z.string().min(1).max(1000),
 });
 
 // Blocked URL shorteners
@@ -15,6 +16,10 @@ const BLOCKED_SHORTENERS = ["bit.ly", "tinyurl.com", "goo.gl", "t.co", "ow.ly", 
 export async function POST(req: NextRequest) {
   try {
     const user = await authenticateRequest(req);
+
+    const denied = await requireApiPermission(user.id, "read", "template");
+    if (denied) return denied;
+
     const input = validateSchema.parse(await req.json());
     const warnings: Array<{ type: string; message: string; word?: string }> = [];
 

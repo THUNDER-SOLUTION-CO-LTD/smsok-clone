@@ -41,7 +41,6 @@ export async function POST(req: NextRequest) {
     }
 
     let imported = 0;
-    const skipped = 0;
     let duplicates = 0;
     let invalid = 0;
     const createdIds: string[] = [];
@@ -82,9 +81,9 @@ export async function POST(req: NextRequest) {
 
     return apiResponse({
       imported,
-      skipped,
       duplicates,
       invalid,
+      addedToGroup: input.groupId ? createdIds.length : 0,
       total: input.contacts.length,
     }, 201);
   } catch (error) {
