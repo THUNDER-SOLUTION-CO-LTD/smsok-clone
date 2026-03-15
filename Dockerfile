@@ -2,8 +2,9 @@
 FROM oven/bun:1 AS deps
 WORKDIR /app
 COPY package.json bun.lock* ./
+ENV HUSKY=0
 RUN --mount=type=cache,target=/root/.bun/install/cache \
-  bun install --frozen-lockfile 2>/dev/null || bun install
+  bun install --frozen-lockfile --ignore-scripts 2>/dev/null || bun install --ignore-scripts
 
 # ── Stage 2: Build (only rebuilds when source changes) ──
 FROM oven/bun:1 AS builder
@@ -26,11 +27,23 @@ RUN bunx prisma generate
 COPY middleware.ts ./
 COPY app ./app
 COPY components ./components
+COPY config ./config
 COPY hooks ./hooks
 COPY lib ./lib
 COPY providers ./providers
 COPY stores ./stores
+COPY types ./types
+COPY workers ./workers
 COPY public ./public
+
+# Dummy env vars for build-time validation (NOT used in production)
+ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
+ENV JWT_SECRET=build-only-dummy-secret-not-used-in-production
+ENV REDIS_URL=redis://localhost:6379
+ENV REDIS_HOST=localhost
+ENV REDIS_PORT=6379
+ENV R2_PUBLIC_URL=https://build-only.example.com
+ENV OTP_HASH_SECRET=build-only-dummy-otp-hash-secret
 
 RUN bun run build
 

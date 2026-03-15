@@ -15,6 +15,11 @@ import {
   Info,
   HelpCircle,
 } from "lucide-react";
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -873,27 +878,81 @@ export default function CheckoutPage() {
                     style={{ color: "var(--text-primary)" }}
                   >
                     หักภาษี ณ ที่จ่าย 3%
-                    <span className="relative group">
-                      <HelpCircle
-                        size={14}
-                        className="cursor-help"
-                        style={{ color: "var(--text-muted)" }}
-                      />
-                      <span
-                        className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 px-3 py-2 rounded-lg text-xs leading-relaxed opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 pointer-events-none"
+                    <Popover>
+                      <PopoverTrigger
+                        className="inline-flex"
+                        aria-label="ข้อมูลภาษีหัก ณ ที่จ่าย"
+                      >
+                        <HelpCircle
+                          size={14}
+                          className="cursor-help"
+                          style={{ color: "var(--text-muted)" }}
+                        />
+                      </PopoverTrigger>
+                      <PopoverContent
+                        side="top"
+                        sideOffset={8}
+                        className="w-80 p-0"
                         style={{
                           background: "var(--bg-elevated)",
-                          color: "var(--text-secondary)",
                           border: "1px solid var(--border-default)",
-                          boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                          boxShadow: "0 4px 16px rgba(0,0,0,0.2)",
                         }}
                       >
-                        นิติบุคคลสามารถหักภาษี ณ ที่จ่าย 3%
-                        จากค่าบริการ (ก่อน VAT) ได้ โดยต้องแนบ
-                        หนังสือรับรองหัก ณ ที่จ่าย (ใบ 50 ทวิ)
-                        พร้อมสลิปโอนเงินทุกครั้ง
-                      </span>
-                    </span>
+                        <div className="px-4 pt-3 pb-2">
+                          <p
+                            className="text-[13px] font-semibold mb-1"
+                            style={{ color: "var(--text-primary)" }}
+                          >
+                            หักภาษี ณ ที่จ่าย (WHT) คืออะไร?
+                          </p>
+                          <p
+                            className="text-xs leading-relaxed"
+                            style={{ color: "var(--text-secondary)" }}
+                          >
+                            นิติบุคคลสามารถหักภาษี ณ ที่จ่าย 3%
+                            จากค่าบริการ (ก่อน VAT) ได้ตามกฎหมาย
+                            โดยต้องแนบหนังสือรับรองหัก ณ ที่จ่าย (ใบ 50 ทวิ)
+                            พร้อมสลิปโอนเงินทุกครั้ง
+                          </p>
+                        </div>
+                        <div
+                          className="mx-4 mb-3 mt-1 rounded-md p-3"
+                          style={{
+                            background: "var(--bg-base)",
+                            border: "1px solid var(--border-default)",
+                          }}
+                        >
+                          <p
+                            className="text-[11px] font-semibold uppercase tracking-wide mb-2"
+                            style={{ color: "var(--text-muted)" }}
+                          >
+                            ตัวอย่างการคำนวณ
+                          </p>
+                          <div className="space-y-1.5 text-xs">
+                            <div className="flex justify-between">
+                              <span style={{ color: "var(--text-muted)" }}>ค่าบริการ</span>
+                              <span className="font-mono tabular-nums" style={{ color: "var(--text-primary)" }}>฿10,000.00</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span style={{ color: "var(--text-muted)" }}>VAT 7%</span>
+                              <span className="font-mono tabular-nums" style={{ color: "var(--text-primary)" }}>฿700.00</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span style={{ color: "var(--error)" }}>หัก WHT 3% (ของ ฿10,000)</span>
+                              <span className="font-mono tabular-nums" style={{ color: "var(--error)" }}>-฿300.00</span>
+                            </div>
+                            <div
+                              className="flex justify-between pt-1.5 mt-1"
+                              style={{ borderTop: "1px dashed var(--border-default)" }}
+                            >
+                              <span className="font-semibold" style={{ color: "var(--text-primary)" }}>ยอดโอนจริง</span>
+                              <span className="font-mono tabular-nums font-bold" style={{ color: "var(--accent)" }}>฿10,400.00</span>
+                            </div>
+                          </div>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                   </span>
                   <p className="text-xs" style={{ color: "var(--text-muted)" }}>
                     เฉพาะนิติบุคคล — หักจากค่าบริการก่อน VAT ต้องแนบใบ 50 ทวิ
