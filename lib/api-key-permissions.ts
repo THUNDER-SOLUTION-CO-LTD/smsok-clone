@@ -138,8 +138,7 @@ export function resolveApiKeyRoutePermission(
 
   if (
     path === "/api/v1/groups" ||
-    path.startsWith("/api/v1/groups/") ||
-    path === "/api/v1/contacts/groups"
+    path.startsWith("/api/v1/groups/")
   ) {
     return isRead ? "groups:read" : "groups:write";
   }

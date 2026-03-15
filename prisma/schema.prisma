@@ -497,7 +497,7 @@ model MessageTemplate {
   organization   Organization? @relation(fields: [organizationId], references: [id])
   user           User          @relation(fields: [userId], references: [id])
 
-  @@index([userId, deletedAt])
+  @@unique([userId, name, deletedAt])
   @@index([organizationId])
   @@index([isPublic])
   @@map("message_templates")
