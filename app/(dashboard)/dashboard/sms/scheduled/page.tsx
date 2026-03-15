@@ -533,7 +533,10 @@ function CreateScheduledSmsDialog({
   const [creating, setCreating] = useState(false);
 
   const charCount = message.length;
-  const smsCount = charCount === 0 ? 0 : Math.ceil(charCount / 70);
+  // GSM-7: 160 chars/segment, UCS-2 (Thai/emoji): 70 chars/segment
+  const isGsm7 = /^[\x20-\x7E\n\r]*$/.test(message);
+  const charsPerSegment = isGsm7 ? 160 : 70;
+  const smsCount = charCount === 0 ? 0 : Math.ceil(charCount / charsPerSegment);
   const isValidPhone = phoneNumber.trim().length >= 9;
 
   async function handleCreate() {
@@ -603,7 +606,7 @@ function CreateScheduledSmsDialog({
             />
             <div className="flex justify-between mt-1">
               <span className="text-[11px] text-[var(--text-muted)]">
-                {charCount} ตัวอักษร · {smsCount} SMS
+                {charCount}/{charsPerSegment} ตัวอักษร · {smsCount} SMS ({isGsm7 ? "GSM-7" : "Unicode"})
               </span>
             </div>
           </div>

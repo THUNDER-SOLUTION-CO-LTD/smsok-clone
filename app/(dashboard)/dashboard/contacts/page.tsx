@@ -19,44 +19,44 @@ export default async function ContactsPage({
   const limitParsed = parseInt(limitParam ?? "20") || 20;
   const limit = (VALID_LIMITS as readonly number[]).includes(limitParsed) ? limitParsed : 20;
 
-  let contactsResult: Awaited<ReturnType<typeof getContacts>> | null = null;
-  let groups: Awaited<ReturnType<typeof getContactGroups>> | null = null;
   try {
-    [contactsResult, groups] = await Promise.all([
+    const [contactsResult, groups] = await Promise.all([
       getContacts({ page, limit }),
       getContactGroups(),
     ]);
-  } catch {}
 
-  if (!contactsResult || !groups) {
+    if (!contactsResult || !groups) {
+      return <ErrorState type="SERVER_ERROR" />;
+    }
+
+    const { contacts, pagination } = contactsResult;
+
+    // Serialize dates for client component (inside try/catch for safety)
+    const serializedContacts = contacts.map((c: typeof contacts[number]) => ({
+      id: c.id,
+      name: c.name ?? "",
+      phone: c.phone ?? "",
+      email: c.email ?? "",
+      tags: c.tags ?? "",
+      smsConsent: c.smsConsent ?? false,
+      groups: (c.groups ?? []).map((g: typeof c.groups[number]) => ({
+        id: g.group.id,
+        name: g.group.name,
+      })),
+      createdAt: c.createdAt ? c.createdAt.toISOString() : new Date().toISOString(),
+    }));
+
+    return (
+      <ContactsClient
+        initialContacts={serializedContacts}
+        totalContacts={pagination.total}
+        initialPage={page}
+        initialLimit={limit}
+        totalPages={pagination.totalPages}
+        groups={groups}
+      />
+    );
+  } catch {
     return <ErrorState type="SERVER_ERROR" />;
   }
-
-  const { contacts, pagination } = contactsResult;
-
-  // Serialize dates for client component
-  const serializedContacts = contacts.map((c: typeof contacts[number]) => ({
-    id: c.id,
-    name: c.name,
-    phone: c.phone,
-    email: c.email,
-    tags: c.tags,
-    smsConsent: c.smsConsent,
-    groups: c.groups.map((g: typeof c.groups[number]) => ({
-      id: g.group.id,
-      name: g.group.name,
-    })),
-    createdAt: c.createdAt.toISOString(),
-  }));
-
-  return (
-    <ContactsClient
-      initialContacts={serializedContacts}
-      totalContacts={pagination.total}
-      initialPage={page}
-      initialLimit={limit}
-      totalPages={pagination.totalPages}
-      groups={groups}
-    />
-  );
 }

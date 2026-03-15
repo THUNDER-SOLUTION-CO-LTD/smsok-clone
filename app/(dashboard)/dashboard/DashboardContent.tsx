@@ -44,7 +44,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import OnboardingChecklist from "@/components/blocks/OnboardingChecklist";
-import TrialBanner from "@/components/blocks/TrialBanner";
+import TrialBanner, { TrialNotice } from "@/components/blocks/TrialBanner";
 import { formatThaiDateOnly, formatThaiDateShort, formatThaiTime } from "@/lib/format-thai-date";
 
 /* ── Types ── */
@@ -1246,6 +1246,11 @@ export default function DashboardContent({
           <QuotaWidget quota={quota} />
         </div>
       </div>
+
+      {/* ── Trial API Limit Notice ── */}
+      {accountStatus === "trial" && (
+        <TrialNotice variant="api-limit" />
+      )}
 
       {/* ── Credit Usage Chart ── */}
       <CreditUsageChart quota={quota} />

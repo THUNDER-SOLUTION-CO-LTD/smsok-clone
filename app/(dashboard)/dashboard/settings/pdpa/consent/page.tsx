@@ -160,7 +160,7 @@ export default function ConsentPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/v1/pdpa/consent");
+      const res = await fetch("/api/v1/consent/status");
       if (!res.ok) throw new Error(`API error: ${res.status}`);
       const data = await res.json();
       setContacts(Array.isArray(data) ? data : data.data ?? []);

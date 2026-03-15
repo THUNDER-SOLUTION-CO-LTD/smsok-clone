@@ -645,7 +645,7 @@ export default function TemplatesClient({
                   <label className="block text-xs text-[var(--text-muted)] mb-2">
                     ตัวอย่าง (Phone Preview)
                   </label>
-                  <PhonePreview message={contentValue} senderName="EasySlip" />
+                  <PhonePreview message={contentValue} senderName="SMSOK" />
                 </div>
               )}
 

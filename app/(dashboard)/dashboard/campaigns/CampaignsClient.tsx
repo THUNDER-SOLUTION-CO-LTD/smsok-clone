@@ -2,8 +2,10 @@
 
 import { useState, useTransition, useRef, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  AlertTriangle,
   BarChart3,
   CheckCircle,
   FileText,
@@ -162,7 +164,7 @@ export default function CampaignsClient({
   initialCampaigns,
   groups,
   templates,
-  senderNames = ["EasySlip"],
+  senderNames = [],
   loadError = false,
 }: {
   userId: string;
@@ -188,7 +190,7 @@ export default function CampaignsClient({
   const [formName, setFormName] = useState("");
   const [formGroup, setFormGroup] = useState("");
   const [formTemplate, setFormTemplate] = useState("");
-  const [formSender, setFormSender] = useState("EasySlip");
+  const [formSender, setFormSender] = useState(senderNames[0] ?? "");
   const [formSchedule, setFormSchedule] = useState("");
 
   // Detail view
@@ -237,7 +239,7 @@ export default function CampaignsClient({
       name: formName.trim(),
       contactGroupId: formGroup,
       templateId: formTemplate,
-      senderName: formSender.trim() || "EasySlip",
+      senderName: formSender.trim(),
       scheduledAt: formSchedule || undefined,
     });
 
@@ -261,7 +263,7 @@ export default function CampaignsClient({
         setFormName("");
         setFormGroup("");
         setFormTemplate("");
-        setFormSender("EasySlip");
+        setFormSender(senderNames[0] ?? "");
         setFormSchedule("");
         setShowForm(false);
         router.refresh();
@@ -395,6 +397,28 @@ export default function CampaignsClient({
         </div>
       )}
 
+      {/* No approved sender warning */}
+      {senderNames.length === 0 && !loadError && (
+        <div
+          className="mb-4 px-4 py-3 rounded-lg text-sm flex items-center gap-2.5"
+          style={{
+            background: "rgba(var(--warning-rgb,245,158,11),0.08)",
+            border: "1px solid rgba(var(--warning-rgb,245,158,11),0.2)",
+            color: "var(--warning)",
+          }}
+        >
+          <AlertTriangle className="w-4 h-4 shrink-0" />
+          <span className="font-medium">กรุณาสร้าง Sender Name ก่อนส่ง Campaign</span>
+          <Link
+            href="/dashboard/senders/new"
+            className="ml-auto text-xs font-semibold underline underline-offset-2 hover:opacity-80 transition-opacity"
+            style={{ color: "var(--accent)" }}
+          >
+            สร้าง Sender Name →
+          </Link>
+        </div>
+      )}
+
       {/* Page Header */}
       <PageHeader
         title="แคมเปญ"
@@ -406,7 +430,8 @@ export default function CampaignsClient({
               setShowWizard(true);
               setSelectedCampaign(null);
             }}
-            className="bg-[var(--accent)] text-[var(--text-on-accent)] hover:bg-[var(--accent)]/90 font-semibold cursor-pointer"
+            disabled={senderNames.length === 0}
+            className="bg-[var(--accent)] text-[var(--text-on-accent)] hover:bg-[var(--accent)]/90 font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Plus className="w-4 h-4 mr-1.5" />
             สร้างแคมเปญ

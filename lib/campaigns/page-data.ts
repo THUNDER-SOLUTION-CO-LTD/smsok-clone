@@ -2,7 +2,7 @@ import { getCampaigns } from "@/lib/actions/campaigns";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 
-const DEFAULT_SENDER_NAME = "EasySlip";
+// No hardcoded default — sender names come from user's approved list only
 const CAMPAIGN_PAGE_STATUSES = new Set([
   "draft",
   "scheduled",
@@ -113,7 +113,7 @@ function serializeCampaign(campaign: RawCampaign): CampaignPageCampaign {
     status: normalizeCampaignStatus(campaign.status),
     groupName: campaign.contactGroup?.name ?? "—",
     templateName: campaign.template?.name ?? "—",
-    senderName: campaign.senderName ?? DEFAULT_SENDER_NAME,
+    senderName: campaign.senderName ?? "—",
     scheduledAt: campaign.scheduledAt?.toISOString() ?? null,
     totalRecipients: campaign.totalRecipients,
     sentCount: campaign.sentCount,
@@ -162,7 +162,7 @@ export async function loadCampaignsPageData(userId: string): Promise<CampaignPag
 
   let groups: CampaignPageGroup[] = [];
   let templates: CampaignPageTemplate[] = [];
-  let senderNames = [DEFAULT_SENDER_NAME];
+  let senderNames: string[] = [];
 
   if (metadataResult.status === "fulfilled") {
     const [rawGroups, rawTemplates, approvedSenders] = metadataResult.value;
@@ -179,10 +179,7 @@ export async function loadCampaignsPageData(userId: string): Promise<CampaignPag
       body: template.content,
     }));
 
-    senderNames = [
-      DEFAULT_SENDER_NAME,
-      ...approvedSenders.map((sender) => sender.name).filter((name) => name !== DEFAULT_SENDER_NAME),
-    ];
+    senderNames = approvedSenders.map((sender) => sender.name);
   } else {
     if (!isRecoverableCampaignsPageError(metadataResult.reason)) {
       throw metadataResult.reason;

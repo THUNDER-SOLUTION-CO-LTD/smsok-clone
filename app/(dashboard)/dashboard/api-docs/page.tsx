@@ -43,7 +43,7 @@ const endpoints: Endpoint[] = [
     headers: "Authorization: Bearer <API_KEY>",
     creditCost: "1 SMS",
     body: `{
-  "sender": "EasySlip",
+  "sender": "MySender",
   "to": "0891234567",
   "message": "สวัสดีครับ ข้อความทดสอบ"
 }`,
@@ -73,7 +73,7 @@ const endpoints: Endpoint[] = [
     headers: "Authorization: Bearer <API_KEY>",
     creditCost: "1 SMS / เบอร์",
     body: `{
-  "sender": "EasySlip",
+  "sender": "MySender",
   "to": ["0891234567", "0812345678"],
   "message": "โปรโมชัน! ลด 50% วันนี้เท่านั้น"
 }`,
@@ -103,7 +103,7 @@ const endpoints: Endpoint[] = [
   "id": "msg_abc123",
   "recipient": "0891234567",
   "status": "delivered",
-  "senderName": "EasySlip",
+  "senderName": "MySender",
   "creditCost": 1,
   "sentAt": "2026-03-09T10:30:00Z",
   "deliveredAt": "2026-03-09T10:30:05Z"
@@ -125,7 +125,7 @@ const endpoints: Endpoint[] = [
     body: `{
   "to": "0891234567",
   "message": "แจ้งเตือนนัดหมาย พรุ่งนี้ 10:00",
-  "sender": "EasySlip",
+  "sender": "MySender",
   "scheduledAt": "2026-03-10T03:00:00Z"
 }`,
     response: `{
@@ -385,7 +385,7 @@ const endpoints: Endpoint[] = [
     headers: "Authorization: Bearer <API_KEY>",
     response: `{
   "senders": [
-    { "name": "EasySlip", "status": "APPROVED" },
+    { "name": "MySender", "status": "APPROVED" },
     { "name": "MyBrand", "status": "PENDING" }
   ]
 }`,

@@ -204,7 +204,8 @@ export async function executeCampaign(...args: [string, string?, string?]) {
 
   const rawMessage = campaign.messageBody ?? campaign.template?.content;
   if (!rawMessage) throw new Error("แคมเปญนี้ไม่มีข้อความ");
-  const senderName = campaign.senderName || "EasySlip";
+  if (!campaign.senderName) throw new Error("แคมเปญนี้ไม่มีชื่อผู้ส่ง กรุณาเลือกชื่อผู้ส่งที่ได้รับอนุมัติ");
+  const senderName = campaign.senderName;
 
   // Auto-shorten links + append UTM params
   const { shortenLinksInMessage } = await import("../link-shortener");

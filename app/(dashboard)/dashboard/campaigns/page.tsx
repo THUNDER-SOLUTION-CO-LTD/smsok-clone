@@ -21,7 +21,7 @@ export default async function CampaignsPage() {
       initialCampaigns={data?.campaigns ?? []}
       groups={data?.groups ?? []}
       templates={data?.templates ?? []}
-      senderNames={data?.senderNames ?? ["EasySlip"]}
+      senderNames={data?.senderNames ?? []}
       loadError={loadError || !data}
     />
   );

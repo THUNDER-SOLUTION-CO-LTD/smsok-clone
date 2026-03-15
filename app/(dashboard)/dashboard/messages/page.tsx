@@ -18,9 +18,9 @@ export default async function MessagesPage({
     const page = Number(params.page ?? "1") || 1;
 
     const { messages, pagination } = await getMessages({ page, limit: 20, search });
-    const serializedMessages = messages.map((message) => ({
+    const serializedMessages = (messages ?? []).map((message) => ({
       ...message,
-      createdAt: message.createdAt.toISOString(),
+      createdAt: message.createdAt ? message.createdAt.toISOString() : new Date().toISOString(),
     }));
 
     return (

@@ -6,6 +6,9 @@ import { updateContactSchema } from "@/lib/validations";
 import { prisma } from "@/lib/db";
 import { logger } from "@/lib/logger";
 
+// Validate id format — reject XSS/injection attempts early
+const SAFE_ID = /^[a-zA-Z0-9_-]{1,64}$/;
+
 // GET /api/v1/contacts/:id — get single contact
 export async function GET(
   req: NextRequest,
@@ -18,6 +21,7 @@ export async function GET(
     if (denied) return denied;
 
     const { id } = await params;
+    if (!SAFE_ID.test(id)) throw new ApiError(400, "รหัสรายชื่อไม่ถูกต้อง");
 
     const contact = await prisma.contact.findFirst({
       where: { id, userId: user.id },
@@ -56,6 +60,7 @@ export async function PUT(
     if (denied) return denied;
 
     const { id } = await params;
+    if (!SAFE_ID.test(id)) throw new ApiError(400, "รหัสรายชื่อไม่ถูกต้อง");
     const body = await req.json();
     const input = updateContactSchema.parse(body);
     const contact = await updateContact(user.id, id, input);
@@ -79,6 +84,7 @@ export async function DELETE(
     if (denied) return denied;
 
     const { id } = await params;
+    if (!SAFE_ID.test(id)) throw new ApiError(400, "รหัสรายชื่อไม่ถูกต้อง");
     await deleteContact(user.id, id);
     return apiResponse({ success: true });
   } catch (error) {
@@ -100,6 +106,7 @@ export async function PATCH(
     if (denied) return denied;
 
     const { id } = await params;
+    if (!SAFE_ID.test(id)) throw new ApiError(400, "รหัสรายชื่อไม่ถูกต้อง");
 
     let body: Record<string, unknown>;
     try {
