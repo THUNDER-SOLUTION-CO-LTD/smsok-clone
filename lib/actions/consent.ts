@@ -313,32 +313,36 @@ export async function assertMarketingConsent(userId: string): Promise<void> {
 export async function processSmsReplyOptOut(opts: {
   phone: string;
   ipAddress?: string;
-}): Promise<{ processed: boolean; userId?: string }> {
-  // Find user by phone
-  const user = await db.user.findFirst({
+}): Promise<{ processed: boolean; userIds: string[] }> {
+  // Find contacts by phone — the recipient who opted out may belong to multiple users/orgs
+  const contacts = await db.contact.findMany({
     where: { phone: opts.phone },
-    select: { id: true },
+    select: { userId: true },
   });
-  if (!user) return { processed: false };
+  if (contacts.length === 0) return { processed: false, userIds: [] };
 
   // Find active MARKETING policy
   const policy = await db.pdpaPolicy.findFirst({
     where: { type: "MARKETING", isActive: true },
     select: { id: true },
   });
-  if (!policy) return { processed: false };
+  if (!policy) return { processed: false, userIds: [] };
 
-  await logConsent({
-    userId: user.id,
-    policyId: policy.id,
-    consentType: "MARKETING",
-    action: "OPT_OUT",
-    ipAddress: opts.ipAddress,
-    channel: "SMS",
-    metadata: { reason: "sms_reply_0", phone: opts.phone },
-  });
+  // Log opt-out for each contact owner (the user who sent SMS to this phone)
+  const uniqueUserIds = [...new Set(contacts.map((c) => c.userId))];
+  for (const userId of uniqueUserIds) {
+    await logConsent({
+      userId,
+      policyId: policy.id,
+      consentType: "MARKETING",
+      action: "OPT_OUT",
+      ipAddress: opts.ipAddress,
+      channel: "SMS",
+      metadata: { reason: "sms_reply_stop", phone: opts.phone },
+    });
+  }
 
-  return { processed: true, userId: user.id };
+  return { processed: true, userIds: uniqueUserIds };
 }
 
 export async function getActivePolicies() {

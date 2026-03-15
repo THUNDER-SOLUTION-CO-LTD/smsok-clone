@@ -2,7 +2,7 @@
 
 const ACCENT = "var(--accent)";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import {
   AreaChart as RechartsAreaChart,
@@ -964,6 +964,209 @@ function AccountStatusBadge({ status }: { status?: AccountStatus }) {
   );
 }
 
+/* ── Credit Usage Chart Widget ── */
+type CreditUsageDay = { date: string; label: string; used: number };
+
+function CreditUsageChart({ quota }: { quota?: QuotaData }) {
+  const [data, setData] = useState<CreditUsageDay[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [period, setPeriod] = useState<"7d" | "30d">("7d");
+
+  useEffect(() => {
+    setLoading(true);
+    fetch(`/api/v1/credits/usage?period=${period}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((res) => {
+        const days: { date: string; creditsUsed: number }[] =
+          res?.usage ?? res?.data?.usage ?? [];
+        if (days.length > 0) {
+          setData(
+            days.map((d) => ({
+              date: d.date,
+              label: new Date(d.date).toLocaleDateString("th-TH", {
+                day: "numeric",
+                month: "short",
+              }),
+              used: d.creditsUsed,
+            }))
+          );
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [period]);
+
+  const remaining = quota?.totalRemaining ?? 0;
+  const total = quota?.totalSms ?? 0;
+  const pct = total > 0 ? Math.round((remaining / total) * 100) : 0;
+  const isLow = pct < 10;
+
+  const totalUsed = data.reduce((a, b) => a + b.used, 0);
+  const avgPerDay = data.length > 0 ? Math.round(totalUsed / data.length) : 0;
+  const maxUsed = Math.max(...data.map((d) => d.used), 0);
+
+  return (
+    <Card className="bg-[var(--bg-surface)] border-[var(--border-default)] rounded-lg">
+      <CardContent className="p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-base font-semibold text-[var(--text-primary)]">
+            เครดิตที่ใช้
+          </h3>
+          <div className="flex gap-1 bg-[var(--bg-base)] border border-[var(--border-default)] rounded-full p-0.5">
+            {(["7d", "30d"] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setPeriod(tab)}
+                className={`h-7 px-3 text-xs rounded-full font-medium transition-colors ${
+                  period === tab
+                    ? "bg-[var(--bg-surface)] text-[var(--text-primary)]"
+                    : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                }`}
+              >
+                {tab === "7d" ? "7 วัน" : "30 วัน"}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Balance + Warning */}
+        <div className="flex items-center gap-4 mb-4">
+          <div>
+            <div className="text-2xl font-bold text-[var(--text-primary)]">
+              {remaining.toLocaleString()}
+            </div>
+            <div className="text-xs text-[var(--text-muted)]">เครดิตคงเหลือ</div>
+          </div>
+          {isLow && (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(var(--error-rgb),0.08)] border border-[rgba(var(--error-rgb),0.15)]">
+              <AlertTriangle size={14} className="text-[var(--error)]" />
+              <span className="text-xs font-medium text-[var(--error)]">
+                เหลือน้อยกว่า {pct}%
+              </span>
+            </div>
+          )}
+          <div className="ml-auto">
+            <Link href="/dashboard/billing/packages">
+              <Button
+                size="sm"
+                className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--bg-base)] rounded-lg text-xs"
+              >
+                ซื้อเพิ่ม →
+              </Button>
+            </Link>
+          </div>
+        </div>
+
+        {/* Summary row */}
+        <div className="flex gap-4 mb-3 text-[11px] text-[var(--text-muted)]">
+          <span>
+            ใช้ทั้งหมด:{" "}
+            <span className="font-semibold text-[var(--text-primary)]">
+              {totalUsed.toLocaleString()}
+            </span>
+          </span>
+          <span>
+            เฉลี่ย/วัน:{" "}
+            <span className="font-semibold text-[var(--text-primary)]">
+              {avgPerDay.toLocaleString()}
+            </span>
+          </span>
+        </div>
+
+        {/* Chart */}
+        {loading ? (
+          <div className="flex items-center justify-center h-[180px]">
+            <span className="text-xs text-[var(--text-muted)]">กำลังโหลด...</span>
+          </div>
+        ) : data.length > 0 ? (
+          <ResponsiveContainer width="100%" height={180}>
+            <LineChart data={data} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
+              <defs>
+                <linearGradient id="gradCredit" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="var(--accent-warm)" stopOpacity={0.2} />
+                  <stop offset="100%" stopColor="var(--accent-warm)" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="rgba(255,255,255,0.04)"
+                vertical={false}
+              />
+              <XAxis
+                dataKey="label"
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: "var(--text-muted)", fontSize: 10 }}
+                dy={6}
+              />
+              <YAxis
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: "var(--text-muted)", fontSize: 9 }}
+                width={40}
+              />
+              <Tooltip
+                contentStyle={{
+                  background: "var(--bg-surface)",
+                  border: "1px solid var(--border-default)",
+                  borderRadius: 8,
+                  fontSize: 12,
+                }}
+                labelStyle={{ color: "var(--text-primary)", fontWeight: 600 }}
+                itemStyle={{ color: "var(--text-muted)" }}
+                formatter={(value) => [
+                  `${Number(value).toLocaleString()} เครดิต`,
+                  "ใช้ไป",
+                ]}
+              />
+              <ReferenceLine
+                y={avgPerDay}
+                stroke="rgba(var(--warning-rgb),0.25)"
+                strokeDasharray="6 4"
+                label={{
+                  value: "avg",
+                  position: "right",
+                  fill: "rgba(var(--warning-rgb),0.4)",
+                  fontSize: 9,
+                }}
+              />
+              <Line
+                type="monotone"
+                dataKey="used"
+                stroke="var(--accent-warm)"
+                strokeWidth={2}
+                dot={{
+                  r: 3,
+                  fill: "var(--accent-warm)",
+                  stroke: "var(--bg-base)",
+                  strokeWidth: 2,
+                }}
+                activeDot={{
+                  r: 5,
+                  fill: "var(--accent-warm)",
+                  stroke: "var(--bg-base)",
+                  strokeWidth: 2,
+                }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="flex flex-col items-center justify-center h-[180px] text-center">
+            <Info
+              size={24}
+              className="text-[var(--text-muted)] mb-2"
+            />
+            <p className="text-xs text-[var(--text-muted)]">
+              ยังไม่มีข้อมูลการใช้เครดิต
+            </p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 /* ── Helpers ── */
 function calcDelta(today: number, yesterday: number): { text: string; positive: boolean } {
   if (yesterday === 0 && today === 0) return { text: "—", positive: true };
@@ -1043,6 +1246,9 @@ export default function DashboardContent({
           <QuotaWidget quota={quota} />
         </div>
       </div>
+
+      {/* ── Credit Usage Chart ── */}
+      <CreditUsageChart quota={quota} />
 
       {/* ── Activity Feed + Recent Messages (50/50 split) ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">

@@ -24,7 +24,7 @@ ALTER TABLE "consent_statuses" ADD CONSTRAINT "consent_statuses_user_id_fkey" FO
 -- Backfill: populate consent_statuses from latest pdpa_consent_logs
 INSERT INTO "consent_statuses" ("id", "user_id", "consent_type", "is_consented", "policy_version", "last_updated_at")
 SELECT
-    gen_random_uuid(),
+    'cs_' || substr(md5(random()::text || clock_timestamp()::text), 1, 25),
     cl."user_id",
     cl."consent_type",
     CASE WHEN cl."action" = 'OPT_IN' THEN true ELSE false END,

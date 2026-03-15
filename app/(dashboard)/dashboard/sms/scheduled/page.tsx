@@ -528,22 +528,16 @@ function CreateScheduledSmsDialog({
   const [message, setMessage] = useState("");
   const [scheduledDate, setScheduledDate] = useState("");
   const [scheduledTime, setScheduledTime] = useState("");
-  const [recipientType, setRecipientType] = useState<RecipientType>("manual");
-  const [manualNumbers, setManualNumbers] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [senderName, setSenderName] = useState("");
   const [creating, setCreating] = useState(false);
 
   const charCount = message.length;
   const smsCount = charCount === 0 ? 0 : Math.ceil(charCount / 70);
-  const recipientCount =
-    recipientType === "manual"
-      ? manualNumbers
-          .split(/[\n,;]+/)
-          .filter((n) => n.trim().length >= 9).length
-      : 0;
+  const isValidPhone = phoneNumber.trim().length >= 9;
 
   async function handleCreate() {
-    if (!message.trim() || !scheduledDate || !scheduledTime) {
+    if (!message.trim() || !scheduledDate || !scheduledTime || !isValidPhone) {
       toast.error("กรุณากรอกข้อมูลให้ครบ");
       return;
     }
@@ -554,20 +548,12 @@ function CreateScheduledSmsDialog({
         `${scheduledDate}T${scheduledTime}:00+07:00`
       ).toISOString();
 
-      const numbers =
-        recipientType === "manual"
-          ? manualNumbers
-              .split(/[\n,;]+/)
-              .map((n) => n.trim())
-              .filter((n) => n.length >= 9)
-          : [];
-
       const res = await fetch("/api/v1/sms/scheduled", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sender: senderName.trim() || "SMSOK",
-          to: numbers.join(","),
+          to: phoneNumber.trim(),
           message: message.trim(),
           scheduledAt,
         }),
@@ -579,7 +565,7 @@ function CreateScheduledSmsDialog({
       setMessage("");
       setScheduledDate("");
       setScheduledTime("");
-      setManualNumbers("");
+      setPhoneNumber("");
       setSenderName("");
       onCreated();
     } catch {
@@ -649,46 +635,24 @@ function CreateScheduledSmsDialog({
             </div>
           </div>
 
-          {/* Recipient Type */}
+          {/* Phone Number */}
           <div>
             <label className="text-xs font-semibold uppercase tracking-[0.05em] text-[var(--text-secondary)] block mb-1.5">
-              ผู้รับ
+              เบอร์ผู้รับ <span className="text-[var(--error)]">*</span>
             </label>
-            <CustomSelect
-              value={recipientType}
-              onChange={(v) => setRecipientType(v as RecipientType)}
-              options={[
-                { value: "manual", label: "พิมพ์เบอร์เอง" },
-                { value: "contacts", label: "เลือกจากรายชื่อ" },
-                { value: "groups", label: "เลือกจากกลุ่ม" },
-              ]}
-              placeholder="เลือกวิธีระบุผู้รับ"
+            <Input
+              placeholder="0891234567"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+              maxLength={15}
+              className="bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] font-mono"
             />
+            {phoneNumber.trim() && !isValidPhone && (
+              <p className="text-[11px] text-[var(--error)] mt-1">
+                กรุณากรอกเบอร์โทรอย่างน้อย 9 หลัก
+              </p>
+            )}
           </div>
-
-          {/* Manual Numbers */}
-          {recipientType === "manual" && (
-            <div>
-              <Textarea
-                placeholder={"เบอร์โทร (คั่นด้วย Enter หรือ ,)\n0891234567\n0898765432"}
-                rows={3}
-                value={manualNumbers}
-                onChange={(e) => setManualNumbers(e.target.value)}
-                className="bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] resize-none font-mono text-[13px]"
-              />
-              {recipientCount > 0 && (
-                <p className="text-[11px] text-[var(--accent)] mt-1">
-                  {recipientCount} เบอร์
-                </p>
-              )}
-            </div>
-          )}
-
-          {recipientType !== "manual" && (
-            <p className="text-[12px] text-[var(--text-muted)] text-center py-4 bg-[var(--bg-base)] rounded-lg border border-[var(--border-default)]">
-              เร็วๆ นี้ — เลือกจาก{recipientType === "contacts" ? "รายชื่อ" : "กลุ่ม"}จะพร้อมใช้เมื่อ API พร้อม
-            </p>
-          )}
 
           {/* Sender Name */}
           <div>
@@ -716,7 +680,7 @@ function CreateScheduledSmsDialog({
           </Button>
           <Button
             onClick={handleCreate}
-            disabled={creating || !message.trim() || !scheduledDate || !scheduledTime}
+            disabled={creating || !message.trim() || !scheduledDate || !scheduledTime || !isValidPhone}
             className="gap-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--bg-base)]"
           >
             {creating ? (
