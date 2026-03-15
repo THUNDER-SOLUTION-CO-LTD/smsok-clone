@@ -1,50 +1,26 @@
-import { NextRequest } from "next/server";
-import { authenticateRequest, apiResponse, apiError } from "@/lib/api-auth";
-import { requireApiPermission } from "@/lib/rbac";
-import { createContactGroup, getContactsByGroup, addContactsToGroup } from "@/lib/actions/contacts";
-import { addContactsToGroupSchema, createContactGroupSchema } from "@/lib/validations";
+import { NextRequest, NextResponse } from "next/server";
 
-// DEPRECATED: Use POST /api/v1/groups instead
-export async function POST(req: NextRequest) {
-  try {
-    const user = await authenticateRequest(req);
+// REMOVED: Legacy route — all group operations now use /api/v1/groups
+// Redirect clients to canonical endpoint
 
-    const denied = await requireApiPermission(user.id, "create", "group");
-    if (denied) return denied;
-
-    const body = await req.json();
-
-    if (body.action === "add_contacts") {
-      const input = addContactsToGroupSchema.parse(body);
-      await addContactsToGroup(user.id, input.groupId, input.contactIds);
-      return apiResponse({ success: true });
-    }
-
-    const input = createContactGroupSchema.parse(body);
-    const group = await createContactGroup(user.id, input.name);
-    return apiResponse(group, 201);
-  } catch (error) {
-    return apiError(error);
-  }
+export async function POST() {
+  return NextResponse.json(
+    { error: "ใช้ POST /api/v1/groups แทน", redirect: "/api/v1/groups" },
+    { status: 301 },
+  );
 }
 
 export async function GET(req: NextRequest) {
-  try {
-    const user = await authenticateRequest(req);
-
-    const denied = await requireApiPermission(user.id, "read", "group");
-    if (denied) return denied;
-
-    const { searchParams } = new URL(req.url);
-    const groupId = searchParams.get("groupId");
-
-    if (!groupId) {
-      return apiResponse({ error: "groupId is required" }, 400);
-    }
-
-    const contacts = await getContactsByGroup(user.id, groupId);
-    return apiResponse({ contacts });
-  } catch (error) {
-    return apiError(error);
+  const { searchParams } = new URL(req.url);
+  const groupId = searchParams.get("groupId");
+  if (groupId) {
+    return NextResponse.json(
+      { error: "ใช้ GET /api/v1/groups/:id/members แทน", redirect: `/api/v1/groups/${groupId}/members` },
+      { status: 301 },
+    );
   }
+  return NextResponse.json(
+    { error: "ใช้ GET /api/v1/groups แทน", redirect: "/api/v1/groups" },
+    { status: 301 },
+  );
 }

@@ -53,11 +53,12 @@ export async function GET(
 
     if (tagsParam) {
       const tagNames = tagsParam.split(",").map((t) => t.trim()).filter(Boolean);
-      if (tagNames.length > 0) {
+      // AND semantics: contact must have ALL specified tags
+      for (const tagName of tagNames) {
         andConditions.push({
           contactTags: {
             some: {
-              tag: { name: { in: tagNames } },
+              tag: { name: tagName },
             },
           },
         });

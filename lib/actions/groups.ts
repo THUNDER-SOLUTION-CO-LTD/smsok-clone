@@ -63,11 +63,21 @@ export async function updateGroup(userIdOrGroupId: string, groupIdOrData: string
     throw new ApiError(400, parsed.error.issues[0]?.message || "ข้อมูลไม่ถูกต้อง");
   }
   const input = parsed.data;
+  const name = input.name.trim();
   const existing = await db.contactGroup.findFirst({ where: { id: groupId, userId } });
   if (!existing) throw new ApiError(404, "ไม่พบกลุ่ม");
+
+  // Check duplicate name (skip if same name)
+  if (name !== existing.name) {
+    const duplicate = await db.contactGroup.findUnique({
+      where: { userId_name: { userId, name } },
+    });
+    if (duplicate) throw new ApiError(409, "มีกลุ่มชื่อนี้อยู่แล้ว");
+  }
+
   const updated = await db.contactGroup.update({
     where: { id: groupId },
-    data: { name: input.name },
+    data: { name },
   });
   revalidatePath("/dashboard/groups");
   return updated;

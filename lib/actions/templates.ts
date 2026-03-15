@@ -86,6 +86,14 @@ export async function updateTemplate(userIdOrTemplateId: string, templateIdOrDat
   });
   if (!existing) throw new Error("ไม่พบเทมเพลต");
 
+  // Duplicate name check on rename
+  if (input.name !== undefined && input.name !== existing.name) {
+    const duplicate = await db.messageTemplate.findFirst({
+      where: { userId, name: input.name, deletedAt: null, id: { not: templateId } },
+    });
+    if (duplicate) throw new Error("มีเทมเพลตชื่อนี้อยู่แล้ว");
+  }
+
   const newContent = input.content ?? existing.content;
   const updateData: Record<string, unknown> = {
     ...(input.name !== undefined && { name: input.name }),
