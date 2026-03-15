@@ -109,69 +109,166 @@ type Props = {
   accountStatus?: AccountStatus;
 };
 
-/* ── Alert Bar ── */
-function AlertBar({ quota }: { quota?: QuotaData }) {
+/* ── Package Upgrade Banner ── */
+function PackageUpgradeBanner({ quota }: { quota?: QuotaData }) {
   const [dismissed, setDismissed] = useState(false);
   if (dismissed || !quota) return null;
 
   const remaining = quota.totalRemaining;
   const total = quota.totalSms;
-  const pct = total > 0 ? (remaining / total) * 100 : 0;
+  const pct = total > 0 ? Math.round((remaining / total) * 100) : 0;
 
-  let alert: { icon: typeof AlertTriangle; message: string; cta: string; href: string; color: string; bg: string } | null = null;
+  const firstPkg = quota.packages?.[0];
+  const pkgName = firstPkg?.tier?.name ?? "—";
+  const expiresAt = firstPkg?.expiresAt ? new Date(firstPkg.expiresAt) : null;
+  const daysUntilExpiry = expiresAt
+    ? Math.ceil((expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    : null;
 
-  if (remaining === 0) {
-    alert = {
-      icon: AlertCircle,
-      message: "โควต้าหมด! ซื้อแพ็กเกจเพื่อส่ง SMS ต่อ",
-      cta: "ซื้อแพ็กเกจ →",
-      href: "/dashboard/packages",
-      color: "var(--error)",
-      bg: "rgba(242,54,69,0.08)",
-    };
-  } else if (pct < 20) {
-    alert = {
-      icon: AlertTriangle,
-      message: `โควต้าเหลือน้อย! เหลือ ${remaining.toLocaleString()} ข้อความ`,
-      cta: "ซื้อแพ็กเกจ →",
-      href: "/dashboard/packages",
-      color: "var(--warning)",
-      bg: "rgba(250,205,99,0.08)",
-    };
-  }
+  // Show only when credits < 20% OR expiring within 7 days
+  const isLowCredits = pct < 20;
+  const isExpiring = daysUntilExpiry !== null && daysUntilExpiry <= 7;
+  if (!isLowCredits && !isExpiring) return null;
 
-  if (!alert) return null;
-  const Icon = alert.icon;
+  const isEmpty = remaining === 0;
+  const borderColor = isEmpty ? "#EF4444" : "#00E2B5";
+  const bgGradient = isEmpty
+    ? "linear-gradient(135deg, #10161c, #1c1015)"
+    : "linear-gradient(135deg, #10161c, #0d2b26)";
 
   return (
     <div
-      className="flex items-center gap-3 rounded-lg px-4 py-3 relative"
-      style={{ background: alert.bg, borderLeft: `3px solid ${alert.color}` }}
+      className="rounded-xl p-5 relative"
+      style={{ background: bgGradient, borderLeft: `4px solid ${borderColor}` }}
       role="alert"
     >
-      <Icon size={18} style={{ color: alert.color }} className="shrink-0" />
-      <span className="text-sm flex-1" style={{ color: "var(--text-primary)" }}>
-        {alert.message}
-      </span>
-      <Link href={alert.href}>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-xs font-medium shrink-0"
-          style={{ color: alert.color }}
-        >
-          {alert.cta}
-        </Button>
-      </Link>
       <button
         type="button"
         onClick={() => setDismissed(true)}
-        className="p-1 rounded-md hover:bg-[rgba(255,255,255,0.05)] transition-colors shrink-0"
-        style={{ color: "var(--text-muted)" }}
+        className="absolute top-3 right-3 p-1 rounded-md hover:bg-[rgba(255,255,255,0.05)] transition-colors text-[var(--text-muted)] hover:text-white cursor-pointer"
         aria-label="ปิดแจ้งเตือน"
       >
         <X size={14} />
       </button>
+
+      <div className="flex items-start gap-2 mb-2">
+        <span className="text-base">{isEmpty ? "🔴" : "⚡"}</span>
+        <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+          {isEmpty
+            ? "แพคเกจหมดแล้ว!"
+            : `แพคเกจใกล้หมด — เหลือ ${remaining.toLocaleString()} ข้อความ (${pct}%)`}
+        </h3>
+      </div>
+
+      <div className="text-xs text-[var(--text-muted)] space-y-0.5 mb-3 ml-6">
+        <p>แพคเกจปัจจุบัน: {pkgName} ({total.toLocaleString()} ข้อความ)</p>
+        {expiresAt && (
+          <p>
+            หมดอายุ: {formatThaiDateOnly(firstPkg!.expiresAt)}
+            {daysUntilExpiry !== null && daysUntilExpiry <= 3 && (
+              <span className="text-[#EF4444] font-medium ml-1">
+                (เหลืออีก {daysUntilExpiry} วัน)
+              </span>
+            )}
+          </p>
+        )}
+      </div>
+
+      {/* Progress bar */}
+      <div className="ml-6 mb-4">
+        <div
+          className="w-full h-2 rounded-full overflow-hidden"
+          style={{ background: "rgba(255,255,255,0.08)" }}
+        >
+          <div
+            className="h-full rounded-full transition-all duration-500"
+            style={{
+              width: `${Math.min(pct, 100)}%`,
+              background: isEmpty ? "#EF4444" : "linear-gradient(90deg, #00E2B5, #00C9A0)",
+            }}
+          />
+        </div>
+        <div className="text-right text-[10px] text-[var(--text-muted)] mt-0.5">{pct}%</div>
+      </div>
+
+      <div className="ml-6">
+        <Link href="/dashboard/packages">
+          <Button
+            className="bg-[#00E2B5] hover:bg-[#00C9A0] text-[#0b1118] font-semibold rounded-lg"
+            size="sm"
+          >
+            อัพเกรดแพคเกจ →
+          </Button>
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+/* ── Smart Alert Cards ── */
+type SmartAlert = {
+  id: string;
+  type: "campaign_running" | "sender_approved" | "sender_rejected" | "order_approved" | "order_pending" | "low_credits" | "system_notice";
+  icon: string;
+  borderColor: string;
+  title: string;
+  action: { label: string; href: string };
+  time: string;
+};
+
+function SmartAlertCards({ alerts }: { alerts: SmartAlert[] }) {
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
+
+  const visible = alerts.filter((a) => !dismissedIds.has(a.id));
+  if (visible.length === 0) return null;
+
+  const shown = visible.slice(0, 3);
+  const remaining = visible.length - 3;
+
+  function dismiss(id: string) {
+    setDismissedIds((prev) => new Set([...prev, id]));
+  }
+
+  return (
+    <div className="space-y-2">
+      {shown.map((alert) => (
+        <div
+          key={alert.id}
+          className="flex items-start gap-3 rounded-lg px-4 py-3 relative bg-[#10161c]/80 backdrop-blur border border-white/5"
+          style={{ borderLeftWidth: 3, borderLeftColor: alert.borderColor }}
+        >
+          <span className="text-sm mt-0.5 shrink-0">{alert.icon}</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm text-[var(--text-primary)]">{alert.title}</p>
+            <div className="flex items-center gap-3 mt-1">
+              <Link
+                href={alert.action.href}
+                className="text-xs font-medium hover:underline"
+                style={{ color: alert.borderColor }}
+              >
+                {alert.action.label}
+              </Link>
+              <span className="text-[11px] text-[var(--text-muted)]">{alert.time}</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => dismiss(alert.id)}
+            className="p-1 rounded-md hover:bg-[rgba(255,255,255,0.05)] transition-colors text-[var(--text-muted)] hover:text-white cursor-pointer shrink-0"
+            aria-label="ปิด"
+          >
+            <X size={12} />
+          </button>
+        </div>
+      ))}
+      {remaining > 0 && (
+        <Link
+          href="/dashboard/notifications"
+          className="block text-center text-xs text-[var(--accent)] hover:underline py-1"
+        >
+          ดูการแจ้งเตือนทั้งหมด ({visible.length}) →
+        </Link>
+      )}
     </div>
   );
 }

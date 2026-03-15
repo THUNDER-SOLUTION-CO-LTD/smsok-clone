@@ -105,7 +105,7 @@ test.describe("E2E-03: Login Flow", () => {
   });
 
   test("Login with valid credentials → dashboard", async ({ page }) => {
-    await login(page, "qa-judge2@smsok.test", "QATest123!");
+    await login(page, "qa-judge2@smsok.test", "QAJudge2026!");
     await page.screenshot({ path: "test-results/e2e-03-03-after-login.png", fullPage: true });
     // Should be on dashboard or redirected away from login
     const url = page.url();
@@ -116,7 +116,7 @@ test.describe("E2E-03: Login Flow", () => {
 
 test.describe("E2E-04: Package Page", () => {
   test.beforeEach(async ({ page }) => {
-    await login(page, "qa-judge2@smsok.test", "QATest123!");
+    await login(page, "qa-judge2@smsok.test", "QAJudge2026!");
   });
 
   test("Packages page shows 8 tiers", async ({ page }) => {
@@ -126,7 +126,7 @@ test.describe("E2E-04: Package Page", () => {
     const body = await page.textContent("body");
     expect(body).not.toContain("Internal Server Error");
     // Check for package tiers (TIER A through D visible on SME tab, E-H on Enterprise tab)
-    const tierNames = ["TIER A", "TIER B", "TIER C", "TIER D"];
+    const tierNames = ["Tier A", "Tier B", "Tier C", "Tier D"];
     let foundCount = 0;
     for (const name of tierNames) {
       if (body?.includes(name)) foundCount++;
@@ -152,7 +152,7 @@ test.describe("E2E-04: Package Page", () => {
 
 test.describe("E2E-05: Order Flow", () => {
   test.beforeEach(async ({ page }) => {
-    await login(page, "qa-judge2@smsok.test", "QATest123!");
+    await login(page, "qa-judge2@smsok.test", "QAJudge2026!");
   });
 
   test("Orders page loads", async ({ page }) => {
@@ -180,7 +180,7 @@ test.describe("E2E-05: Order Flow", () => {
 
 test.describe("E2E-06: Profile/Settings Page", () => {
   test.beforeEach(async ({ page }) => {
-    await login(page, "qa-judge2@smsok.test", "QATest123!");
+    await login(page, "qa-judge2@smsok.test", "QAJudge2026!");
   });
 
   test("Settings page loads with user info", async ({ page }) => {

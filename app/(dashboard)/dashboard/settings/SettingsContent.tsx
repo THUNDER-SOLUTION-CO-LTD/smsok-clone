@@ -14,10 +14,16 @@ import {
   Lock,
   Clock,
   FileText,
+  Camera,
+  Building2,
+  Key,
+  Webhook,
+  ArrowRight,
 } from "lucide-react";
 import Link from "next/link";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+import CustomSelect from "@/components/ui/CustomSelect";
 import PageLayout, { PageHeader } from "@/components/blocks/PageLayout";
 import ProfileEditForm from "./ProfileEditForm";
 import PasswordChangeForm from "./PasswordChangeForm";
@@ -32,7 +38,7 @@ import { formatThaiDateOnly } from "@/lib/format-thai-date";
 
 /* ─── Types ─── */
 
-type Tab = "profile" | "security" | "sessions" | "notifications";
+type Tab = "profile" | "security" | "billing" | "api-keys" | "webhooks" | "notifications";
 
 type SettingsUser = {
   id: string;
@@ -41,13 +47,31 @@ type SettingsUser = {
   phone: string | null;
   role: string;
   createdAt: string;
+  companyName?: string | null;
+  timezone?: string | null;
+  avatarUrl?: string | null;
 };
 
 const TABS: { id: Tab; label: string; icon: typeof User }[] = [
   { id: "profile", label: "โปรไฟล์", icon: User },
   { id: "security", label: "ความปลอดภัย", icon: Shield },
-  { id: "sessions", label: "เซสชัน", icon: Globe },
+  { id: "billing", label: "การเงิน", icon: CreditCard },
+  { id: "api-keys", label: "API Keys", icon: Key },
+  { id: "webhooks", label: "Webhooks", icon: Webhook },
   { id: "notifications", label: "การแจ้งเตือน", icon: Bell },
+];
+
+const TIMEZONE_OPTIONS = [
+  { value: "Asia/Bangkok", label: "Asia/Bangkok (GMT+7)" },
+  { value: "Asia/Singapore", label: "Asia/Singapore (GMT+8)" },
+  { value: "Asia/Tokyo", label: "Asia/Tokyo (GMT+9)" },
+  { value: "Asia/Shanghai", label: "Asia/Shanghai (GMT+8)" },
+  { value: "Asia/Kolkata", label: "Asia/Kolkata (GMT+5:30)" },
+  { value: "Asia/Dubai", label: "Asia/Dubai (GMT+4)" },
+  { value: "Europe/London", label: "Europe/London (GMT+0)" },
+  { value: "America/New_York", label: "America/New York (GMT-5)" },
+  { value: "America/Los_Angeles", label: "America/Los Angeles (GMT-8)" },
+  { value: "Australia/Sydney", label: "Australia/Sydney (GMT+11)" },
 ];
 
 /* ─── Notification Preferences ─── */
@@ -110,10 +134,26 @@ function ProfileCard({
   user,
   smsRemaining,
   memberSince,
+  companyName,
+  onCompanyNameChange,
+  timezone,
+  onTimezoneChange,
+  avatarPreview,
+  onAvatarChange,
+  onSaveCompany,
+  savingCompany,
 }: {
   user: SettingsUser;
   smsRemaining: number;
   memberSince: string;
+  companyName: string;
+  onCompanyNameChange: (v: string) => void;
+  timezone: string;
+  onTimezoneChange: (v: string) => void;
+  avatarPreview: string | null;
+  onAvatarChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onSaveCompany: () => void;
+  savingCompany: boolean;
 }) {
   const initials = user.name.slice(0, 2).toUpperCase();
 
@@ -121,10 +161,26 @@ function ProfileCard({
     <>
       {/* Avatar + Info */}
       <div className="flex items-center gap-3.5 sm:gap-5 pb-4 border-b border-[rgba(43,53,64,0.5)] mb-4">
-        <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg bg-gradient-to-br from-[var(--accent)]/30 to-[var(--accent-secondary)]/20 border border-[rgba(var(--accent-rgb),0.15)] flex items-center justify-center shrink-0">
-          <span className="text-base sm:text-xl font-bold text-[var(--text-primary)]">
-            {initials}
-          </span>
+        {/* Avatar with upload overlay */}
+        <div className="relative group shrink-0">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-gradient-to-br from-[var(--accent)]/30 to-[var(--accent-secondary)]/20 border border-[rgba(var(--accent-rgb),0.15)] flex items-center justify-center overflow-hidden">
+            {avatarPreview ? (
+              <img src={avatarPreview} alt="avatar" className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-lg sm:text-2xl font-bold text-[var(--text-primary)]">
+                {initials}
+              </span>
+            )}
+          </div>
+          <label className="absolute inset-0 rounded-xl flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+            <Camera className="w-5 h-5 text-white" />
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              className="hidden"
+              onChange={onAvatarChange}
+            />
+          </label>
         </div>
         <div className="flex-1 min-w-0">
           <h2 className="text-[15px] sm:text-lg font-semibold text-[var(--text-primary)] truncate">
@@ -187,8 +243,93 @@ function ProfileCard({
         </div>
 
         <ProfileEditForm userId={user.id} initialName={user.name} />
+
+        {/* Company Info Section */}
+        <div className="pt-4 border-t border-[rgba(43,53,64,0.5)]">
+          <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-4 flex items-center gap-2">
+            <Building2 className="w-4 h-4 text-[var(--accent)]" />
+            ข้อมูลบริษัท
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs sm:text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1.5 font-medium">
+                ชื่อบริษัท / องค์กร
+              </label>
+              <input
+                type="text"
+                value={companyName}
+                onChange={(e) => onCompanyNameChange(e.target.value)}
+                placeholder="บริษัท ตัวอย่าง จำกัด"
+                className="bg-[var(--bg-base)] border border-[var(--border-default)] rounded-lg text-[var(--text-primary)] placeholder:text-[var(--text-muted)] w-full px-3.5 h-11 text-base sm:text-sm focus:border-[rgba(var(--accent-rgb),0.6)] focus:outline-none transition-colors"
+              />
+            </div>
+            <div>
+              <label className="block text-xs sm:text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1.5 font-medium">
+                เขตเวลา
+              </label>
+              <CustomSelect
+                value={timezone}
+                onChange={onTimezoneChange}
+                options={TIMEZONE_OPTIONS}
+                placeholder="เลือกเขตเวลา..."
+              />
+            </div>
+          </div>
+          <div className="mt-4">
+            <button
+              type="button"
+              onClick={onSaveCompany}
+              disabled={savingCompany}
+              className="btn-primary px-5 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 disabled:opacity-50"
+            >
+              {savingCompany ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  กำลังบันทึก...
+                </>
+              ) : (
+                "บันทึกข้อมูลบริษัท"
+              )}
+            </button>
+          </div>
+        </div>
       </div>
     </>
+  );
+}
+
+/* ─── Placeholder Tab for upcoming sections ─── */
+function ComingSoonTab({
+  icon: Icon,
+  title,
+  description,
+  linkHref,
+  linkLabel,
+}: {
+  icon: typeof Key;
+  title: string;
+  description: string;
+  linkHref: string;
+  linkLabel: string;
+}) {
+  return (
+    <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg p-8 text-center">
+      <div className="w-14 h-14 rounded-xl bg-[rgba(var(--accent-rgb),0.08)] border border-[rgba(var(--accent-rgb),0.12)] flex items-center justify-center mx-auto mb-4">
+        <Icon className="w-6 h-6 text-[var(--accent)]" />
+      </div>
+      <h3 className="text-base font-semibold text-[var(--text-primary)] mb-2">{title}</h3>
+      <p className="text-sm text-[var(--text-muted)] mb-5 max-w-md mx-auto">{description}</p>
+      <Link
+        href={linkHref}
+        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold bg-[var(--accent)] text-[var(--bg-base)] hover:opacity-90 transition-opacity"
+      >
+        {linkLabel}
+        <ArrowRight className="w-4 h-4" />
+      </Link>
+    </div>
   );
 }
 
@@ -376,6 +517,44 @@ export default function SettingsContent({
   const [apiUnavailable, setApiUnavailable] = useState(false);
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
+  // Profile: company info, avatar, timezone
+  const [companyName, setCompanyName] = useState(user.companyName ?? "");
+  const [timezone, setTimezone] = useState(user.timezone ?? "Asia/Bangkok");
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(user.avatarUrl ?? null);
+  const [savingCompany, setSavingCompany] = useState(false);
+
+  const handleAvatarChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("ไฟล์ต้องมีขนาดไม่เกิน 2MB");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setAvatarPreview(ev.target?.result as string);
+      toast.success("อัปเดตรูปโปรไฟล์แล้ว");
+    };
+    reader.readAsDataURL(file);
+  }, []);
+
+  const handleSaveCompany = useCallback(async () => {
+    setSavingCompany(true);
+    try {
+      const res = await fetch("/api/v1/settings/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ companyName: companyName.trim(), timezone }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      toast.success("บันทึกข้อมูลบริษัทสำเร็จ");
+    } catch {
+      toast.error("ไม่สามารถบันทึกข้อมูลได้ กรุณาลองอีกครั้ง");
+    } finally {
+      setSavingCompany(false);
+    }
+  }, [companyName, timezone]);
+
   // Fetch notification preferences from API on mount
   useEffect(() => {
     let cancelled = false;
@@ -485,7 +664,19 @@ export default function SettingsContent({
       <div className="md:hidden">
         {/* Profile — always open */}
         <div className="bg-[var(--bg-surface)] border-y border-[var(--border-default)] -mx-4 px-4 py-5 mb-[2px]">
-          <ProfileCard user={user} smsRemaining={smsRemaining} memberSince={memberSince} />
+          <ProfileCard
+            user={user}
+            smsRemaining={smsRemaining}
+            memberSince={memberSince}
+            companyName={companyName}
+            onCompanyNameChange={setCompanyName}
+            timezone={timezone}
+            onTimezoneChange={setTimezone}
+            avatarPreview={avatarPreview}
+            onAvatarChange={handleAvatarChange}
+            onSaveCompany={handleSaveCompany}
+            savingCompany={savingCompany}
+          />
         </div>
 
         {/* Accordion sections */}
@@ -589,10 +780,22 @@ export default function SettingsContent({
             <div role="tabpanel" id="settings-panel-profile" aria-labelledby="settings-tab-profile">
               <div className="space-y-6">
                 <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg p-6 md:p-8">
-                  <ProfileCard user={user} smsRemaining={smsRemaining} memberSince={memberSince} />
+                  <ProfileCard
+                    user={user}
+                    smsRemaining={smsRemaining}
+                    memberSince={memberSince}
+                    companyName={companyName}
+                    onCompanyNameChange={setCompanyName}
+                    timezone={timezone}
+                    onTimezoneChange={setTimezone}
+                    avatarPreview={avatarPreview}
+                    onAvatarChange={handleAvatarChange}
+                    onSaveCompany={handleSaveCompany}
+                    savingCompany={savingCompany}
+                  />
                 </div>
                 <AccountSummary user={user} smsRemaining={smsRemaining} />
-                <TaxProfileSection />
+                <SendingHoursSection />
               </div>
             </div>
           )}
@@ -604,23 +807,58 @@ export default function SettingsContent({
                 <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg p-6 md:p-8">
                   <h2 className="text-base font-semibold text-[var(--text-primary)] mb-5 flex items-center gap-2.5">
                     <div className="w-8 h-8 rounded-lg bg-[rgba(var(--accent-rgb),0.1)] border border-[rgba(var(--accent-rgb),0.15)] flex items-center justify-center">
-                      <Shield size={16} className="text-[var(--accent)]" />
+                      <Lock size={16} className="text-[var(--accent)]" />
                     </div>
                     เปลี่ยนรหัสผ่าน
                   </h2>
                   <PasswordChangeForm />
                 </div>
                 <TwoFactorSection />
-                <SendingHoursSection />
+                <SessionsSection />
                 <DangerZone />
               </div>
             </div>
           )}
 
-          {/* Sessions Tab */}
-          {activeTab === "sessions" && (
-            <div role="tabpanel" id="settings-panel-sessions" aria-labelledby="settings-tab-sessions">
-              <SessionsSection />
+          {/* Billing Tab */}
+          {activeTab === "billing" && (
+            <div role="tabpanel" id="settings-panel-billing" aria-labelledby="settings-tab-billing">
+              <div className="space-y-6">
+                <TaxProfileSection />
+                <ComingSoonTab
+                  icon={CreditCard}
+                  title="ข้อมูลการเงินและแพ็กเกจ"
+                  description="ดูแพ็กเกจปัจจุบัน ประวัติการชำระเงิน ใบกำกับภาษี และตั้งค่าการเติมเงินอัตโนมัติ"
+                  linkHref="/dashboard/billing"
+                  linkLabel="ไปหน้าการเงิน"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* API Keys Tab */}
+          {activeTab === "api-keys" && (
+            <div role="tabpanel" id="settings-panel-api-keys" aria-labelledby="settings-tab-api-keys">
+              <ComingSoonTab
+                icon={Key}
+                title="จัดการ API Keys"
+                description="สร้าง จัดการ และดูสถิติการใช้งาน API Keys ของคุณ"
+                linkHref="/dashboard/api-keys"
+                linkLabel="ไปหน้า API Keys"
+              />
+            </div>
+          )}
+
+          {/* Webhooks Tab */}
+          {activeTab === "webhooks" && (
+            <div role="tabpanel" id="settings-panel-webhooks" aria-labelledby="settings-tab-webhooks">
+              <ComingSoonTab
+                icon={Webhook}
+                title="จัดการ Webhooks"
+                description="ตั้งค่า webhook endpoints สำหรับรับการแจ้งเตือน events ต่างๆ จากระบบ"
+                linkHref="/dashboard/settings/webhooks"
+                linkLabel="ไปหน้า Webhooks"
+              />
             </div>
           )}
 

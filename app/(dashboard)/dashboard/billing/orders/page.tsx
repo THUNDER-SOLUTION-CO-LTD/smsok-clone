@@ -438,7 +438,7 @@ export default function OrderManagementPage() {
                     Order#
                   </TableHead>
                   <TableHead className="text-[var(--text-muted)] font-medium text-xs">
-                    Package
+                    แพ็กเกจ
                   </TableHead>
                   <TableHead className="text-[var(--text-muted)] font-medium text-xs text-right w-[120px]">
                     ยอดโอน
@@ -450,7 +450,7 @@ export default function OrderManagementPage() {
                     วันที่
                   </TableHead>
                   <TableHead className="text-[var(--text-muted)] font-medium text-xs text-right w-[80px]">
-                    Action
+                    จัดการ
                   </TableHead>
                 </TableRow>
               </TableHeader>
