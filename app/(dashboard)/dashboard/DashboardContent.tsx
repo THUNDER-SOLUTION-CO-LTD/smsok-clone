@@ -202,7 +202,7 @@ function PackageUpgradeBanner({ quota }: { quota?: QuotaData }) {
             className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--bg-base)] font-semibold rounded-lg"
             size="sm"
           >
-            อัพเกรดแพคเกจ →
+            ซื้อแพ็กเกจ →
           </Button>
         </Link>
       </div>

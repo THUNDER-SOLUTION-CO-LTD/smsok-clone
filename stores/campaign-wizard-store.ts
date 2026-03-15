@@ -88,6 +88,8 @@ export const createCampaignWizardStore = (initState: Partial<CampaignWizardState
               s.currentStep = 'details'
               s.draft = { ...defaultDraft }
               s.completedSteps = []
+              // Clear persisted localStorage to prevent stale values
+              try { localStorage.removeItem('smsok-campaign-wizard') } catch {}
             }),
         })),
         {

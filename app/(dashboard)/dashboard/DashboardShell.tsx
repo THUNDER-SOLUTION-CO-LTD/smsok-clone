@@ -8,7 +8,7 @@ import ReconsentModal from "@/components/reconsent-modal";
 import LanguageSwitcher from "@/components/language-switcher";
 import DashboardBreadcrumb from "@/components/DashboardBreadcrumb";
 import DashboardTour from "@/components/DashboardTour";
-import { SidebarUpgradeCta } from "@/components/blocks/TrialBanner";
+// SidebarUpgradeCta removed — redundant with "ซื้อแพ็กเกจ" menu item
 import { cn } from "@/lib/utils";
 
 // shadcn components
@@ -104,7 +104,7 @@ const sidebarItems: SidebarItem[] = [
   { icon: BarChart3, label: "รายงาน", href: "/dashboard/analytics", section: "manage" },
   { icon: Key, label: "คีย์ API", href: "/dashboard/api-keys", section: "settings" },
   { icon: ScrollText, label: "API Logs", href: "/dashboard/logs", section: "settings" },
-  { icon: BookOpen, label: "เอกสาร API", href: "/dashboard/docs", section: "settings" },
+  { icon: BookOpen, label: "เอกสาร API", href: "/dashboard/api-docs", section: "settings" },
   { icon: Settings, label: "ตั้งค่า", href: "/dashboard/settings", section: "settings" },
 ];
 
@@ -268,9 +268,6 @@ export default function DashboardShell({
             ))}
           </nav>
         </ScrollArea>
-
-        {/* Upgrade CTA */}
-        <SidebarUpgradeCta />
 
         {/* User section */}
         <div className="border-t border-[var(--border-default)] p-3">

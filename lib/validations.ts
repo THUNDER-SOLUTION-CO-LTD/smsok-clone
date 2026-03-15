@@ -567,6 +567,9 @@ export const createCampaignSchema = z.object({
 }).refine(
   (value) => Boolean(value.templateId) || Boolean(value.messageBody),
   { path: ["messageBody"], message: "กรุณากรอกข้อความหรือเลือกเทมเพลต" },
+).refine(
+  (value) => !value.scheduledAt || Boolean(value.senderName),
+  { path: ["senderName"], message: "แคมเปญที่ตั้งเวลาต้องระบุชื่อผู้ส่ง" },
 );
 
 export const updateCampaignSchema = z.object({

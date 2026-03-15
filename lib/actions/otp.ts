@@ -218,6 +218,8 @@ export async function generateOtp_(
     creditUsed: delivery === "sms" ? OTP_CREDIT_COST : 0,
     smsRemaining: updatedQuota.totalRemaining,
     delivery,
+    // Include OTP code for dev bypass mode (no SMS sent)
+    ...(delivery === "dev_bypass" ? { debugCode: code } : {}),
   };
 }
 

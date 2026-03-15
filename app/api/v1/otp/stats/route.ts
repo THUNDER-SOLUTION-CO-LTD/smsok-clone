@@ -4,14 +4,12 @@ import { prisma as db } from "@/lib/db";
 
 type OtpStatus = "verified" | "expired" | "wrong_otp" | "pending";
 
-function startOfDay(date: Date) {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+function startOfDayUTC(date: Date) {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
 }
 
 function addDays(date: Date, days: number) {
-  const next = new Date(date);
-  next.setDate(next.getDate() + days);
-  return next;
+  return new Date(date.getTime() + days * 86_400_000);
 }
 
 function formatPercent(value: number) {
@@ -58,7 +56,7 @@ export async function GET(req: NextRequest) {
     const user = await authenticateRequest(req);
 
     const now = new Date();
-    const todayStart = startOfDay(now);
+    const todayStart = startOfDayUTC(now);
     const yesterdayStart = addDays(todayStart, -1);
     const last7DaysStart = addDays(todayStart, -6);
 

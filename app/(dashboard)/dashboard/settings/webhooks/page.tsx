@@ -324,6 +324,18 @@ function WebhookTableRow({
 
         {/* Actions */}
         <td className="px-4 py-3.5 text-right">
+          <div className="flex items-center justify-end gap-1.5">
+          <button
+            type="button"
+            onClick={() => {
+              fetch(`/api/v1/webhooks/${hook.id}/test`, { method: "POST" }).catch(() => {});
+            }}
+            className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-md border border-[var(--border-default)] text-[var(--text-secondary)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors cursor-pointer"
+            title="ส่ง test event ไปยัง webhook"
+          >
+            <FlaskConical className="w-3 h-3" />
+            ทดสอบ
+          </button>
           <DropdownMenu>
             <DropdownMenuTrigger className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-white/10 transition-colors cursor-pointer">
               <MoreHorizontal className="w-4 h-4 text-[var(--text-muted)]" />
@@ -369,6 +381,7 @@ function WebhookTableRow({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          </div>
         </td>
       </tr>
 
@@ -504,7 +517,7 @@ function WebhookDialog({
           {/* URL */}
           <div>
             <label className="block text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1.5">
-              Endpoint URL
+              Endpoint URL <span className="normal-case text-[var(--text-muted)]">(HTTPS เท่านั้น)</span>
             </label>
             <Input
               value={url}
@@ -512,11 +525,15 @@ function WebhookDialog({
                 setUrl(e.target.value);
                 setUrlError(validateUrl(e.target.value));
               }}
-              placeholder="https://your-domain.com/webhook"
+              placeholder="https://example.com/webhook/smsok"
               className={`font-mono text-sm ${urlError ? "border-[var(--error)]" : ""}`}
             />
-            {urlError && (
+            {urlError ? (
               <p className="text-[11px] mt-1" style={{ color: "var(--error)" }}>{urlError}</p>
+            ) : (
+              <p className="text-[10px] mt-1 text-[var(--text-muted)]">
+                URL ที่ระบบจะส่ง HTTP POST เมื่อเกิด event — ต้องเป็น HTTPS และตอบ 200 OK
+              </p>
             )}
           </div>
 
@@ -716,7 +733,7 @@ export default function WebhooksPage() {
     <PageLayout>
       <PageHeader
         title="Webhooks"
-        description="จัดการ webhook endpoints"
+        description="รับการแจ้งเตือนอัตโนมัติเมื่อมี event เกิดขึ้น เช่น SMS ส่งสำเร็จ, แคมเปญเสร็จ, เครดิตเหลือน้อย"
         actions={
           <Button
             type="button"
@@ -728,10 +745,28 @@ export default function WebhooksPage() {
             }}
           >
             <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">เพิ่ม Webhook</span>
+            เพิ่ม Webhook
           </Button>
         }
       />
+
+      {/* How it works guide */}
+      <div
+        className="mb-5 rounded-lg px-4 py-3 text-[13px]"
+        style={{
+          background: "rgba(var(--info-rgb),0.05)",
+          border: "1px solid rgba(var(--info-rgb),0.12)",
+          color: "var(--text-secondary)",
+        }}
+      >
+        <p className="font-semibold mb-1" style={{ color: "var(--info)" }}>วิธีใช้งาน Webhook</p>
+        <ol className="list-decimal list-inside space-y-0.5 text-[12px]">
+          <li>กด <strong>&quot;เพิ่ม Webhook&quot;</strong> → ใส่ URL ปลายทาง (HTTPS เท่านั้น)</li>
+          <li>เลือก Events ที่ต้องการรับแจ้งเตือน (เช่น sms.delivered, campaign.completed)</li>
+          <li>บันทึก → ระบบจะส่ง HTTP POST ไปยัง URL ที่กำหนดทุกครั้งที่เกิด event</li>
+          <li>ใช้ <strong>Signing Secret</strong> เพื่อยืนยันว่า request มาจากระบบจริง</li>
+        </ol>
+      </div>
 
       {/* Stats */}
       <StatsRow columns={3}>

@@ -453,8 +453,8 @@ export async function getDashboardStats(userId?: string) {
   const resolvedUserId = await resolveActionUserId(userId);
   const messageScope = await getDashboardMessageScope(resolvedUserId);
   const now = new Date();
-  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const startOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
 
   const [user, todayStats, monthStats, recentMessages] = await db.$transaction([
     db.user.findUnique({
@@ -507,10 +507,9 @@ export async function getDashboardStats(userId?: string) {
   const last7Days: { day: string; short: string; date: string; sms: number; delivered: number; failed: number }[] = [];
 
   for (let i = 6; i >= 0; i--) {
-    const d = new Date(now);
-    d.setDate(d.getDate() - i);
-    const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-    const dayEnd = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
+    const dayStart = new Date(startOfDay.getTime() - i * 86_400_000);
+    const dayEnd = new Date(dayStart.getTime() + 86_400_000);
+    const d = dayStart;
 
     const dayStats = await db.message.groupBy({
       by: ["status"],
@@ -530,8 +529,8 @@ export async function getDashboardStats(userId?: string) {
   }
 
   // Yesterday stats for delta calculation
-  const yesterdayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
-  const yesterdayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterdayStart = new Date(startOfDay.getTime() - 86_400_000);
+  const yesterdayEnd = startOfDay;
   const yesterdayStats = await db.message.groupBy({
     by: ["status"],
     where: { ...messageScope, createdAt: { gte: yesterdayStart, lt: yesterdayEnd } },

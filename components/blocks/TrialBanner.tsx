@@ -124,7 +124,7 @@ export default function TrialBanner({
               size="sm"
               className="bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--bg-base)] font-semibold gap-1.5"
             >
-              อัพเกรดตอนนี้
+              ซื้อแพ็กเกจ
               <ArrowRight className="w-3.5 h-3.5" />
             </Button>
           </Link>
@@ -147,7 +147,7 @@ export function TrialNotice({ variant }: TrialNoticeProps) {
       color: "var(--warning)",
       rgb: "var(--warning-rgb, 245,158,11)",
       text: "ทดลองใช้งาน: ส่งได้สูงสุด 10 SMS/วัน · ใช้ชื่อผู้ส่งระบบเท่านั้น",
-      cta: "อัพเกรดเพื่อส่งไม่จำกัด",
+      cta: "ซื้อแพ็กเกจเพื่อส่งไม่จำกัด",
     },
     "sender-limit": {
       icon: AlertTriangle,
@@ -204,7 +204,7 @@ export function SidebarUpgradeCta() {
         }}
       >
         <Sparkles className="w-3.5 h-3.5" />
-        <span className="flex-1">อัพเกรดแพ็กเกจ</span>
+        <span className="flex-1">ซื้อแพ็กเกจ</span>
         <ArrowRight className="w-3 h-3" />
       </Link>
     </div>
