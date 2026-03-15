@@ -59,8 +59,14 @@ export async function POST(req: NextRequest) {
 
   // Also log to PDPA consent system for audit trail
   const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "webhook";
-  await processSmsReplyOptOut({ phone: normalized, ipAddress: clientIp }).catch(() => {});
+  let consentLogged = false;
+  try {
+    await processSmsReplyOptOut({ phone: normalized, ipAddress: clientIp });
+    consentLogged = true;
+  } catch (err) {
+    console.error("[webhook/stop] PDPA consent log failed:", err instanceof Error ? err.message : err);
+  }
 
-  return Response.json({ success: true, updated: result.count });
+  return Response.json({ success: true, updated: result.count, consentLogged });
 }
 

@@ -398,7 +398,7 @@ async function seedAdminUsers(options: { allowDefaultPassword: boolean }) {
   for (const a of admins) {
     await prisma.adminUser.upsert({
       where: { email: a.email },
-      update: { password: adminPassword, name: a.name, role: a.role },
+      update: { name: a.name, role: a.role }, // don't overwrite existing passwords
       create: { email: a.email, name: a.name, password: adminPassword, role: a.role },
     });
   }

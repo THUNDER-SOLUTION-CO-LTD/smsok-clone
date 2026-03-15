@@ -91,32 +91,30 @@ export async function logRegistrationConsent(opts: {
   // Get active policies for each consent type
   const policies = await db.pdpaPolicy.findMany({
     where: { isActive: true },
-    select: { id: true, type: true },
+    select: { id: true, type: true, version: true },
   });
 
-  const policyMap = new Map(policies.map((p) => [p.type as string, p.id]));
+  const policyMap = new Map(policies.map((p) => [p.type as string, { id: p.id, version: p.version }]));
 
-  const logs = opts.consents
-    .map((c) => {
-      const policyType = CONSENT_TO_POLICY_TYPE[c.consentType];
-      const policyId = policyMap.get(policyType);
-      if (!policyId) return null;
-      return {
-        userId: opts.userId,
-        policyId,
-        consentType: c.consentType,
-        action: c.action,
-        ipAddress: opts.ipAddress,
-        userAgent: opts.userAgent,
-      };
-    })
-    .filter((x): x is NonNullable<typeof x> => x !== null);
+  let logged = 0;
+  for (const c of opts.consents) {
+    const policyType = CONSENT_TO_POLICY_TYPE[c.consentType];
+    const policy = policyMap.get(policyType);
+    if (!policy) continue;
 
-  if (logs.length > 0) {
-    await db.pdpaConsentLog.createMany({ data: logs });
+    await logConsent({
+      userId: opts.userId,
+      policyId: policy.id,
+      consentType: c.consentType,
+      action: c.action,
+      ipAddress: opts.ipAddress,
+      userAgent: opts.userAgent,
+      channel: "WEB",
+    });
+    logged++;
   }
 
-  return { logged: logs.length };
+  return { logged };
 }
 
 // ── Get current consent status ──────────────────────────
