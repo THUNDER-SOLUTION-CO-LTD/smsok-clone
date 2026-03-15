@@ -10,6 +10,7 @@ import {
   ensureSufficientQuota,
 } from "../package/quota";
 import { checkSendingHours } from "../sending-hours";
+import { hasMarketingConsent } from "./consent";
 
 const MAX_SCHEDULE_DAYS_AHEAD = 30;
 
@@ -189,10 +190,21 @@ export async function processScheduledSms() {
     return { processed: 0, sent: 0, failed: 0, rescheduled: blockedMessages.length > 0, nextAllowedAt: defaultHours.nextAllowedAt };
   }
 
-  const results = { sent: 0, failed: 0 };
+  const results = { sent: 0, failed: 0, skippedConsent: 0 };
 
   for (const sms of allowedMessages) {
     try {
+      // PDPA: Skip if user lacks marketing consent
+      const consented = await hasMarketingConsent(sms.userId);
+      if (!consented) {
+        await prisma.scheduledSms.update({
+          where: { id: sms.id },
+          data: { status: "failed", errorCode: "PDPA_NO_MARKETING_CONSENT" },
+        });
+        results.skippedConsent++;
+        continue;
+      }
+
       const result = await sendSingleSms(sms.recipient, sms.content, sms.senderName);
 
       if (result.success) {

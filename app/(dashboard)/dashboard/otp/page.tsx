@@ -401,7 +401,7 @@ function QuickTestPanel() {
               <div>
                 <span className="text-[10px] uppercase text-[var(--text-muted)] tracking-wider">OTP</span>
                 <p className="text-lg font-semibold text-[var(--text-primary)]" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
-                  {otpCode}
+                  {otpCode || "ส่งทาง SMS แล้ว"}
                 </p>
               </div>
               <button

@@ -18,6 +18,7 @@ import {
   calculateSmsSegments,
   ensureSufficientQuota,
 } from "../package/quota";
+import { assertMarketingConsent } from "./consent";
 import { assertSendingHours } from "../sending-hours";
 import { InsufficientCreditsError, toInsufficientCreditsResult } from "../quota-errors";
 import type { InsufficientCreditsResult } from "../quota-errors";
@@ -89,6 +90,7 @@ export async function sendSms(dataOrUserId: unknown, maybeData?: unknown, channe
   // API channel may be transactional — caller handles enforcement
   if (channel === "WEB") {
     await assertSendingHours(orgId);
+    await assertMarketingConsent(userId);
   }
 
   const smsCount = calculateSmsSegments(input.message);
@@ -224,6 +226,7 @@ export async function sendBatchSms(dataOrUserId: unknown, maybeData?: unknown, c
   // API channel may be transactional — caller handles enforcement
   if (channel === "WEB") {
     await assertSendingHours(orgId);
+    await assertMarketingConsent(userId);
   }
 
   const smsCount = calculateSmsSegments(input.message);
