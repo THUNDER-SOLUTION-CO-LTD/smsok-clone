@@ -315,17 +315,44 @@ export async function processScheduledSms() {
             await refundStoredDeductions(tx, sms.deductions, sms.creditCost, sms.userId);
           });
         } catch (refundErr) {
-          // Critical: refund failed — mark as failed but log for manual recovery
-          console.error("[scheduled-sms] PDPA consent refund failed, quota may be lost:", {
+          // Critical: transaction failed — retry refund separately from status update
+          console.error("[scheduled-sms] PDPA consent refund tx failed, retrying refund:", {
             smsId: sms.id,
             userId: sms.userId,
             creditCost: sms.creditCost,
             error: refundErr instanceof Error ? refundErr.message : String(refundErr),
           });
-          await prisma.scheduledSms.update({
-            where: { id: sms.id },
-            data: { status: "failed", errorCode: "PDPA_REFUND_FAILED" },
-          }).catch(() => {});
+
+          // Retry: mark failed first, then attempt refund separately
+          try {
+            await prisma.scheduledSms.update({
+              where: { id: sms.id },
+              data: { status: "failed", errorCode: "PDPA_REFUND_FAILED" },
+            });
+          } catch (statusErr) {
+            console.error("[scheduled-sms] Failed to update status after refund failure:", {
+              smsId: sms.id,
+              error: statusErr instanceof Error ? statusErr.message : String(statusErr),
+            });
+          }
+
+          // Retry refund outside transaction
+          try {
+            await refundStoredDeductions(prisma, sms.deductions, sms.creditCost, sms.userId);
+            // Refund succeeded on retry — update error code
+            await prisma.scheduledSms.update({
+              where: { id: sms.id },
+              data: { errorCode: "PDPA_NO_MARKETING_CONSENT" },
+            });
+          } catch (retryErr) {
+            console.error("[scheduled-sms] CRITICAL: PDPA refund retry failed, quota lost — needs manual recovery:", {
+              smsId: sms.id,
+              userId: sms.userId,
+              creditCost: sms.creditCost,
+              deductions: sms.deductions,
+              error: retryErr instanceof Error ? retryErr.message : String(retryErr),
+            });
+          }
         }
         results.skippedConsent++;
         continue;
