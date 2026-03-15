@@ -20,6 +20,14 @@ const DOCUMENT_TYPES = [
   "other",                 // อื่นๆ
 ] as const;
 
+function sanitizeFileName(name: string): string {
+  return name
+    .replace(/[<>:"\/\\|?*]/g, "_")
+    .replace(/[\x00-\x1F\x7F]/g, "")
+    .trim()
+    .slice(0, 255) || "unnamed";
+}
+
 // POST /api/v1/senders/:id/documents — upload documents for sender name request
 export async function POST(req: NextRequest, ctx: Ctx) {
   try {
@@ -79,11 +87,12 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
     // Validate all files before uploading
     for (const { file } of files) {
+      const safeName = sanitizeFileName(file.name);
       if (!ALLOWED_TYPES.includes(file.type)) {
-        throw new ApiError(400, `ไฟล์ "${file.name}" รองรับเฉพาะ JPG, PNG, PDF`);
+        throw new ApiError(400, `ไฟล์ "${safeName}" รองรับเฉพาะ JPG, PNG, PDF`);
       }
       if (file.size > MAX_FILE_SIZE) {
-        throw new ApiError(400, `ไฟล์ "${file.name}" ต้องไม่เกิน 5MB`);
+        throw new ApiError(400, `ไฟล์ "${safeName}" ต้องไม่เกิน 5MB`);
       }
     }
 
@@ -103,7 +112,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
         uploadedRefs.push(uploaded.ref);
         uploadedDocs.push({
           ref: uploaded.ref,
-          fileName: file.name,
+          fileName: sanitizeFileName(file.name),
           fileSize: file.size,
           mimeType: file.type,
           docType,
