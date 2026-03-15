@@ -1,3 +1,5 @@
+"use client";
+
 import { ShieldAlert, ArrowLeft } from "lucide-react";
 import { StateDisplay } from "@/components/ui/state-display";
 

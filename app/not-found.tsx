@@ -1,7 +1,7 @@
+"use client";
+
 import { Search, ArrowLeft } from "lucide-react";
 import { StateDisplay } from "@/components/ui/state-display";
-
-export const dynamic = "force-dynamic";
 
 export default function NotFound() {
   return (
