@@ -21,8 +21,9 @@ import { useToast } from "@/app/components/ui/Toast";
 import ImportWizard from "./ImportWizard";
 import EmptyState from "@/components/EmptyState";
 import CustomSelect from "@/components/ui/CustomSelect";
-import { TAG_PRESETS, MAX_VISIBLE_TAGS, getTagColor, parseTags } from "@/lib/tag-utils";
-import type { ContactItem, ContactGroupItem, PaginationMeta } from "@/lib/types/api-responses";
+import { TAG_PRESETS, MAX_VISIBLE_TAGS, getTagColor } from "@/lib/tag-utils";
+import type { ContactItem, ContactTag, ContactGroupItem, PaginationMeta } from "@/lib/types/api-responses";
+import type { ContactStats } from "@/lib/actions/contacts";
 import { toCsvCell } from "@/lib/csv";
 
 // shadcn
@@ -63,6 +64,13 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Form,
   FormControl,
   FormField,
@@ -92,6 +100,12 @@ import {
   UserPlus,
   Minus,
   ShieldOff,
+  Folder,
+  MoreHorizontal,
+  Eye,
+  Ban,
+  CheckCircle2,
+  ShieldCheck,
 } from "lucide-react";
 
 // ==========================================
@@ -99,6 +113,13 @@ import {
 // ==========================================
 
 type Contact = ContactItem;
+
+/** Extract tag names from ContactTag[] (new API format) */
+function getTagNames(tags: ContactTag[] | string | null): string[] {
+  if (!tags) return [];
+  if (typeof tags === "string") return tags.split(",").map(t => t.trim()).filter(Boolean);
+  return tags.map(t => t.name);
+}
 
 // ==========================================
 // Zod schemas for contact form
@@ -299,6 +320,8 @@ export default function ContactsClient({
   initialLimit = 20,
   totalPages = 1,
   groups = [],
+  stats,
+  initialStatus = "all",
 }: {
   initialContacts: Contact[];
   totalContacts: number;
@@ -306,6 +329,8 @@ export default function ContactsClient({
   initialLimit?: number;
   totalPages?: number;
   groups?: ContactGroupItem[];
+  stats?: ContactStats;
+  initialStatus?: string;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -322,10 +347,14 @@ export default function ContactsClient({
   const [showAddToGroup, setShowAddToGroup] = useState(false);
   const [addToGroupId, setAddToGroupId] = useState("");
 
+  // Tab state (ทั้งหมด | กลุ่ม)
+  const [activeTab, setActiveTab] = useState<"contacts" | "groups">("contacts");
+
   // Filter / search state
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTagFilter, setActiveTagFilter] = useState<string | null>(null);
   const [activeGroupFilter, setActiveGroupFilter] = useState<string | null>(null);
+  const [activeStatusFilter, setActiveStatusFilter] = useState<string>(initialStatus);
 
   // Selection state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -364,7 +393,7 @@ export default function ContactsClient({
   const allTags = useMemo(() => {
     const tagMap = new Map<string, number>();
     initialContacts.forEach((c) => {
-      parseTags(c.tags).forEach((tag) => {
+      getTagNames(c.tags).forEach((tag) => {
         tagMap.set(tag, (tagMap.get(tag) || 0) + 1);
       });
     });
@@ -376,8 +405,14 @@ export default function ContactsClient({
   const filteredContacts = useMemo(() => {
     let result = initialContacts;
 
+    if (activeStatusFilter === "active") {
+      result = result.filter((c) => c.smsConsent);
+    } else if (activeStatusFilter === "opted-out") {
+      result = result.filter((c) => !c.smsConsent);
+    }
+
     if (activeTagFilter) {
-      result = result.filter((c) => parseTags(c.tags).includes(activeTagFilter));
+      result = result.filter((c) => getTagNames(c.tags).includes(activeTagFilter));
     }
 
     if (activeGroupFilter) {
@@ -391,12 +426,12 @@ export default function ContactsClient({
           c.name.toLowerCase().includes(q) ||
           c.phone.includes(q) ||
           (c.email && c.email.toLowerCase().includes(q)) ||
-          parseTags(c.tags).some((t) => t.toLowerCase().includes(q)),
+          getTagNames(c.tags).some((t) => t.toLowerCase().includes(q)),
       );
     }
 
     return result;
-  }, [initialContacts, activeTagFilter, activeGroupFilter, searchQuery]);
+  }, [initialContacts, activeStatusFilter, activeTagFilter, activeGroupFilter, searchQuery]);
 
   const hasSelection = selectedIds.size > 0;
   const allSelected =
@@ -433,9 +468,9 @@ export default function ContactsClient({
       name: contact.name,
       phone: contact.phone,
       email: contact.email || "",
-      tags: contact.tags || "",
+      tags: getTagNames(contact.tags).join(", "),
     });
-    setFormTags(parseTags(contact.tags));
+    setFormTags(getTagNames(contact.tags));
     setShowContactDialog(true);
   }
 
@@ -698,7 +733,7 @@ export default function ContactsClient({
   function handleQuickTagToggle(contactId: string, tag: string) {
     const contact = initialContacts.find((c) => c.id === contactId);
     if (!contact) return;
-    const currentTags = parseTags(contact.tags);
+    const currentTags = getTagNames(contact.tags);
     const newTags = currentTags.includes(tag)
       ? currentTags.filter((t) => t !== tag)
       : [...currentTags, tag];
@@ -799,14 +834,122 @@ export default function ContactsClient({
         </div>
       </div>
 
-      {/* Search Box */}
-      <div className="mb-4">
-        <div className="relative">
+      {/* ═══ Stat Cards ═══ */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+        {[
+          { icon: Users, label: "ทั้งหมด", value: stats?.total ?? totalContacts, color: "var(--text-muted)" },
+          { icon: CheckCircle2, label: "Active", value: stats?.active ?? totalContacts, color: "var(--success)" },
+          { icon: ShieldOff, label: "Opted-out", value: stats?.optedOut ?? 0, color: "var(--warning)" },
+          { icon: Folder, label: "กลุ่ม", value: stats?.groups ?? groups.length, color: "var(--accent)" },
+        ].map((stat) => (
+          <div
+            key={stat.label}
+            className="rounded-xl p-4"
+            style={{ background: "var(--bg-surface)", border: "1px solid var(--border-default)" }}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: `color-mix(in srgb, ${stat.color} 10%, transparent)` }}>
+                <stat.icon className="size-[18px]" style={{ color: stat.color }} />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-[var(--text-primary)]" style={{ fontVariantNumeric: "tabular-nums" }}>
+                  {stat.value.toLocaleString()}
+                </p>
+                <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">{stat.label}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* ═══ Tab Navigation ═══ */}
+      <div className="flex items-center gap-1 mb-6 border-b border-[var(--border-default)]">
+        <button
+          type="button"
+          onClick={() => setActiveTab("contacts")}
+          className={`relative px-4 py-3 text-sm font-medium transition-colors min-h-[44px] ${
+            activeTab === "contacts"
+              ? "text-[var(--accent)]"
+              : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+          }`}
+        >
+          ทั้งหมด ({totalContacts.toLocaleString()})
+          {activeTab === "contacts" && (
+            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[var(--accent)] rounded-full" />
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("groups")}
+          className={`relative px-4 py-3 text-sm font-medium transition-colors min-h-[44px] ${
+            activeTab === "groups"
+              ? "text-[var(--accent)]"
+              : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+          }`}
+        >
+          กลุ่ม ({groups.length})
+          {activeTab === "groups" && (
+            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[var(--accent)] rounded-full" />
+          )}
+        </button>
+      </div>
+
+      {/* ═══ Groups Tab ═══ */}
+      {activeTab === "groups" && (
+        <div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {groups.length === 0 ? (
+              <div className="col-span-full text-center py-12">
+                <div className="w-14 h-14 mx-auto mb-3 rounded-lg flex items-center justify-center" style={{ background: "var(--bg-surface)", border: "1px solid var(--border-default)" }}>
+                  <Folder className="size-6 text-[var(--text-muted)]" />
+                </div>
+                <p className="text-sm text-[var(--text-primary)] mb-1">ยังไม่มีกลุ่ม</p>
+                <p className="text-xs text-[var(--text-muted)]">สร้างกลุ่มเพื่อจัดระเบียบรายชื่อผู้ติดต่อ</p>
+              </div>
+            ) : (
+              groups.map((group) => (
+                <button
+                  key={group.id}
+                  type="button"
+                  onClick={() => router.push(`/dashboard/contacts/groups/${group.id}`)}
+                  className="rounded-xl p-5 text-left transition-all hover:translate-y-[-1px] cursor-pointer"
+                  style={{
+                    background: "var(--bg-surface)",
+                    border: "1px solid var(--border-default)",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.borderColor = "rgba(var(--accent-rgb),0.3)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--border-default)")}
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Folder className="size-5 text-[var(--text-muted)]" />
+                      <h3 className="text-base font-semibold text-[var(--text-primary)]">{group.name}</h3>
+                    </div>
+                  </div>
+                  <p className="text-sm text-[var(--text-secondary)]">
+                    {(group.memberCount ?? 0).toLocaleString()} contacts
+                  </p>
+                  <div className="mt-3 pt-3 border-t border-[var(--border-default)]">
+                    <span className="text-xs text-[var(--accent)] font-medium">ดูสมาชิก →</span>
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ═══ Contacts Tab Content ═══ */}
+      {activeTab === "contacts" && (<>
+
+      {/* Filter Bar */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-4">
+        <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
           <Input
             type="text"
             className="pl-10 h-11 bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] rounded-lg focus:border-[rgba(var(--accent-rgb),0.6)] focus:ring-[rgba(var(--accent-rgb),0.12)]"
-            placeholder="ค้นหาชื่อ, เบอร์โทร, อีเมล หรือแท็ก..."
+            placeholder="ค้นหาชื่อ, เบอร์โทร, อีเมล..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -819,6 +962,16 @@ export default function ContactsClient({
             </button>
           )}
         </div>
+        <CustomSelect
+          value={activeStatusFilter}
+          onChange={(v) => setActiveStatusFilter(v)}
+          options={[
+            { value: "all", label: "ทุกสถานะ" },
+            { value: "active", label: "● Active" },
+            { value: "opted-out", label: "○ Opted-out" },
+          ]}
+          placeholder="สถานะ"
+        />
       </div>
 
       {/* Group Filter Chips */}
@@ -901,197 +1054,123 @@ export default function ContactsClient({
         </div>
       )}
 
-      {/* Batch Actions Toolbar */}
+      {/* Floating Action Bar */}
       {hasSelection && (
-        <Card className="bg-[var(--bg-surface)] border-[var(--border-default)] rounded-lg p-4 mb-4">
+        <div
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-20 animate-in slide-in-from-bottom-4 duration-250"
+          style={{
+            background: "var(--bg-elevated)",
+            border: "1px solid var(--border-default)",
+            borderRadius: 12,
+            padding: "12px 20px",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+          }}
+        >
           <div className="flex items-center gap-3 flex-wrap">
-            <span className="text-sm text-[var(--text-primary)] font-medium">
-              เลือก {selectedIds.size} รายชื่อ
+            <span className="text-sm text-[var(--text-primary)] font-medium whitespace-nowrap">
+              เลือก {selectedIds.size} รายการ
             </span>
-            <div className="h-4 w-px bg-[var(--border-subtle)]" />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setBatchAction("add");
-                setShowBatchTagInput(
-                  !showBatchTagInput || batchAction !== "add",
-                );
-              }}
-              className="border-[var(--border-default)] bg-transparent text-[var(--text-muted)] hover:text-[var(--accent)] hover:border-[rgba(var(--accent-rgb),0.3)]"
-            >
-              <Plus className="w-3 h-3 mr-1" />
-              เพิ่มแท็ก
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setBatchAction("remove");
-                setShowBatchTagInput(
-                  !showBatchTagInput || batchAction !== "remove",
-                );
-              }}
-              className="border-[var(--border-default)] bg-transparent text-[var(--text-muted)] hover:text-[var(--accent)] hover:border-[rgba(var(--accent-rgb),0.3)]"
-            >
-              <Minus className="w-3 h-3 mr-1" />
-              ลบแท็ก
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowBulkDeleteAlert(true)}
-              disabled={isPending}
-              className="border-[rgba(var(--error-rgb,239,68,68),0.2)] bg-[rgba(var(--error-rgb,239,68,68),0.1)] text-[var(--error)] hover:bg-[rgba(var(--error-rgb,239,68,68),0.15)] hover:border-[rgba(var(--error-rgb,239,68,68),0.3)]"
-            >
-              <Trash2 className="w-3 h-3 mr-1" />
-              ลบ
-            </Button>
-            {groups.length > 0 && (
+            <div className="h-4 w-px bg-[var(--border-default)]" />
+            {/* Desktop buttons */}
+            <div className="hidden sm:flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setShowAddToGroup(true)}
+                onClick={() => {
+                  setBatchAction("add");
+                  setShowBatchTagInput(!showBatchTagInput || batchAction !== "add");
+                }}
                 className="border-[var(--border-default)] bg-transparent text-[var(--text-muted)] hover:text-[var(--accent)] hover:border-[rgba(var(--accent-rgb),0.3)]"
               >
-                <FolderPlus className="w-3 h-3 mr-1" />
-                เพิ่มเข้ากลุ่ม
+                <Tag className="w-3 h-3 mr-1" />
+                ติดแท็ก
               </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="sm"
+              {groups.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAddToGroup(true)}
+                  className="border-[var(--border-default)] bg-transparent text-[var(--text-muted)] hover:text-[var(--accent)] hover:border-[rgba(var(--accent-rgb),0.3)]"
+                >
+                  <FolderPlus className="w-3 h-3 mr-1" />
+                  ย้ายกลุ่ม
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExport}
+                className="border-[var(--border-default)] bg-transparent text-[var(--text-muted)] hover:text-[var(--accent)] hover:border-[rgba(var(--accent-rgb),0.3)]"
+              >
+                <Download className="w-3 h-3 mr-1" />
+                Export
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowBulkDeleteAlert(true)}
+                disabled={isPending}
+                className="border-[rgba(var(--error-rgb,239,68,68),0.2)] bg-[rgba(var(--error-rgb,239,68,68),0.1)] text-[var(--error)] hover:bg-[rgba(var(--error-rgb,239,68,68),0.15)] hover:border-[rgba(var(--error-rgb,239,68,68),0.3)]"
+              >
+                <Trash2 className="w-3 h-3 mr-1" />
+                ลบ
+              </Button>
+            </div>
+            {/* Mobile icon-only buttons */}
+            <div className="flex sm:hidden items-center gap-1">
+              {groups.length > 0 && (
+                <button
+                  onClick={() => setShowAddToGroup(true)}
+                  className="min-w-[44px] min-h-[44px] flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
+                >
+                  <FolderPlus className="w-4 h-4" />
+                </button>
+              )}
+              <button
+                onClick={() => setShowBulkDeleteAlert(true)}
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--error)] transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+            <button
               onClick={() => {
                 setSelectedIds(new Set());
                 setShowBatchTagInput(false);
               }}
-              className="text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+              className="min-w-[44px] min-h-[44px] flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+              aria-label="ยกเลิกการเลือก"
             >
-              ยกเลิก
-            </Button>
-
-            {showBatchTagInput && (
-              <div className="flex items-center gap-2">
-                <Input
-                  type="text"
-                  className="h-8 w-36 bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] text-xs placeholder:text-[var(--text-muted)] focus:border-[rgba(var(--accent-rgb),0.6)]"
-                  placeholder={
-                    batchAction === "add"
-                      ? "แท็กที่จะเพิ่ม..."
-                      : "แท็กที่จะลบ..."
-                  }
-                  value={batchTagValue}
-                  onChange={(e) => setBatchTagValue(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleBatchTag();
-                  }}
-                  autoFocus
-                />
-                <Button
-                  size="sm"
-                  onClick={handleBatchTag}
-                  disabled={isPending || !batchTagValue.trim()}
-                  className="h-8 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--bg-base)] font-semibold disabled:opacity-50"
-                >
-                  {isPending ? "..." : "ยืนยัน"}
-                </Button>
-              </div>
-            )}
+              <X className="w-4 h-4" />
+            </button>
           </div>
-        </Card>
+          {showBatchTagInput && (
+            <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[var(--border-default)]">
+              <Input
+                type="text"
+                className="h-8 flex-1 bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] text-xs placeholder:text-[var(--text-muted)] focus:border-[rgba(var(--accent-rgb),0.6)]"
+                placeholder={batchAction === "add" ? "แท็กที่จะเพิ่ม..." : "แท็กที่จะลบ..."}
+                value={batchTagValue}
+                onChange={(e) => setBatchTagValue(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handleBatchTag(); }}
+                autoFocus
+              />
+              <Button
+                size="sm"
+                onClick={handleBatchTag}
+                disabled={isPending || !batchTagValue.trim()}
+                className="h-8 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--bg-base)] font-semibold disabled:opacity-50"
+              >
+                {isPending ? "..." : "ยืนยัน"}
+              </Button>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Contact Table */}
       {filteredContacts.length > 0 ? (
         <>
-          {/* Mobile Card View */}
-          <div className="md:hidden space-y-2">
-            {filteredContacts.map((contact) => {
-              const contactTags = parseTags(contact.tags);
-              return (
-                <Card
-                  key={contact.id}
-                  className="bg-[var(--bg-surface)] border-[var(--border-default)] overflow-hidden"
-                >
-                  <div className="p-4">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <Checkbox
-                          checked={selectedIds.has(contact.id)}
-                          onCheckedChange={() => toggleSelect(contact.id)}
-                          className="border-[rgba(var(--accent-rgb),0.4)] data-[state=checked]:bg-[var(--accent)] data-[state=checked]:border-[var(--accent)] data-[state=checked]:text-[var(--bg-base)] shrink-0"
-                        />
-                        <a
-                          href={`/dashboard/contacts/${contact.id}`}
-                          className="text-sm font-medium text-[var(--text-primary)] hover:text-[var(--accent)] truncate"
-                        >
-                          {contact.name}
-                        </a>
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openEditDialog(contact)}
-                          className="h-8 w-8 p-0 text-[var(--text-muted)] hover:text-[var(--accent)]"
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setDeletingContact(contact);
-                            setShowDeleteAlert(true);
-                          }}
-                          className="h-8 w-8 p-0 text-[var(--text-muted)] hover:text-[var(--error)]"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 mb-2 pl-6">
-                      <span className="text-xs font-mono text-[var(--text-muted)]">
-                        {contact.phone}
-                      </span>
-                      {!contact.smsConsent && (
-                        <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[rgba(var(--error-rgb),0.08)] text-[var(--error)]">
-                          <ShieldOff className="w-2.5 h-2.5" />
-                          Opt-out
-                        </span>
-                      )}
-                    </div>
-                    {(contactTags.length > 0 || contact.groups.length > 0) && (
-                      <div className="flex flex-wrap gap-1 pl-6">
-                        {contact.groups.slice(0, 2).map((g) => (
-                          <Badge
-                            key={g.id}
-                            variant="outline"
-                            className="text-[10px] px-1.5 py-0.5 bg-[rgba(var(--accent-rgb),0.06)] text-[var(--accent)] border-[rgba(var(--accent-rgb),0.15)]"
-                          >
-                            <Users className="w-2.5 h-2.5 mr-0.5" />
-                            {g.name}
-                          </Badge>
-                        ))}
-                        {contactTags.slice(0, 3).map((tag) => (
-                          <TagChip key={tag} tag={tag} size="xs" />
-                        ))}
-                        {contactTags.length > 3 && (
-                          <span className="text-[10px] text-[var(--text-muted)]">
-                            +{contactTags.length - 3}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                    <div className="text-[10px] text-[var(--text-muted)] mt-2 pl-6">
-                      {formatThaiDateOnly(contact.createdAt)}
-                    </div>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
-
           {/* Desktop Table */}
           <Card className="hidden md:block bg-[var(--bg-surface)] border-[var(--border-default)] rounded-lg overflow-hidden">
             <div className="overflow-x-auto">
@@ -1105,29 +1184,29 @@ export default function ContactsClient({
                       className="border-[rgba(var(--accent-rgb),0.4)] data-[state=checked]:bg-[var(--accent)] data-[state=checked]:border-[var(--accent)] data-[state=checked]:text-[var(--bg-base)]"
                     />
                   </TableHead>
+                  <TableHead className="bg-[var(--bg-secondary)] text-[var(--text-muted)] text-xs uppercase tracking-wider font-medium h-11 w-[160px]">
+                    เบอร์โทร
+                  </TableHead>
                   <TableHead className="bg-[var(--bg-secondary)] text-[var(--text-muted)] text-xs uppercase tracking-wider font-medium h-11">
                     ชื่อ
                   </TableHead>
-                  <TableHead className="bg-[var(--bg-secondary)] text-[var(--text-muted)] text-xs uppercase tracking-wider font-medium h-11">
-                    เบอร์โทร
-                  </TableHead>
-                  <TableHead className="bg-[var(--bg-secondary)] text-[var(--text-muted)] text-xs uppercase tracking-wider font-medium h-11 hidden lg:table-cell">
-                    กลุ่ม
-                  </TableHead>
-                  <TableHead className="bg-[var(--bg-secondary)] text-[var(--text-muted)] text-xs uppercase tracking-wider font-medium h-11">
+                  <TableHead className="bg-[var(--bg-secondary)] text-[var(--text-muted)] text-xs uppercase tracking-wider font-medium h-11 w-[160px]">
                     แท็ก
+                  </TableHead>
+                  <TableHead className="bg-[var(--bg-secondary)] text-[var(--text-muted)] text-xs uppercase tracking-wider font-medium h-11 w-[100px]">
+                    สถานะ
                   </TableHead>
                   <TableHead className="bg-[var(--bg-secondary)] text-[var(--text-muted)] text-xs uppercase tracking-wider font-medium h-11 hidden lg:table-cell">
                     วันที่เพิ่ม
                   </TableHead>
-                  <TableHead className="bg-[var(--bg-secondary)] text-[var(--text-muted)] text-xs uppercase tracking-wider font-medium h-11 text-right w-28">
-                    จัดการ
+                  <TableHead className="bg-[var(--bg-secondary)] text-[var(--text-muted)] text-xs uppercase tracking-wider font-medium h-11 text-right w-12">
+                    <span className="sr-only">จัดการ</span>
                   </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredContacts.map((contact, idx) => {
-                  const contactTags = parseTags(contact.tags);
+                  const contactTags = getTagNames(contact.tags);
                   const visibleTags = contactTags.slice(0, MAX_VISIBLE_TAGS);
                   const overflowCount = contactTags.length - MAX_VISIBLE_TAGS;
 
@@ -1145,47 +1224,13 @@ export default function ContactsClient({
                           className="border-[rgba(var(--accent-rgb),0.4)] data-[state=checked]:bg-[var(--accent)] data-[state=checked]:border-[var(--accent)] data-[state=checked]:text-[var(--bg-base)]"
                         />
                       </TableCell>
-                      <TableCell className="py-3.5 text-[var(--text-primary)] font-medium">
+                      <TableCell className="py-3.5 text-[var(--text-primary)] font-mono text-[13px] font-medium">
+                        {contact.phone}
+                      </TableCell>
+                      <TableCell className="py-3.5 text-[13px] text-[var(--text-secondary)]">
                         <a href={`/dashboard/contacts/${contact.id}`} className="hover:text-[var(--accent)] hover:underline transition-colors">
                           {contact.name}
                         </a>
-                      </TableCell>
-                      <TableCell className="py-3.5 text-[var(--text-muted)] font-mono text-xs">
-                        <div className="flex items-center gap-1.5">
-                          {contact.phone}
-                          {!contact.smsConsent && (
-                            <span
-                              title="Opt-out: ไม่ยินยอมรับ SMS"
-                              className="inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[rgba(var(--error-rgb),0.08)] text-[var(--error)]"
-                            >
-                              <ShieldOff className="w-2.5 h-2.5" />
-                              Opt-out
-                            </span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-3.5 hidden lg:table-cell">
-                        <div className="flex gap-1 flex-wrap">
-                          {contact.groups.length > 0 ? (
-                            contact.groups.slice(0, 2).map((g) => (
-                              <Badge
-                                key={g.id}
-                                variant="outline"
-                                className="text-[10px] px-2 py-0.5 bg-[rgba(var(--accent-rgb),0.06)] text-[var(--accent)] border-[rgba(var(--accent-rgb),0.15)] font-medium"
-                              >
-                                <Users className="w-2.5 h-2.5 mr-1" />
-                                {g.name}
-                              </Badge>
-                            ))
-                          ) : (
-                            <span className="text-xs text-[var(--text-muted)]">—</span>
-                          )}
-                          {contact.groups.length > 2 && (
-                            <span className="text-[10px] text-[var(--text-muted)]">
-                              +{contact.groups.length - 2}
-                            </span>
-                          )}
-                        </div>
                       </TableCell>
                       <TableCell className="py-3.5">
                         <div className="flex gap-1 flex-wrap items-center">
@@ -1197,7 +1242,6 @@ export default function ContactsClient({
                               +{overflowCount}
                             </span>
                           )}
-                          {/* Quick tag picker */}
                           <Popover>
                             <PopoverTrigger
                               className="w-5 h-5 rounded-md bg-[rgba(var(--accent-rgb),0.04)] hover:bg-[rgba(var(--accent-rgb),0.1)] border border-[var(--border-default)] hover:border-[rgba(var(--accent-rgb),0.3)] flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--accent)] transition-all cursor-pointer"
@@ -1251,31 +1295,88 @@ export default function ContactsClient({
                           </Popover>
                         </div>
                       </TableCell>
+                      <TableCell className="py-3.5">
+                        {contact.smsConsent ? (
+                          <span className="inline-flex items-center gap-1.5 text-xs" aria-label="สถานะ: Active">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--success)]" />
+                            <span className="text-[var(--success)]">Active</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 text-xs" aria-label="สถานะ: Opted-out">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--warning)]" />
+                            <span className="text-[var(--warning)]">Unsub</span>
+                          </span>
+                        )}
+                      </TableCell>
                       <TableCell className="py-3.5 text-xs text-[var(--text-muted)] hidden lg:table-cell">
                         {formatThaiDateOnly(contact.createdAt)}
                       </TableCell>
-                      <TableCell className="py-3.5 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openEditDialog(contact)}
-                            className="h-8 px-2.5 text-[var(--text-muted)] hover:text-[var(--accent)] hover:bg-[rgba(var(--accent-rgb),0.04)]"
+                      <TableCell className="py-3.5">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[rgba(var(--accent-rgb),0.04)]"
+                            >
+                              <MoreHorizontal className="w-4 h-4" />
+                              <span className="sr-only">เมนู</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            align="end"
+                            className="w-48 bg-[var(--bg-surface)] border-[var(--border-default)]"
                           >
-                            <Pencil className="w-3.5 h-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setDeletingContact(contact);
-                              setShowDeleteAlert(true);
-                            }}
-                            className="h-8 px-2.5 text-[var(--text-muted)] hover:text-[var(--error)] hover:bg-[rgba(var(--error-rgb,239,68,68),0.05)]"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
-                        </div>
+                            <DropdownMenuItem
+                              onClick={() => router.push(`/dashboard/contacts/${contact.id}`)}
+                              className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] focus:bg-[rgba(var(--accent-rgb),0.04)] cursor-pointer"
+                            >
+                              <Eye className="w-4 h-4 mr-2" />
+                              ดูรายละเอียด
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => openEditDialog(contact)}
+                              className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] focus:bg-[rgba(var(--accent-rgb),0.04)] cursor-pointer"
+                            >
+                              <Pencil className="w-4 h-4 mr-2" />
+                              แก้ไข
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setBatchAction("add");
+                                setSelectedIds(new Set([contact.id]));
+                                setShowBatchTagInput(true);
+                              }}
+                              className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] focus:bg-[rgba(var(--accent-rgb),0.04)] cursor-pointer"
+                            >
+                              <Tag className="w-4 h-4 mr-2" />
+                              ติดแท็ก
+                            </DropdownMenuItem>
+                            {groups.length > 0 && (
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedIds(new Set([contact.id]));
+                                  setShowAddToGroup(true);
+                                }}
+                                className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] focus:bg-[rgba(var(--accent-rgb),0.04)] cursor-pointer"
+                              >
+                                <FolderPlus className="w-4 h-4 mr-2" />
+                                ย้ายกลุ่ม
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuSeparator className="bg-[var(--border-default)]" />
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setDeletingContact(contact);
+                                setShowDeleteAlert(true);
+                              }}
+                              className="text-[var(--error)] focus:text-[var(--error)] focus:bg-[rgba(var(--error-rgb,239,68,68),0.05)] cursor-pointer"
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              ลบ
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   );
@@ -1285,10 +1386,16 @@ export default function ContactsClient({
             </div>
 
             {/* Filter info */}
-            {(activeTagFilter || searchQuery) && (
+            {(activeTagFilter || searchQuery || activeStatusFilter !== "all") && (
               <div className="px-5 py-3 border-t border-[var(--border-default)] text-xs text-[var(--text-muted)]">
                 แสดง {filteredContacts.length} จาก {initialContacts.length}{" "}
                 รายชื่อ
+                {activeStatusFilter !== "all" && (
+                  <span>
+                    {" "}| สถานะ:{" "}
+                    <span className="text-[var(--accent)]">{activeStatusFilter === "active" ? "Active" : "Opted-out"}</span>
+                  </span>
+                )}
                 {activeTagFilter && (
                   <span>
                     {" "}
@@ -1413,7 +1520,7 @@ export default function ContactsClient({
             </div>
 
             {filteredContacts.map((contact) => {
-              const contactTags = parseTags(contact.tags);
+              const contactTags = getTagNames(contact.tags);
               return (
                 <Card
                   key={contact.id}
@@ -1434,35 +1541,47 @@ export default function ContactsClient({
                         <a href={`/dashboard/contacts/${contact.id}`} className="text-sm font-medium text-[var(--text-primary)] truncate hover:text-[var(--accent)] hover:underline transition-colors">
                           {contact.name}
                         </a>
-                        <div className="flex items-center gap-1 shrink-0 ml-2">
-                          <button
-                            onClick={() => openEditDialog(contact)}
-                            className="min-w-[44px] min-h-[44px] flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
+                        <DropdownMenu>
+                          <DropdownMenuTrigger>
+                            <button className="min-w-[44px] min-h-[44px] flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors shrink-0 ml-2">
+                              <MoreHorizontal className="w-4 h-4" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            align="end"
+                            className="w-48 bg-[var(--bg-surface)] border-[var(--border-default)]"
                           >
-                            <Pencil className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => {
-                              setDeletingContact(contact);
-                              setShowDeleteAlert(true);
-                            }}
-                            className="min-w-[44px] min-h-[44px] flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--error)] transition-colors"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
+                            <DropdownMenuItem
+                              onClick={() => router.push(`/dashboard/contacts/${contact.id}`)}
+                              className="text-[var(--text-secondary)] focus:bg-[rgba(var(--accent-rgb),0.04)] cursor-pointer"
+                            >
+                              <Eye className="w-4 h-4 mr-2" />
+                              ดูรายละเอียด
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => openEditDialog(contact)}
+                              className="text-[var(--text-secondary)] focus:bg-[rgba(var(--accent-rgb),0.04)] cursor-pointer"
+                            >
+                              <Pencil className="w-4 h-4 mr-2" />
+                              แก้ไข
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator className="bg-[var(--border-default)]" />
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setDeletingContact(contact);
+                                setShowDeleteAlert(true);
+                              }}
+                              className="text-[var(--error)] focus:text-[var(--error)] focus:bg-[rgba(var(--error-rgb,239,68,68),0.05)] cursor-pointer"
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              ลบ
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        <p className="text-xs text-[var(--text-muted)] font-mono">
-                          {contact.phone}
-                        </p>
-                        {!contact.smsConsent && (
-                          <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[rgba(var(--error-rgb),0.08)] text-[var(--error)]">
-                            <ShieldOff className="w-2.5 h-2.5" />
-                            Opt-out
-                          </span>
-                        )}
-                      </div>
+                      <p className="text-[13px] text-[var(--accent)] font-mono mt-0.5">
+                        {contact.phone}
+                      </p>
                       {contact.email && (
                         <p className="text-xs text-[var(--text-muted)] mt-0.5 truncate">
                           {contact.email}
@@ -1501,9 +1620,21 @@ export default function ContactsClient({
                           )}
                         </div>
                       )}
-                      <p className="text-[10px] text-[var(--text-muted)] mt-2">
-                        {formatThaiDateOnly(contact.createdAt)}
-                      </p>
+                      <div className="flex items-center gap-2 mt-2 text-xs text-[var(--text-muted)]">
+                        {contact.smsConsent ? (
+                          <span className="inline-flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--success)]" />
+                            Active
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--warning)]" />
+                            Unsub
+                          </span>
+                        )}
+                        <span>·</span>
+                        <span>{formatThaiDateOnly(contact.createdAt)}</span>
+                      </div>
                     </div>
                   </div>
                 </Card>
@@ -1554,6 +1685,7 @@ export default function ContactsClient({
               setSearchQuery("");
               setActiveTagFilter(null);
               setActiveGroupFilter(null);
+              setActiveStatusFilter("all");
             }}
             className="text-xs text-[var(--accent)] hover:underline mt-2 transition-colors"
           >
@@ -1947,6 +2079,7 @@ export default function ContactsClient({
         onOpenChange={setShowImportWizard}
         onComplete={() => router.refresh()}
       />
+    </>)}
     </div>
   );
 }
