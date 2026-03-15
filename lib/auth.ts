@@ -1,11 +1,15 @@
 import { randomBytes } from "crypto";
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
+import bcrypt from "bcryptjs";
 import { prisma } from "./db";
 import { redis } from "./redis";
 import { env } from "./env";
 import { logger } from "./logger";
 import { getClientIp, hashToken, parseUserAgent } from "./session-utils";
+
+// Detect if Bun runtime is available (Next.js dev uses Node, not Bun)
+const hasBunRuntime = typeof globalThis.Bun !== "undefined";
 
 const JWT_SECRET = env.JWT_SECRET;
 const ACCESS_TOKEN_TTL_SECONDS = 15 * 60;
@@ -391,20 +395,32 @@ async function writeAccessCookie(accessToken: string) {
 }
 
 export async function hashPassword(password: string) {
-  return Bun.password.hash(password, {
-    algorithm: "argon2id",
-    memoryCost: 19456, // 19 MiB (OWASP recommended)
-    timeCost: 2,
-  });
+  if (hasBunRuntime) {
+    return Bun.password.hash(password, {
+      algorithm: "argon2id",
+      memoryCost: 19456, // 19 MiB (OWASP recommended)
+      timeCost: 2,
+    });
+  }
+  // Fallback: bcrypt when running under Node.js (e.g. next dev)
+  return bcrypt.hash(password, 12);
 }
 
 /**
  * Verify password — supports both argon2id and legacy bcrypt hashes.
- * Returns { valid, needsRehash } so callers can lazy-migrate.
  */
 export async function verifyPassword(password: string, hash: string) {
-  const valid = await Bun.password.verify(password, hash);
-  return valid;
+  if (hasBunRuntime) {
+    return Bun.password.verify(password, hash);
+  }
+  // Fallback: bcrypt.compare handles both bcrypt and argon2id-prefixed hashes
+  // For bcrypt hashes ($2b$), bcryptjs works. For argon2id, this will fail gracefully.
+  if (hash.startsWith("$argon2id$")) {
+    // Cannot verify argon2id without Bun runtime — log warning
+    logger.warn("Cannot verify argon2id hash without Bun runtime, rejecting");
+    return false;
+  }
+  return bcrypt.compare(password, hash);
 }
 
 /**
@@ -422,10 +438,10 @@ export async function verifyAndMigratePassword(
   password: string,
   currentHash: string,
 ): Promise<{ valid: boolean; newHash?: string }> {
-  const valid = await Bun.password.verify(password, currentHash);
+  const valid = await verifyPassword(password, currentHash);
   if (!valid) return { valid: false };
 
-  if (needsRehash(currentHash)) {
+  if (hasBunRuntime && needsRehash(currentHash)) {
     const newHash = await hashPassword(password);
     return { valid: true, newHash };
   }
