@@ -33,6 +33,8 @@ export type RbacAction = (typeof RBAC_ACTIONS)[number];
 export type RbacResource = (typeof RBAC_RESOURCES)[number];
 type RbacDbClient = typeof db | Prisma.TransactionClient;
 
+const WORKSPACE_SLUG_RETRY_ATTEMPTS = 3;
+
 // ── System Role Definitions ──────────────────────────────
 
 type SystemRoleDef = {
@@ -125,6 +127,29 @@ function buildWorkspaceName(user: { name: string; email: string }): string {
   return `${label.slice(0, 80)} Workspace`;
 }
 
+async function ensurePermissionCatalog(client: RbacDbClient = db): Promise<void> {
+  for (const action of RBAC_ACTIONS) {
+    for (const resource of RBAC_RESOURCES) {
+      await client.permission.upsert({
+        where: { action_resource: { action, resource } },
+        update: {},
+        create: {
+          action,
+          resource,
+          description: `${action} ${resource}`,
+        },
+      });
+    }
+  }
+}
+
+function isUniqueConstraintError(error: unknown): error is Prisma.PrismaClientKnownRequestError {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    (error as { code?: string }).code === "P2002"
+  );
+}
+
 // ── System Role Provisioning ─────────────────────────────
 
 /**
@@ -135,6 +160,8 @@ export async function provisionSystemRoles(
   organizationId: string,
   client: RbacDbClient = db,
 ): Promise<void> {
+  await ensurePermissionCatalog(client);
+
   for (const def of SYSTEM_ROLES) {
     const role = await client.role.upsert({
       where: { organizationId_name: { organizationId, name: def.name } },
@@ -214,40 +241,59 @@ export async function ensureUserWorkspace(
     throw new Error("ไม่พบผู้ใช้");
   }
 
-  return db.$transaction(async (tx) => {
-    const existingMembership = await tx.membership.findFirst({
-      where: { userId },
-      select: { organizationId: true, role: true },
-      orderBy: { createdAt: "asc" },
-    });
+  for (let attempt = 0; attempt < WORKSPACE_SLUG_RETRY_ATTEMPTS; attempt += 1) {
+    try {
+      const workspace = await db.$transaction(async (tx) => {
+        const existingMembership = await tx.membership.findFirst({
+          where: { userId },
+          select: { organizationId: true, role: true },
+          orderBy: { createdAt: "asc" },
+        });
 
-    if (existingMembership) {
-      return existingMembership;
-    }
+        if (existingMembership) {
+          return existingMembership;
+        }
 
-    const organization = await tx.organization.create({
-      data: {
-        name: buildWorkspaceName(user),
-        slug: generateOrganizationSlug(user.name || user.email),
-      },
-    });
+        const organization = await tx.organization.create({
+          data: {
+            name: buildWorkspaceName(user),
+            slug: generateOrganizationSlug(user.name || user.email),
+          },
+        });
 
-    await tx.membership.create({
-      data: {
+        await tx.membership.create({
+          data: {
+            userId,
+            organizationId: organization.id,
+            role: "OWNER",
+          },
+        });
+
+        await provisionSystemRoles(organization.id, tx);
+        await assignOwnerRole(userId, organization.id, tx);
+
+        return {
+          organizationId: organization.id,
+          role: "OWNER",
+        };
+      });
+
+      await ensureMembershipRoleAssignment(
         userId,
-        organizationId: organization.id,
-        role: "OWNER",
-      },
-    });
+        workspace.organizationId,
+        workspace.role,
+      );
 
-    await provisionSystemRoles(organization.id, tx);
-    await assignOwnerRole(userId, organization.id, tx);
+      return workspace;
+    } catch (error) {
+      if (isUniqueConstraintError(error) && attempt < WORKSPACE_SLUG_RETRY_ATTEMPTS - 1) {
+        continue;
+      }
+      throw error;
+    }
+  }
 
-    return {
-      organizationId: organization.id,
-      role: "OWNER",
-    };
-  });
+  throw new Error("สร้าง workspace ไม่สำเร็จ กรุณาลองใหม่");
 }
 
 export async function ensureMembershipRoleAssignment(
@@ -257,9 +303,20 @@ export async function ensureMembershipRoleAssignment(
 ): Promise<void> {
   const existing = await db.userRole.findFirst({
     where: { userId, organizationId },
-    select: { roleId: true },
+    select: {
+      roleId: true,
+      role: {
+        select: {
+          _count: {
+            select: { permissions: true },
+          },
+        },
+      },
+    },
   });
-  if (existing) return;
+  if (existing?.role._count.permissions && existing.role._count.permissions > 0) {
+    return;
+  }
 
   const membership =
     membershipRole != null
@@ -276,14 +333,24 @@ export async function ensureMembershipRoleAssignment(
 
   let role = await db.role.findUnique({
     where: { organizationId_name: { organizationId, name: roleName } },
-    select: { id: true },
+    select: {
+      id: true,
+      _count: {
+        select: { permissions: true },
+      },
+    },
   });
 
-  if (!role) {
+  if (!role || role._count.permissions === 0) {
     await provisionSystemRoles(organizationId);
     role = await db.role.findUnique({
       where: { organizationId_name: { organizationId, name: roleName } },
-      select: { id: true },
+      select: {
+        id: true,
+        _count: {
+          select: { permissions: true },
+        },
+      },
     });
   }
 
@@ -302,9 +369,10 @@ export async function ensureMembershipRoleAssignment(
       create: { userId, roleId: role.id, organizationId },
     });
   } catch (error) {
+    const prismaError = error as { code?: string };
     if (
       !(error instanceof Prisma.PrismaClientKnownRequestError) ||
-      error.code !== "P2002"
+      prismaError.code !== "P2002"
     ) {
       throw error;
     }

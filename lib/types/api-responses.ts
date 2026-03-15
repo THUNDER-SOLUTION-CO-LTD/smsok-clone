@@ -58,8 +58,7 @@ export type SendOtpResponse = {
   expiresIn: number
   smsUsed: number
   smsRemaining: number
-  delivery: "sms" | "debug" | "dev_bypass"
-  debugCode?: string
+  delivery: "sms" | "dev_bypass"
   retryAfter: number
   otpExpiresIn: number
   cooldownState: OtpCooldownState
@@ -83,8 +82,7 @@ export type VerifyOtpResponse = {
 export type RegisterOtpSendResponse = {
   ref: string
   expiresIn: number
-  delivery: "sms" | "debug" | "dev_bypass"
-  debugCode?: string
+  delivery: "sms" | "dev_bypass"
 }
 
 export type RegisterOtpVerifyResponse = {

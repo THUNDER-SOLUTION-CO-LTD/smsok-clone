@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { prisma } from "./db";
 import { redis } from "./redis";
 import { env } from "./env";
+import { logger } from "./logger";
 import { getClientIp, hashToken, parseUserAgent } from "./session-utils";
 
 const JWT_SECRET = env.JWT_SECRET;
@@ -115,7 +116,12 @@ async function loadSessionUser(userId: string): Promise<Omit<SessionUser, "sessi
     const { ensureUserWorkspace } = await import("./rbac");
     const workspace = await ensureUserWorkspace(userId);
     organizationId = workspace.organizationId;
-  } catch {
+  } catch (err) {
+    logger.error("ensureUserWorkspace failed", {
+      userId,
+      error: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : undefined,
+    });
     const membership = await prisma.membership.findFirst({
       where: { userId },
       orderBy: { createdAt: "asc" },
