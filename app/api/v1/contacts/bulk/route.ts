@@ -14,12 +14,12 @@ const bulkAddSchema = z.object({
       })
     )
     .min(1, "กรุณาเพิ่มรายชื่ออย่างน้อย 1 รายการ")
-    .max(1000, "เพิ่มได้สูงสุด 1,000 รายชื่อต่อครั้ง"),
+    .max(5000, "เพิ่มได้สูงสุด 5,000 รายชื่อต่อครั้ง"),
   groupId: z.string().cuid().optional(),
 });
 
 const bulkDeleteSchema = z.object({
-  contactIds: z.array(z.string().cuid()).min(1).max(1000),
+  contactIds: z.array(z.string().cuid()).min(1).max(5000),
 });
 
 // POST /api/v1/contacts/bulk — Quick add multiple contacts
@@ -81,9 +81,9 @@ export async function POST(req: NextRequest) {
 
     return apiResponse({
       imported,
+      addedToGroup: input.groupId ? createdIds.length : 0,
       duplicates,
       invalid,
-      addedToGroup: input.groupId ? createdIds.length : 0,
       total: input.contacts.length,
     }, 201);
   } catch (error) {

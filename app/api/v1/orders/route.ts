@@ -15,8 +15,11 @@ import {
 } from "@/lib/orders/service";
 import { generateOrderDocumentNumber } from "@/lib/orders/numbering";
 
-// Strip HTML tags to prevent XSS
-const stripHtml = (val: string) => val.replace(/<[^>]*>/g, "");
+// Strip HTML tags and entities to prevent XSS
+const stripHtml = (val: string) =>
+  val
+    .replace(/<[^>]*>?/g, "")
+    .replace(/&(?:lt|gt|amp|quot|#39|#x27|#x2F);?/gi, "");
 
 const createSchema = z.object({
   package_tier_id: z.string().min(1),
@@ -230,7 +233,6 @@ export async function POST(req: NextRequest) {
       });
 
       const quotationUrl = `/api/v1/orders/${created.id}/quotation`;
-      await ensureOrderDocument(tx, { id: created.id }, "INVOICE");
 
       const updated = await tx.order.update({
         where: { id: created.id },
@@ -245,6 +247,13 @@ export async function POST(req: NextRequest) {
 
       return updated;
     });
+
+    // Generate invoice document outside transaction — non-fatal
+    try {
+      await ensureOrderDocument(db, { id: order.id }, "INVOICE");
+    } catch (docErr) {
+      console.error("[orders] Invoice document generation failed (non-fatal):", docErr);
+    }
 
     return apiResponse(serializeOrder(order), 201);
   } catch (error) {

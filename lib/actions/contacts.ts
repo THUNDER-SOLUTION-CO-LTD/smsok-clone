@@ -113,6 +113,29 @@ export async function updateContactConsent(
 }
 
 // ==========================================
+// Contact stats (for stat cards)
+// ==========================================
+
+export type ContactStats = {
+  total: number;
+  active: number;
+  optedOut: number;
+  groups: number;
+};
+
+export async function getContactStats(): Promise<ContactStats>;
+export async function getContactStats(userId: string): Promise<ContactStats>;
+export async function getContactStats(userId?: string) {
+  userId = await resolveActionUserId(userId);
+  const [total, optedOut, groups] = await db.$transaction([
+    db.contact.count({ where: { userId } }),
+    db.contact.count({ where: { userId, smsConsent: false } }),
+    db.contactGroup.count({ where: { userId } }),
+  ]);
+  return { total, active: total - optedOut, optedOut, groups };
+}
+
+// ==========================================
 // List contacts
 // ==========================================
 

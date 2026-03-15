@@ -114,7 +114,8 @@ export async function POST(req: NextRequest) {
       if (error instanceof Error && "code" in error && (error as { code: string }).code === "P2002") {
         throw new ApiError(409, "ชื่อผู้ส่งนี้มีอยู่แล้ว", "DUPLICATE");
       }
-      throw error;
+      console.error("[senders/name] Transaction failed:", error);
+      throw new ApiError(500, "ไม่สามารถสร้างชื่อผู้ส่งได้ กรุณาลองใหม่");
     }
 
     return apiResponse({

@@ -21,7 +21,7 @@ import CustomSelect from "@/components/ui/CustomSelect";
 
 type Step = "upload" | "mapping" | "preview" | "importing" | "result";
 
-type DuplicateAction = "skip" | "update" | "overwrite";
+type DuplicateAction = "skip" | "update";
 
 type ImportResult = {
   total: number;
@@ -52,7 +52,6 @@ const CONTACT_FIELDS = [
 const DUPLICATE_OPTIONS: { value: DuplicateAction; label: string; desc: string }[] = [
   { value: "skip", label: "ข้าม", desc: "ไม่ทำอะไรกับเบอร์ซ้ำ" },
   { value: "update", label: "ผสานข้อมูล", desc: "อัปเดตเฉพาะฟิลด์ที่มีค่าใหม่" },
-  { value: "overwrite", label: "เขียนทับ", desc: "แทนที่ข้อมูลเดิมทั้งหมด" },
 ];
 
 const PHONE_REGEX = /^(0[0-9]{8,9}|\+66[0-9]{8,9}|66[0-9]{8,9})$/;

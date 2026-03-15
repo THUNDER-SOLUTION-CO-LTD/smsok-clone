@@ -64,7 +64,12 @@ export async function POST(req: NextRequest) {
       data: { userId: user.id, name },
     });
 
-    return apiResponse(group, 201);
+    return apiResponse({
+      id: group.id,
+      name: group.name,
+      createdAt: group.createdAt,
+      memberCount: 0,
+    }, 201);
   } catch (error) {
     return apiError(error);
   }
