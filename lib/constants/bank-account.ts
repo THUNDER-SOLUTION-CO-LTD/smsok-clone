@@ -10,6 +10,7 @@ export const COMPANY_BANK_ACCOUNT = {
   accountType: "ออมทรัพย์",
   branch: "สำนักงานใหญ่",
   logo: "scb",
+  promptpayId: "0948946526",
 } as const;
 
 /** เลขบัญชีแบบไม่มี dash — ใช้สำหรับ slip verification */

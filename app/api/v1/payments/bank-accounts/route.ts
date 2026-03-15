@@ -11,6 +11,7 @@ const BANK_ACCOUNTS = [
     accountType: COMPANY_BANK_ACCOUNT.accountType,
     branch: COMPANY_BANK_ACCOUNT.branch,
     logo: COMPANY_BANK_ACCOUNT.logo,
+    promptpayId: COMPANY_BANK_ACCOUNT.promptpayId,
   },
 ];
 

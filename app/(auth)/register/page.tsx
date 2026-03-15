@@ -272,7 +272,7 @@ export default function RegisterPage() {
       {/* Back button */}
       <Link
         href="/"
-        className="fixed top-5 left-5 z-10 flex items-center gap-1.5 text-[var(--text-muted)] hover:text-white transition-colors duration-200"
+        className="fixed top-5 left-5 z-10 flex items-center gap-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors duration-200"
       >
         <ArrowLeft className="w-4 h-4" />
         <span className="text-[13px]">กลับหน้าหลัก</span>
@@ -301,7 +301,7 @@ export default function RegisterPage() {
           ))}
         </div>
 
-        <Card className="bg-[var(--bg-surface)] border-[#20252c] rounded-lg shadow-none">
+        <Card className="bg-[var(--bg-surface)] border-[var(--border-default)] rounded-lg shadow-none">
           {step === "form" ? (
             <>
               <CardHeader className="text-center pb-0 pt-8 px-5 sm:px-8">
@@ -309,10 +309,10 @@ export default function RegisterPage() {
                   <div className="w-7 h-7 rounded-lg bg-[var(--accent)] flex items-center justify-center">
                     <Send className="w-3.5 h-3.5 text-[var(--bg-base)]" />
                   </div>
-                  <span className="text-xl font-bold text-white">SMSOK</span>
+                  <span className="text-xl font-bold text-[var(--text-primary)]">SMSOK</span>
                 </Link>
-                <h1 className="text-2xl font-bold text-[#e2e8f0]">สร้างบัญชีใหม่</h1>
-                <p className="text-sm text-[#b2bacd] mt-1">เริ่มต้นส่ง SMS ได้ทันที</p>
+                <h1 className="text-2xl font-bold text-[var(--text-primary)]">สร้างบัญชีใหม่</h1>
+                <p className="text-sm text-[var(--text-secondary)] mt-1">เริ่มต้นส่ง SMS ได้ทันที</p>
               </CardHeader>
 
               <CardContent className="px-5 sm:px-8 pt-6 pb-2">
@@ -322,7 +322,7 @@ export default function RegisterPage() {
                   </div>
                 )}
                 {formError && !rateLimitSeconds && (
-                  <div className="mb-4 p-3 rounded-lg bg-[rgba(239,68,68,0.06)] border border-[rgba(239,68,68,0.15)] text-[var(--error)] text-[13px] text-center">
+                  <div className="mb-4 p-3 rounded-lg bg-[rgba(var(--error-rgb),0.06)] border border-[rgba(var(--error-rgb),0.15)] text-[var(--error)] text-[13px] text-center">
                     {formError}
                   </div>
                 )}
@@ -335,9 +335,9 @@ export default function RegisterPage() {
                         name="firstName"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-xs font-semibold uppercase tracking-[0.05em] text-[#b2bacd]">ชื่อ</FormLabel>
+                            <FormLabel className="text-xs font-semibold uppercase tracking-[0.05em] text-[var(--text-secondary)]">ชื่อ</FormLabel>
                             <FormControl>
-                              <Input placeholder="สมชาย" className="h-11 bg-[var(--bg-base)] border-[#20252c] text-white placeholder:text-[#8a95a0] rounded-lg focus:border-[#00E2B5] focus:ring-[rgba(0,226,181,0.12)]" {...field} />
+                              <Input placeholder="สมชาย" className="h-11 bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] rounded-lg focus:border-[var(--accent)] focus:ring-[rgba(var(--accent-rgb),0.12)]" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -348,9 +348,9 @@ export default function RegisterPage() {
                         name="lastName"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-xs font-semibold uppercase tracking-[0.05em] text-[#b2bacd]">นามสกุล</FormLabel>
+                            <FormLabel className="text-xs font-semibold uppercase tracking-[0.05em] text-[var(--text-secondary)]">นามสกุล</FormLabel>
                             <FormControl>
-                              <Input placeholder="ใจดี" className="h-11 bg-[var(--bg-base)] border-[#20252c] text-white placeholder:text-[#8a95a0] rounded-lg focus:border-[#00E2B5] focus:ring-[rgba(0,226,181,0.12)]" {...field} />
+                              <Input placeholder="ใจดี" className="h-11 bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] rounded-lg focus:border-[var(--accent)] focus:ring-[rgba(var(--accent-rgb),0.12)]" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -363,9 +363,9 @@ export default function RegisterPage() {
                       name="email"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-xs font-semibold uppercase tracking-[0.05em] text-[#b2bacd]">อีเมล</FormLabel>
+                          <FormLabel className="text-xs font-semibold uppercase tracking-[0.05em] text-[var(--text-secondary)]">อีเมล</FormLabel>
                           <FormControl>
-                            <Input type="email" autoComplete="email" placeholder="you@example.com" onKeyDown={blockThai} className="h-11 bg-[var(--bg-base)] border-[#20252c] text-white placeholder:text-[#8a95a0] rounded-lg focus:border-[#00E2B5] focus:ring-[rgba(0,226,181,0.12)]" {...field} />
+                            <Input type="email" autoComplete="email" placeholder="you@example.com" onKeyDown={blockThai} className="h-11 bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] rounded-lg focus:border-[var(--accent)] focus:ring-[rgba(var(--accent-rgb),0.12)]" {...field} />
                           </FormControl>
                           <FormMessage />
                           {emailAvailability.status !== "idle" && (
@@ -389,11 +389,11 @@ export default function RegisterPage() {
                       name="phone"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-xs font-semibold uppercase tracking-[0.05em] text-[#b2bacd]">
+                          <FormLabel className="text-xs font-semibold uppercase tracking-[0.05em] text-[var(--text-secondary)]">
                             หมายเลขโทรศัพท์
                           </FormLabel>
                           <FormControl>
-                            <Input type="tel" autoComplete="tel" inputMode="numeric" maxLength={10} placeholder="0891234567" onKeyDown={blockNonNumeric} className="h-11 bg-[var(--bg-base)] border-[#20252c] text-white placeholder:text-[#8a95a0] rounded-lg focus:border-[#00E2B5] focus:ring-[rgba(0,226,181,0.12)]" {...field} />
+                            <Input type="tel" autoComplete="tel" inputMode="numeric" maxLength={10} placeholder="0891234567" onKeyDown={blockNonNumeric} className="h-11 bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] rounded-lg focus:border-[var(--accent)] focus:ring-[rgba(var(--accent-rgb),0.12)]" {...field} />
                           </FormControl>
                           <p className="text-[11px] text-[var(--text-muted)]">ใช้สำหรับรับ OTP ยืนยันตัวตน</p>
                           <FormMessage />
@@ -418,7 +418,7 @@ export default function RegisterPage() {
                       name="password"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-xs font-semibold uppercase tracking-[0.05em] text-[#b2bacd]">รหัสผ่าน</FormLabel>
+                          <FormLabel className="text-xs font-semibold uppercase tracking-[0.05em] text-[var(--text-secondary)]">รหัสผ่าน</FormLabel>
                           <FormControl>
                             <div className="relative">
                               <Input
@@ -426,7 +426,7 @@ export default function RegisterPage() {
                                 type={showPassword ? "text" : "password"}
                                 autoComplete="new-password"
                                 placeholder="••••••••"
-                                className="h-11 bg-[var(--bg-base)] border-[#20252c] text-white placeholder:text-[#8a95a0] rounded-lg pr-11 focus:border-[#00E2B5] focus:ring-[rgba(0,226,181,0.12)]"
+                                className="h-11 bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] rounded-lg pr-11 focus:border-[var(--accent)] focus:ring-[rgba(var(--accent-rgb),0.12)]"
                                 onKeyDown={(e) => setCapsLockOn(e.getModifierState("CapsLock"))}
                                 onKeyUp={(e) => setCapsLockOn(e.getModifierState("CapsLock"))}
                                 onBlur={(e) => { setCapsLockOn(false); field.onBlur(); }}
@@ -479,7 +479,7 @@ export default function RegisterPage() {
                       name="confirmPassword"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-xs font-semibold uppercase tracking-[0.05em] text-[#b2bacd]">ยืนยันรหัสผ่าน</FormLabel>
+                          <FormLabel className="text-xs font-semibold uppercase tracking-[0.05em] text-[var(--text-secondary)]">ยืนยันรหัสผ่าน</FormLabel>
                           <FormControl>
                             <div className="relative">
                               <Input
@@ -487,7 +487,7 @@ export default function RegisterPage() {
                                 type={showConfirm ? "text" : "password"}
                                 autoComplete="new-password"
                                 placeholder="••••••••"
-                                className="h-11 bg-[var(--bg-base)] border-[#20252c] text-white placeholder:text-[#8a95a0] rounded-lg pr-11 focus:border-[#00E2B5] focus:ring-[rgba(0,226,181,0.12)]"
+                                className="h-11 bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] rounded-lg pr-11 focus:border-[var(--accent)] focus:ring-[rgba(var(--accent-rgb),0.12)]"
                                 onKeyDown={(e) => setCapsLockOn(e.getModifierState("CapsLock"))}
                                 onKeyUp={(e) => setCapsLockOn(e.getModifierState("CapsLock"))}
                                 onBlur={(e) => { setCapsLockOn(false); field.onBlur(); }}
@@ -526,7 +526,7 @@ export default function RegisterPage() {
                                 checked={field.value}
                                 onCheckedChange={field.onChange}
                                 aria-required="true"
-                                className="mt-0.5 h-4 w-4 shrink-0 rounded-[4px] border-[1.5px] border-[#3a4049] data-[state=checked]:border-transparent data-[state=checked]:bg-[var(--accent)] data-[state=checked]:text-[var(--bg-base)]"
+                                className="mt-0.5 h-4 w-4 shrink-0 rounded-[4px] border-[1.5px] border-[var(--border-default)] data-[state=checked]:border-transparent data-[state=checked]:bg-[var(--accent)] data-[state=checked]:text-[var(--bg-base)]"
                               />
                             </FormControl>
                             <FormLabel className="text-xs text-[var(--text-secondary)] font-normal leading-relaxed break-words">
@@ -565,7 +565,7 @@ export default function RegisterPage() {
                                 checked={field.value}
                                 onCheckedChange={field.onChange}
                                 aria-required="true"
-                                className="mt-0.5 h-4 w-4 shrink-0 rounded-[4px] border-[1.5px] border-[#3a4049] data-[state=checked]:border-transparent data-[state=checked]:bg-[var(--accent)] data-[state=checked]:text-[var(--bg-base)]"
+                                className="mt-0.5 h-4 w-4 shrink-0 rounded-[4px] border-[1.5px] border-[var(--border-default)] data-[state=checked]:border-transparent data-[state=checked]:bg-[var(--accent)] data-[state=checked]:text-[var(--bg-base)]"
                               />
                             </FormControl>
                             <FormLabel className="text-xs text-[var(--text-secondary)] font-normal leading-relaxed break-words">
@@ -594,7 +594,7 @@ export default function RegisterPage() {
                               <Checkbox
                                 checked={field.value}
                                 onCheckedChange={field.onChange}
-                                className="mt-0.5 h-4 w-4 shrink-0 rounded-[4px] border-[1.5px] border-[#3a4049] data-[state=checked]:border-transparent data-[state=checked]:bg-[var(--accent)] data-[state=checked]:text-[var(--bg-base)]"
+                                className="mt-0.5 h-4 w-4 shrink-0 rounded-[4px] border-[1.5px] border-[var(--border-default)] data-[state=checked]:border-transparent data-[state=checked]:bg-[var(--accent)] data-[state=checked]:text-[var(--bg-base)]"
                               />
                             </FormControl>
                             <FormLabel className="text-xs text-[var(--text-muted)] font-normal leading-relaxed">
@@ -633,27 +633,27 @@ export default function RegisterPage() {
               <CardHeader className="text-center pb-0 pt-8 px-5 sm:px-8">
                 <button
                   onClick={() => { setStep("form"); setOtpCode(""); setOtpError(""); }}
-                  className="inline-flex items-center gap-1 text-[13px] text-[var(--text-muted)] hover:text-white transition-colors duration-200 mb-4 mx-auto"
+                  className="inline-flex items-center gap-1 text-[13px] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors duration-200 mb-4 mx-auto"
                 >
                   <ArrowLeft className="w-3.5 h-3.5" /> แก้ไขข้อมูล
                 </button>
                 <div className="w-12 h-12 rounded-full bg-[rgba(var(--accent-rgb),0.08)] border border-[rgba(var(--accent-rgb),0.15)] flex items-center justify-center mx-auto mb-4">
                   <Smartphone className="w-6 h-6 text-[var(--accent)]" />
                 </div>
-                <h1 className="text-2xl font-bold text-[#e2e8f0]">ยืนยันเบอร์โทรศัพท์</h1>
+                <h1 className="text-2xl font-bold text-[var(--text-primary)]">ยืนยันเบอร์โทรศัพท์</h1>
                 <p className="text-sm text-[var(--text-muted)] mt-1">ส่ง OTP ไปที่ {form.getValues("phone")}</p>
                 {otpRef && <p className="text-[var(--text-muted)] text-[11px] mt-1 font-mono">REF: {otpRef.slice(0, 8).toUpperCase()}</p>}
               </CardHeader>
 
               <CardContent className="px-5 sm:px-8 pt-6 pb-2">
                 {debugCode && (
-                  <div className="mb-4 p-3 rounded-lg bg-[rgba(245,158,11,0.08)] border border-[rgba(245,158,11,0.2)] text-amber-300 text-sm text-center">
+                  <div className="mb-4 p-3 rounded-lg bg-[rgba(var(--warning-rgb),0.08)] border border-[rgba(var(--warning-rgb),0.2)] text-[var(--warning)] text-sm text-center">
                     <span className="opacity-60 text-xs">DEV — OTP: </span>
                     <span className="font-mono font-bold tracking-widest">{debugCode}</span>
                   </div>
                 )}
                 {otpError && (
-                  <div className="mb-4 p-3 rounded-lg bg-[rgba(239,68,68,0.06)] border border-[rgba(239,68,68,0.15)] text-[var(--error)] text-[13px] text-center">
+                  <div className="mb-4 p-3 rounded-lg bg-[rgba(var(--error-rgb),0.06)] border border-[rgba(var(--error-rgb),0.15)] text-[var(--error)] text-[13px] text-center">
                     {otpError}
                   </div>
                 )}
@@ -675,7 +675,7 @@ export default function RegisterPage() {
                           <InputOTPSlot
                             key={i}
                             index={i}
-                            className="w-12 h-14 bg-[var(--bg-base)] border-[#20252c] text-white text-2xl font-bold font-mono rounded-lg data-[active=true]:border-[#00E2B5] data-[active=true]:ring-[rgba(0,226,181,0.12)]"
+                            className="w-12 h-14 bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] text-2xl font-bold font-mono rounded-lg data-[active=true]:border-[var(--accent)] data-[active=true]:ring-[rgba(var(--accent-rgb),0.12)]"
                           />
                         ))}
                       </InputOTPGroup>

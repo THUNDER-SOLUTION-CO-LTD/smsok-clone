@@ -62,12 +62,14 @@ import {
 import { OrderStatusBadge } from "@/components/order/OrderStatusBadge";
 import { formatBaht } from "@/types/purchase";
 import { formatThaiDate, formatThaiDateTimeShort } from "@/lib/format-thai-date";
+import { generatePromptPayQRDataUrl } from "@/lib/promptpay-qr";
 
 interface BankAccount {
   bank: string;
   accountNumber: string;
   accountName: string;
   logo: string;
+  promptpayId?: string;
 }
 
 type CanonicalOrderHistoryEntry = {
@@ -1094,6 +1096,8 @@ function BankAccountCard({ bankAccount }: { bankAccount: BankAccount | null }) {
       setCopied(true);
       toast.success("คัดลอกเลขบัญชีแล้ว");
       setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {
+      toast.error("ไม่สามารถคัดลอกได้");
     });
   }
 
@@ -1148,6 +1152,239 @@ function BankAccountCard({ bankAccount }: { bankAccount: BankAccount | null }) {
             {bankAccount.accountName}
           </span>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ── PromptPay QR Card ──
+
+function PromptPayQRCard({
+  promptpayId,
+  amount,
+  expiresAt,
+}: {
+  promptpayId: string;
+  amount: number;
+  expiresAt: string;
+}) {
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(true);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setGenerating(true);
+    generatePromptPayQRDataUrl(promptpayId, amount)
+      .then((url) => {
+        if (!cancelled) {
+          setQrDataUrl(url);
+          setGenerating(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setGenerating(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [promptpayId, amount]);
+
+  function handleSaveQR() {
+    if (!qrDataUrl) return;
+    const link = document.createElement("a");
+    link.download = `promptpay-${formatBaht(amount).replace(/,/g, "")}.png`;
+    link.href = qrDataUrl;
+    link.click();
+  }
+
+  function handleCopyAmount() {
+    navigator.clipboard.writeText(amount.toFixed(2)).then(() => {
+      setCopied(true);
+      toast.success("คัดลอกยอดเงินแล้ว");
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {
+      toast.error("ไม่สามารถคัดลอกได้");
+    });
+  }
+
+  return (
+    <div
+      className="rounded-lg p-5 mb-4"
+      style={{
+        background: "var(--bg-surface)",
+        border: "1px solid var(--border-default)",
+      }}
+    >
+      <div className="flex items-center gap-2 mb-4">
+        <div
+          className="w-7 h-7 rounded-lg flex items-center justify-center"
+          style={{
+            background: "rgba(var(--accent-rgb),0.1)",
+          }}
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="var(--accent)"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <rect x="3" y="3" width="7" height="7" />
+            <rect x="14" y="3" width="7" height="7" />
+            <rect x="3" y="14" width="7" height="7" />
+            <rect x="14" y="14" width="3" height="3" />
+            <line x1="21" y1="14" x2="21" y2="21" />
+            <line x1="14" y1="21" x2="21" y2="21" />
+          </svg>
+        </div>
+        <h3
+          className="text-sm font-semibold"
+          style={{ color: "var(--text-primary)" }}
+        >
+          สแกนจ่ายผ่าน PromptPay
+        </h3>
+      </div>
+
+      {/* QR Code */}
+      <div
+        className="rounded-lg p-6 flex flex-col items-center"
+        style={{
+          background: "#FFFFFF",
+          border: "1px solid var(--border-default)",
+        }}
+      >
+        {generating ? (
+          <div className="w-[200px] h-[200px] flex items-center justify-center">
+            <Loader2
+              size={32}
+              className="animate-spin"
+              style={{ color: "var(--text-muted)" }}
+            />
+          </div>
+        ) : qrDataUrl ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={qrDataUrl}
+              alt="PromptPay QR Code"
+              className="w-[200px] h-[200px]"
+            />
+            <div className="mt-3 flex items-center gap-1.5">
+              <svg width="20" height="12" viewBox="0 0 60 36" fill="none">
+                <rect width="60" height="36" rx="4" fill="#1A3B6E" />
+                <text
+                  x="30"
+                  y="24"
+                  textAnchor="middle"
+                  fill="white"
+                  fontSize="14"
+                  fontWeight="bold"
+                  fontFamily="sans-serif"
+                >
+                  PP
+                </text>
+              </svg>
+              <span
+                className="text-xs font-medium"
+                style={{ color: "var(--text-muted)" }}
+              >
+                PromptPay
+              </span>
+            </div>
+          </>
+        ) : (
+          <div className="w-[200px] h-[200px] flex items-center justify-center">
+            <p className="text-sm text-gray-400">
+              ไม่สามารถสร้าง QR ได้
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Amount */}
+      <div
+        className="mt-4 rounded-lg p-3 flex items-center justify-between"
+        style={{
+          background: "var(--bg-base)",
+          border: "1px solid var(--border-default)",
+        }}
+      >
+        <div>
+          <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+            ยอดชำระ
+          </p>
+          <p
+            className="text-xl font-bold font-mono tabular-nums"
+            style={{ color: "var(--accent)" }}
+          >
+            ฿{formatBaht(amount)}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={handleCopyAmount}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors"
+          style={{
+            color: copied ? "var(--success)" : "var(--text-secondary)",
+            background: copied
+              ? "rgba(var(--success-rgb),0.08)"
+              : "rgba(var(--text-muted-rgb),0.06)",
+          }}
+        >
+          {copied ? <Check size={14} /> : <Copy size={14} />}
+          {copied ? "คัดลอกแล้ว" : "คัดลอก"}
+        </button>
+      </div>
+
+      {/* Expiry + Actions */}
+      <div className="mt-3 flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
+          <Timer size={13} style={{ color: "var(--warning)" }} />
+          <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+            หมดอายุ {formatThaiDate(expiresAt)}
+          </span>
+        </div>
+        {qrDataUrl && (
+          <button
+            type="button"
+            onClick={handleSaveQR}
+            className="flex items-center gap-1.5 text-xs font-medium transition-colors"
+            style={{ color: "var(--text-secondary)" }}
+          >
+            <Download size={13} />
+            บันทึก QR
+          </button>
+        )}
+      </div>
+
+      {/* Instructions */}
+      <div
+        className="mt-4 rounded-lg p-3 space-y-2"
+        style={{
+          background: "rgba(var(--accent-rgb),0.04)",
+          border: "1px solid rgba(var(--accent-rgb),0.1)",
+        }}
+      >
+        <p
+          className="text-xs font-medium"
+          style={{ color: "var(--accent)" }}
+        >
+          วิธีชำระเงิน
+        </p>
+        <ol
+          className="text-xs space-y-1 list-decimal list-inside"
+          style={{ color: "var(--text-secondary)" }}
+        >
+          <li>เปิดแอปธนาคารบนมือถือ</li>
+          <li>เลือก &quot;สแกน QR&quot; หรือ &quot;จ่ายเงิน&quot;</li>
+          <li>สแกน QR Code ด้านบน</li>
+          <li>ตรวจสอบยอดเงินและกด &quot;ยืนยัน&quot;</li>
+          <li>บันทึกสลิปแล้วกลับมาอัปโหลดที่นี่</li>
+        </ol>
       </div>
     </div>
   );
@@ -2234,6 +2471,15 @@ export default function OrderDetailPage() {
 
             {/* Section 3: Itemized Breakdown */}
             <ItemizedTable order={order} />
+
+            {/* Section 4.5: PromptPay QR (PENDING only, when promptpayId available) */}
+            {order.status === "PENDING" && bankAccount?.promptpayId && (
+              <PromptPayQRCard
+                promptpayId={bankAccount.promptpayId}
+                amount={order.pay_amount}
+                expiresAt={order.expires_at}
+              />
+            )}
 
             {/* Section 5: Bank Account (PENDING / SLIP_UPLOADED only) */}
             {(order.status === "PENDING" || order.status === "SLIP_UPLOADED") && (
