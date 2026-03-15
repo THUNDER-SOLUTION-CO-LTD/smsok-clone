@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { ApiError, apiResponse, apiError, authenticateRequest } from "@/lib/api-auth";
 import { prisma as db } from "@/lib/db";
+import { enforceSupportTicketRateLimit } from "@/lib/tickets/rate-limit";
 import { z } from "zod";
 
 const listSchema = z.object({
@@ -78,6 +79,7 @@ export async function POST(req: NextRequest) {
   try {
     const session = await authenticateRequest(req);
     if (!session?.id) throw new ApiError(401, "กรุณาเข้าสู่ระบบ");
+    await enforceSupportTicketRateLimit(req.headers, session.id, "create");
     const input = createSchema.parse(await req.json());
 
     const ticket = await db.supportTicket.create({

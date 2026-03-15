@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { ApiError, apiResponse, apiError, authenticateRequest } from "@/lib/api-auth";
 import { prisma as db } from "@/lib/db";
+import { enforceSupportTicketRateLimit } from "@/lib/tickets/rate-limit";
 import { z } from "zod";
 
 const replySchema = z.object({
@@ -14,6 +15,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   try {
     const session = await authenticateRequest(req);
     if (!session?.id) throw new ApiError(401, "กรุณาเข้าสู่ระบบ");
+    await enforceSupportTicketRateLimit(req.headers, session.id, "reply");
     const { id } = await ctx.params;
     const input = replySchema.parse(await req.json());
 
@@ -25,7 +27,6 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
     if (!ticket) throw new ApiError(404, "ไม่พบ Ticket");
     if (ticket.status === "CLOSED") throw new ApiError(400, "Ticket นี้ปิดแล้ว ไม่สามารถตอบกลับได้");
-    if (ticket.status === "IN_PROGRESS") throw new ApiError(400, "Ticket อยู่ระหว่างดำเนินการ กรุณารอเจ้าหน้าที่ตอบกลับ");
 
     // Create reply + update ticket status to OPEN (customer replied)
     const [reply] = await db.$transaction([

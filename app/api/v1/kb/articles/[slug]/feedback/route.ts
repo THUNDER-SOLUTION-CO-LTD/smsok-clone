@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { ApiError, apiResponse, apiError } from "@/lib/api-auth";
 import { getSession } from "@/lib/auth";
+import { hasValidCsrfOrigin } from "@/lib/csrf";
 import { prisma as db } from "@/lib/db";
 import { redis } from "@/lib/redis";
 import { getClientIp } from "@/lib/session-utils";
@@ -21,6 +22,10 @@ function voteKey(slug: string, identifier: string) {
 // POST /api/v1/kb/articles/:slug/feedback — helpful/not helpful vote (1 per user)
 export async function POST(req: NextRequest, ctx: Ctx) {
   try {
+    if (!hasValidCsrfOrigin(req)) {
+      throw new ApiError(403, "คำขอไม่ถูกต้อง กรุณาลองใหม่");
+    }
+
     const session = await getSession();
     const userId = session?.id;
     const clientIp = getClientIp(req.headers) || "unknown";
