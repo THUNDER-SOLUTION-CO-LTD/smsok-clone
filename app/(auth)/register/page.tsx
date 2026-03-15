@@ -589,6 +589,15 @@ export default function RegisterPage() {
 
                     {/* PDPA Consent */}
                     <div className="space-y-2.5 pt-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.05em] text-[var(--text-secondary)]">
+                          ความยินยอม PDPA
+                        </p>
+                        <span className="text-[10px] text-[var(--text-muted)] font-mono">
+                          Policy v1.0 — 1 มี.ค. 2569
+                        </span>
+                      </div>
+
                       {/* 1. Service Terms — Required */}
                       <FormField
                         control={form.control}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import CustomSelect from "./CustomSelect";
 
 /**
@@ -19,10 +19,12 @@ export default function SenderDropdown({
   onChange: (v: string) => void;
   senderNames?: string[];
 }) {
-  // Auto-select when only 1 sender available
+  // Auto-select when only 1 sender available (useRef to avoid infinite loop from unstable onChange)
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
   useEffect(() => {
-    if (senderNames.length === 1 && !value) onChange(senderNames[0]);
-  }, [senderNames, value, onChange]);
+    if (senderNames.length === 1 && !value) onChangeRef.current(senderNames[0]);
+  }, [senderNames, value]);
 
   if (senderNames.length === 0) {
     return (

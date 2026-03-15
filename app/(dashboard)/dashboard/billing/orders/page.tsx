@@ -406,8 +406,8 @@ export default function OrderManagementPage() {
       {orders.length === 0 && statusFilter === "ALL" && !searchQuery && !dateRange?.from ? (
         <StateDisplay
           icon={Package}
-          iconColor="#00FFA7"
-          iconBg="rgba(0,255,167,0.08)"
+          iconColor="var(--accent)"
+          iconBg="rgba(var(--accent-rgb),0.08)"
           title="ยังไม่มีคำสั่งซื้อ"
           description="เริ่มต้นใช้งานด้วยการสั่งซื้อแพ็กเกจ SMS ตัวแรก"
           primaryAction={{

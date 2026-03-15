@@ -461,9 +461,9 @@ export default function MessagesClient({
         /* Empty state */
         <EmptyState
           icon={MessageSquare}
-          iconColor="#00FFA7"
-          iconBg="rgba(0,255,167,0.08)"
-          iconBorder="rgba(0,255,167,0.15)"
+          iconColor="var(--accent)"
+          iconBg="rgba(var(--accent-rgb),0.08)"
+          iconBorder="rgba(var(--accent-rgb),0.15)"
           title="ยังไม่เคยส่ง SMS"
           description="ส่ง SMS ข้อความแรกของคุณเลย!"
           ctaLabel="ส่ง SMS แรก"

@@ -322,8 +322,19 @@ export async function getDataRequests(
   page = 1,
   limit = 20
 ) {
+  // Scope to user's org — resolve from membership if no orgId provided
+  let scopedOrgId = orgId;
+  if (!scopedOrgId) {
+    const membership = await db.membership.findFirst({
+      where: { userId },
+      select: { organizationId: true },
+      orderBy: { createdAt: "asc" },
+    });
+    if (membership) scopedOrgId = membership.organizationId;
+  }
+
   const where: Record<string, unknown> = {};
-  if (orgId) where.organizationId = orgId;
+  if (scopedOrgId) where.organizationId = scopedOrgId;
   if (status) where.status = status;
 
   const [requests, total] = await Promise.all([
@@ -362,6 +373,16 @@ export async function processDataRequest(
 
   const request = await db.dataRequest.findUnique({ where: { id: requestId } });
   if (!request) throw new ApiError(404, "ไม่พบคำขอ", "NOT_FOUND");
+
+  // IDOR guard: verify user belongs to the same org as the data request
+  if (request.organizationId) {
+    const membership = await db.membership.findFirst({
+      where: { userId, organizationId: request.organizationId },
+      select: { id: true },
+    });
+    if (!membership) throw new ApiError(403, "ไม่มีสิทธิ์ดำเนินการคำขอนี้", "FORBIDDEN");
+  }
+
   if (request.status === "COMPLETED") throw new ApiError(400, "คำขอนี้ดำเนินการเสร็จแล้ว", "ALREADY_COMPLETED");
 
   const updateData: Record<string, unknown> = {

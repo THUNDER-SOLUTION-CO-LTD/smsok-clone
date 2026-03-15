@@ -478,14 +478,14 @@ async function seedPlans() {
 async function seedPackageTiers() {
   const tiers = [
     { tierCode: "TRIAL", name: "Trial", price: 0, smsQuota: 15, bonusPercent: 0, senderNameLimit: 1, expiryMonths: 1, isTrial: true, sortOrder: 0 },
-    { tierCode: "A", name: "Tier A", price: 350, smsQuota: 500, bonusPercent: 0, senderNameLimit: 5, expiryMonths: 6, sortOrder: 1 },
-    { tierCode: "B", name: "Tier B", price: 650, smsQuota: 1000, bonusPercent: 5, senderNameLimit: 10, expiryMonths: 6, sortOrder: 2 },
-    { tierCode: "C", name: "Tier C", price: 2800, smsQuota: 5000, bonusPercent: 10, senderNameLimit: 15, expiryMonths: 12, sortOrder: 3 },
-    { tierCode: "D", name: "Tier D", price: 5000, smsQuota: 10000, bonusPercent: 15, senderNameLimit: 20, expiryMonths: 12, sortOrder: 4 },
-    { tierCode: "E", name: "Tier E", price: 22000, smsQuota: 50000, bonusPercent: 20, senderNameLimit: null, expiryMonths: 12, sortOrder: 5 },
-    { tierCode: "F", name: "Tier F", price: 40000, smsQuota: 100000, bonusPercent: 25, senderNameLimit: null, expiryMonths: 24, sortOrder: 6 },
-    { tierCode: "G", name: "Tier G", price: 180000, smsQuota: 500000, bonusPercent: 30, senderNameLimit: null, expiryMonths: 24, sortOrder: 7 },
-    { tierCode: "H", name: "Tier H", price: 320000, smsQuota: 1000000, bonusPercent: 35, senderNameLimit: null, expiryMonths: 24, sortOrder: 8 },
+    { tierCode: "A", name: "Starter", price: 490, smsQuota: 2450, bonusPercent: 0, senderNameLimit: 5, expiryMonths: 6, sortOrder: 1 },
+    { tierCode: "B", name: "Basic", price: 990, smsQuota: 4950, bonusPercent: 12, senderNameLimit: 10, expiryMonths: 12, sortOrder: 2 },
+    { tierCode: "C", name: "Growth", price: 9900, smsQuota: 49352, bonusPercent: 18, senderNameLimit: 15, expiryMonths: 24, sortOrder: 3 },
+    { tierCode: "D", name: "Business", price: 49000, smsQuota: 244902, bonusPercent: 22, senderNameLimit: 20, expiryMonths: 24, sortOrder: 4 },
+    { tierCode: "E", name: "Pro", price: 99000, smsQuota: 493991, bonusPercent: 28, senderNameLimit: null, expiryMonths: 36, sortOrder: 5 },
+    { tierCode: "F", name: "Enterprise", price: 290000, smsQuota: 1749830, bonusPercent: 33, senderNameLimit: null, expiryMonths: 36, sortOrder: 6 },
+    { tierCode: "G", name: "Corporate", price: 490000, smsQuota: 3154930, bonusPercent: 42, senderNameLimit: null, expiryMonths: 36, sortOrder: 7 },
+    { tierCode: "H", name: "Ultimate", price: 990000, smsQuota: 6252632, bonusPercent: 52, senderNameLimit: null, expiryMonths: 36, sortOrder: 8 },
   ];
 
   for (const tier of tiers) {

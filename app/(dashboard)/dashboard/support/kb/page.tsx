@@ -92,7 +92,7 @@ const CATEGORIES: {
     label: "ชื่อผู้ส่ง",
     icon: AtSign,
     color: "var(--accent)",
-    colorRgb: "0,255,167",
+    colorRgb: "0,226,181",
   },
   {
     key: "DELIVERY",
