@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertTriangle } from "lucide-react";
+import { SENDING_HOURS_START, SENDING_HOURS_END, SENDING_HOURS_TIMEZONE } from "@/lib/sending-hours-config";
 
 /**
  * Marketing SMS can only be sent 08:00-21:00 (Thailand time, ICT UTC+7).
@@ -9,13 +10,13 @@ import { AlertTriangle } from "lucide-react";
  * Shows a warning banner if the current time or scheduled time is outside allowed hours.
  */
 
-const MARKETING_START_HOUR = 8;
-const MARKETING_END_HOUR = 21;
+const MARKETING_START_HOUR = SENDING_HOURS_START;
+const MARKETING_END_HOUR = SENDING_HOURS_END;
 
 function isOutsideMarketingHours(date: Date): boolean {
   // Convert to Thailand time (UTC+7)
   const thaiHour = new Date(
-    date.toLocaleString("en-US", { timeZone: "Asia/Bangkok" })
+    date.toLocaleString("en-US", { timeZone: SENDING_HOURS_TIMEZONE })
   ).getHours();
   return thaiHour < MARKETING_START_HOUR || thaiHour >= MARKETING_END_HOUR;
 }
@@ -29,7 +30,7 @@ export function checkSendingHours(scheduledAt?: string | null): {
     const timeStr = scheduledAt ? "เวลาที่ตั้งไว้" : "ขณะนี้";
     return {
       isOutside: true,
-      message: `${timeStr}อยู่นอกเวลาส่ง Marketing SMS (08:00-21:00) — ข้อความจะถูกส่งในช่วงเวลาที่อนุญาตถัดไป`,
+      message: `${timeStr}อยู่นอกเวลาส่ง Marketing SMS (${String(MARKETING_START_HOUR).padStart(2, "0")}:00-${MARKETING_END_HOUR}:00) — ข้อความจะถูกส่งในช่วงเวลาที่อนุญาตถัดไป`,
     };
   }
   return { isOutside: false, message: "" };

@@ -7,10 +7,11 @@
 
 import { prisma as db } from "./db";
 import { ApiError } from "./api-auth";
+import { SENDING_HOURS_START, SENDING_HOURS_END, SENDING_HOURS_TIMEZONE } from "./sending-hours-config";
 
-const DEFAULT_START = 8;  // 08:00
-const DEFAULT_END = 21;   // 21:00
-const TIMEZONE = "Asia/Bangkok";
+const DEFAULT_START = SENDING_HOURS_START;
+const DEFAULT_END = SENDING_HOURS_END;
+const TIMEZONE = SENDING_HOURS_TIMEZONE;
 
 /**
  * Get sending hours config for an organization (or defaults)
