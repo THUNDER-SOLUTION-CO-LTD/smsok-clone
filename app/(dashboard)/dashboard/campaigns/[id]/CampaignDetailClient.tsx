@@ -9,6 +9,7 @@ import {
   CheckCircle,
   XCircle,
   Clock,
+  BarChart3,
 } from "lucide-react";
 import { getCampaignProgress } from "@/lib/actions/campaigns";
 import { formatThaiDateShort } from "@/lib/format-thai-date";
@@ -161,6 +162,20 @@ export default function CampaignDetailClient({ campaignId }: { campaignId: strin
           <div><p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">โควต้าสำรอง</p><p className="text-[var(--text-secondary)] tabular-nums">{campaign.creditReserved.toLocaleString()} SMS</p></div>
           <div><p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-1">โควต้าใช้จริง</p><p className="text-[var(--text-secondary)] tabular-nums">{campaign.creditUsed.toLocaleString()} SMS</p></div>
         </div>
+
+        {/* Analytics link */}
+        {(campaign.status === "completed" || campaign.status === "sending" || campaign.status === "running" || campaign.status === "failed") && (
+          <div className="mt-4 pt-4 border-t border-[var(--table-border)]">
+            <Button
+              variant="outline"
+              onClick={() => router.push(`/dashboard/campaigns/${campaignId}/analytics`)}
+              className="gap-2 border-[var(--border-default)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[rgba(var(--accent-rgb),0.04)]"
+            >
+              <BarChart3 className="w-4 h-4" />
+              ดูวิเคราะห์แคมเปญ
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

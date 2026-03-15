@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
-import { verifyPassword, setSession } from "@/lib/auth";
+import { verifyPassword, verifyAndMigratePassword, setSession } from "@/lib/auth";
 import { ApiError, apiError, apiResponse } from "@/lib/api-auth";
 import { loginSchema } from "@/lib/validations";
 import { ERROR_CODES, startApiLog, setApiLogUser } from "@/lib/api-log";
@@ -51,8 +51,8 @@ export async function POST(req: NextRequest) {
       throw new ApiError(401, "อีเมลหรือรหัสผ่านไม่ถูกต้อง");
     }
 
-    // Always run bcrypt first (constant-time) — check lockout AFTER to avoid leaking account existence
-    const valid = await verifyPassword(input.password, user.password);
+    // Verify + lazy-migrate bcrypt→argon2id (constant-time)
+    const { valid, newHash } = await verifyAndMigratePassword(input.password, user.password);
 
     // Account lockout check — same 401 message to prevent enumeration
     if (user.lockedUntil && user.lockedUntil > new Date()) {
@@ -79,11 +79,19 @@ export async function POST(req: NextRequest) {
       throw new ApiError(401, "อีเมลหรือรหัสผ่านไม่ถูกต้อง");
     }
 
-    // Login success — reset failed attempts
+    // Login success — reset failed attempts + lazy-migrate password hash
+    const updateData: Record<string, unknown> = {};
     if (user.failedLoginAttempts > 0 || user.lockedUntil) {
+      updateData.failedLoginAttempts = 0;
+      updateData.lockedUntil = null;
+    }
+    if (newHash) {
+      updateData.password = newHash;
+    }
+    if (Object.keys(updateData).length > 0) {
       await prisma.user.update({
         where: { id: user.id },
-        data: { failedLoginAttempts: 0, lockedUntil: null },
+        data: updateData,
       });
     }
 
