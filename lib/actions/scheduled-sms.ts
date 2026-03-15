@@ -62,11 +62,18 @@ export async function createScheduledSms(
   // Check remaining quota
   await ensureSufficientQuota(userId, smsCount);
 
+  // Look up user's organization for quiet-hours enforcement
+  const userOrg = await prisma.membership.findFirst({
+    where: { userId },
+    select: { organizationId: true },
+  });
+
   // HOLD: deduct quota now via FIFO
   const scheduled = await prisma.$transaction(async (tx) => {
     const record = await tx.scheduledSms.create({
       data: {
         userId,
+        organizationId: userOrg?.organizationId ?? null,
         senderName: data.senderName,
         recipient: data.recipient,
         content: data.message,
@@ -145,18 +152,27 @@ export async function cancelScheduledSms(userId: string, id: string) {
 export async function processScheduledSms() {
   const now = new Date();
 
-  // Fetch due messages first, then check sending hours per-org
-  const dueMessages = await prisma.scheduledSms.findMany({
+  // Atomic claim: mark due rows as "processing" before reading them.
+  // This prevents double-send when two cron invocations overlap.
+  const { count: claimedCount } = await prisma.scheduledSms.updateMany({
     where: {
       status: "pending",
       scheduledAt: { lte: now },
     },
-    take: 50, // batch size
+    data: { status: "processing" },
   });
 
-  if (dueMessages.length === 0) {
+  if (claimedCount === 0) {
     return { processed: 0, sent: 0, failed: 0, rescheduled: false };
   }
+
+  // Now fetch the claimed rows — only this cron instance owns them
+  const dueMessages = await prisma.scheduledSms.findMany({
+    where: {
+      status: "processing",
+    },
+    take: 50,
+  });
 
   // Group by orgId to check sending hours per-org
   const orgIds = [...new Set(dueMessages.map((m) => m.organizationId).filter(Boolean))] as string[];
@@ -172,14 +188,26 @@ export async function processScheduledSms() {
     if (!orgHours.allowed) blockedOrgs.add(orgId);
   }
 
-  // Reschedule blocked messages
+  // Reschedule blocked messages — per-org nextAllowedAt, not one shared default
   const blockedMessages = dueMessages.filter((m) => blockedOrgs.has(m.organizationId));
   if (blockedMessages.length > 0) {
-    const nextAllowed = defaultHours.nextAllowedAt ? new Date(defaultHours.nextAllowedAt) : null;
-    if (nextAllowed) {
+    // Build per-org nextAllowedAt map
+    const orgNextAllowed = new Map<string | null, Date | null>();
+    orgNextAllowed.set(null, defaultHours.nextAllowedAt ? new Date(defaultHours.nextAllowedAt) : null);
+    for (const orgId of orgIds) {
+      if (blockedOrgs.has(orgId)) {
+        const orgHoursResult = await checkSendingHours(orgId);
+        orgNextAllowed.set(orgId, orgHoursResult.nextAllowedAt ? new Date(orgHoursResult.nextAllowedAt) : null);
+      }
+    }
+    // Reschedule each group by their org's next allowed time
+    for (const [orgId, nextTime] of orgNextAllowed) {
+      if (!nextTime) continue;
+      const ids = blockedMessages.filter((m) => m.organizationId === orgId).map((m) => m.id);
+      if (ids.length === 0) continue;
       await prisma.scheduledSms.updateMany({
-        where: { id: { in: blockedMessages.map((m) => m.id) } },
-        data: { scheduledAt: nextAllowed },
+        where: { id: { in: ids } },
+        data: { scheduledAt: nextTime, status: "pending" },
       });
     }
   }
