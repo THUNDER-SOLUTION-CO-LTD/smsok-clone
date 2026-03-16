@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { ApiError, apiError } from "@/lib/api-auth";
 import { getSession } from "@/lib/auth";
 import { prisma as db } from "@/lib/db";
+import { ensureOrderDocumentVerificationCode } from "@/lib/orders/verification-code";
 import { renderOrderQuotationPdf } from "@/lib/orders/pdf";
 import { renderOrderAccountingDocumentPdf } from "@/lib/orders/pdf";
 import { orderPdfSelect } from "@/lib/orders/api";
@@ -104,15 +105,11 @@ export async function buildOrderDocumentDownloadResponse(
     }
 
     // Ensure verificationCode is non-null for PDF generation
-    let verificationCode = document.verificationCode;
-    if (!verificationCode) {
-      const { randomUUID } = await import("node:crypto");
-      verificationCode = randomUUID();
-      await db.orderDocument.update({
-        where: { id: document.id },
-        data: { verificationCode },
-      });
-    }
+    const verificationCode = await ensureOrderDocumentVerificationCode(
+      db,
+      document.id,
+      document.verificationCode,
+    );
 
     const pdfBuffer = await renderOrderAccountingDocumentPdf(order, {
       documentNumber: document.documentNumber,

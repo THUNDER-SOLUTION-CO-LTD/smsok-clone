@@ -8,6 +8,7 @@
 import { getEnv } from "../lib/env"
 import { createOtpWorker } from "../lib/queue/workers/otp-worker"
 import { createSingleWorker } from "../lib/queue/workers/single-worker"
+import { createScheduledSmsWorker } from "../lib/queue/workers/scheduled-sms-worker"
 import { createBatchWorker } from "../lib/queue/workers/batch-worker"
 import { createCampaignWorker } from "../lib/queue/workers/campaign-worker"
 import { createWebhookWorker } from "../lib/queue/workers/webhook-worker"
@@ -21,6 +22,7 @@ console.log("🚀 Starting SMSOK workers...")
 const workers = [
   createOtpWorker(),
   createSingleWorker(),
+  createScheduledSmsWorker(),
   createBatchWorker(),
   createCampaignWorker(),
   createWebhookWorker(),

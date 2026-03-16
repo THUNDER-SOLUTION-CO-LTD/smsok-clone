@@ -10,6 +10,7 @@ import { Worker } from "bullmq"
 import { workerConnectionOptions } from "../connection"
 import { QUEUE_NAMES, QUEUE_CONFIG, type SmsJobData, type SmsJobResult } from "../types"
 import { prisma } from "../../db"
+import { InsufficientCreditsError } from "../../quota-errors"
 import { dispatchWebhookEvent } from "../../webhook-dispatch"
 import { logger } from "../../logger"
 
@@ -22,20 +23,116 @@ export function createCampaignWorker() {
     QUEUE_NAMES.SMS_CAMPAIGN,
     async (job) => {
       const { recipients, message, sender, correlationId, userId, campaignId } = job.data
+      const isRecurringRun = Boolean(job.opts.repeat?.pattern || job.repeatJobKey)
 
       if (recipients.length === 0) {
         throw new Error("No recipients")
       }
 
-      // Update campaign status → sending
-      if (campaignId) {
-        await prisma.campaign.update({
+      const { sendSingleSms } = await import("../../sms-gateway")
+      const {
+        calculateSmsSegments,
+        deductQuota,
+        ensureSufficientQuota,
+        refundQuotaIfEligible,
+      } = await import("../../package/quota")
+
+      const smsCount = calculateSmsSegments(message)
+      const totalCredits = smsCount * recipients.length
+      const campaign = campaignId
+        ? await prisma.campaign.findUnique({
           where: { id: campaignId },
-          data: { status: "sending" },
-        }).catch((err) => { console.error(`[Campaign Worker] Failed to update status to sending: campaignId=${campaignId}`, err); throw err })
+          select: { id: true, name: true },
+        })
+        : null
+
+      const handleInsufficientCredits = async (error: InsufficientCreditsError) => {
+        if (campaignId) {
+          await prisma.campaign.update({
+            where: { id: campaignId },
+            data: isRecurringRun
+              ? {
+                status: "scheduled",
+                failedCount: recipients.length,
+              }
+              : {
+                status: "failed",
+                failedCount: recipients.length,
+                completedAt: new Date(),
+              },
+          }).catch((err) => {
+            console.error(`[Campaign Worker] Failed to update insufficient-credit status: campaignId=${campaignId}`, err)
+          })
+        }
+
+        const { sendScheduledSmsInsufficientCreditsNotice } = await import("../../actions/notifications")
+        await sendScheduledSmsInsufficientCreditsNotice(userId, {
+          campaignName: campaign?.name ?? null,
+          creditsRequired: error.creditsRequired,
+          creditsRemaining: error.creditsRemaining,
+          recurring: isRecurringRun,
+        })
+
+        logger.warn("campaign worker skipped job due to insufficient credits", {
+          campaignId,
+          correlationId,
+          creditsRemaining: error.creditsRemaining,
+          creditsRequired: error.creditsRequired,
+          isRecurringRun,
+          jobId: job.id,
+          totalRecipients: recipients.length,
+        })
+
+        return {
+          smsId: job.data.id,
+          status: "failed" as const,
+          creditCost: 0,
+        }
       }
 
-      const { sendSingleSms } = await import("../../sms-gateway")
+      try {
+        await ensureSufficientQuota(userId, totalCredits)
+      } catch (error) {
+        if (!(error instanceof InsufficientCreditsError)) {
+          throw error
+        }
+        return handleInsufficientCredits(error)
+      }
+
+      let deductions: Array<{ purchaseId: string; amount: number }> = []
+
+      if (campaignId) {
+        try {
+          await prisma.$transaction(async (tx) => {
+            await tx.campaign.update({
+              where: { id: campaignId },
+              data: { status: "sending" },
+            })
+
+            const quotaResult = await deductQuota(tx, userId, totalCredits)
+            deductions = quotaResult.deductions
+          })
+        } catch (error) {
+          if (error instanceof InsufficientCreditsError) {
+            return handleInsufficientCredits(error)
+          }
+
+          console.error(`[Campaign Worker] Failed to reserve quota: campaignId=${campaignId}`, error)
+          throw error
+        }
+      } else {
+        try {
+          await prisma.$transaction(async (tx) => {
+            const quotaResult = await deductQuota(tx, userId, totalCredits)
+            deductions = quotaResult.deductions
+          })
+        } catch (error) {
+          if (error instanceof InsufficientCreditsError) {
+            return handleInsufficientCredits(error)
+          }
+          throw error
+        }
+      }
 
       let sent = 0
       let failed = 0
@@ -65,7 +162,7 @@ export function createCampaignWorker() {
             status: finalStatus,
             sentCount: sent,
             failedCount: failed,
-            creditUsed: sent,
+            creditUsed: sent * smsCount,
             completedAt: new Date(),
           },
         }).catch((err) => { console.error(`[Campaign Worker] Failed to update completion metrics: campaignId=${campaignId}`, err); throw err })
@@ -73,18 +170,24 @@ export function createCampaignWorker() {
 
       // Refund package quota for failed sends (tier D+ only)
       if (failed > 0 && userId) {
-        const { refundQuotaIfEligible } = await import("../../package/quota")
-        const quota = await import("../../package/quota").then(m => m.getRemainingQuota(userId))
-        if (quota.packages.length > 0) {
-          const pkg = quota.packages[0]
-          await prisma.$transaction(async (tx) => {
-            await refundQuotaIfEligible(tx, pkg.id, failed)
-          }).catch((err) => {
-            console.error(`[Campaign Worker] CRITICAL: Refund failed! userId=${userId} amount=${failed} packageId=${pkg.id}`, err)
-            // Re-throw so BullMQ retries this job — financial data must not be lost
-            throw err
-          })
-        }
+        let remainingRefund = failed * smsCount
+
+        await prisma.$transaction(async (tx) => {
+          for (const deduction of [...deductions].reverse()) {
+            if (remainingRefund <= 0) break
+
+            const refundable = Math.min(remainingRefund, deduction.amount)
+            if (refundable <= 0) continue
+
+            const refunded = await refundQuotaIfEligible(tx, deduction.purchaseId, refundable)
+            if (refunded) {
+              remainingRefund -= refundable
+            }
+          }
+        }).catch((err) => {
+          console.error(`[Campaign Worker] CRITICAL: Refund failed! userId=${userId} amount=${failed}`, err)
+          throw err
+        })
       }
 
       // Dispatch webhook
@@ -107,7 +210,7 @@ export function createCampaignWorker() {
       return {
         smsId: job.data.id,
         status: failed === recipients.length ? "failed" as const : "sent" as const,
-        creditCost: sent,
+        creditCost: sent * smsCount,
       }
     },
     {

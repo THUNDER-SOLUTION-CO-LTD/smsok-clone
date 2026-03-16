@@ -5,6 +5,7 @@ import {
 import { prisma as db } from "@/lib/db";
 import { generateOrderDocumentNumber } from "@/lib/orders/numbering";
 import { renderOrderAccountingDocumentPdf } from "@/lib/orders/pdf";
+import { ensureOrderDocumentVerificationCode } from "@/lib/orders/verification-code";
 import { storeBufferInR2 } from "@/lib/storage/service";
 
 type TxClient = Parameters<Parameters<typeof db.$transaction>[0]>[0];
@@ -191,15 +192,11 @@ async function syncOrderDocumentPdfToR2(
   }
 
   // Ensure verificationCode is non-null for PDF generation
-  let verificationCode = document.verificationCode;
-  if (!verificationCode) {
-    const { randomUUID } = await import("node:crypto");
-    verificationCode = randomUUID();
-    await client.orderDocument.update({
-      where: { id: document.id },
-      data: { verificationCode },
-    });
-  }
+  const verificationCode = await ensureOrderDocumentVerificationCode(
+    client,
+    document.id,
+    document.verificationCode,
+  );
 
   const pdfBuffer = await renderOrderAccountingDocumentPdf(orderForPdf, {
     documentNumber: document.documentNumber,

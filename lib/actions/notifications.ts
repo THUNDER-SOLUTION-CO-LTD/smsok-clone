@@ -167,6 +167,44 @@ export async function sendSmsLowWarning(userId: string) {
   }
 }
 
+export async function sendScheduledSmsInsufficientCreditsNotice(
+  userId: string,
+  details: {
+    campaignName?: string | null;
+    creditsRemaining: number;
+    creditsRequired: number;
+    recurring: boolean;
+  },
+) {
+  try {
+    const user = await getUser(userId);
+    if (!user) return;
+
+    const campaignLabel = details.campaignName?.trim() || "Scheduled SMS";
+    const scheduleLabel = details.recurring ? "Recurring SMS" : "Scheduled SMS";
+    const subject = `${scheduleLabel} skipped: insufficient credits`;
+    const text = [
+      `Hello ${user.name},`,
+      "",
+      `${campaignLabel} was skipped because your SMS balance was insufficient.`,
+      `Required: ${details.creditsRequired} SMS`,
+      `Remaining: ${details.creditsRemaining} SMS`,
+      "",
+      "Top up credits and the next scheduled run will continue automatically.",
+    ].join("\n");
+
+    await sendEmail({
+      to: user.email,
+      subject,
+      html: text.replace(/\n/g, "<br />"),
+      text,
+      tags: [{ name: "type", value: "scheduled-sms-insufficient-credits" }],
+    });
+  } catch (error) {
+    console.error("[notifications] sendScheduledSmsInsufficientCreditsNotice failed:", error);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // 6. Campaign Summary
 // ---------------------------------------------------------------------------

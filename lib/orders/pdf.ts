@@ -19,6 +19,7 @@ import { buildDocumentVerificationAssets } from "@/lib/accounting/pdf/document-v
 import { numberToThaiText } from "@/lib/accounting/thai-number";
 import { prisma as db } from "@/lib/db";
 import { getCompanyInfo } from "@/lib/env";
+import { ensureOrderDocumentVerificationCode } from "@/lib/orders/verification-code";
 
 type NumericLike = { toNumber(): number } | number;
 type PdfRenderable = Parameters<typeof renderToBuffer>[0];
@@ -303,15 +304,11 @@ export async function renderOrderInvoicePdf(order: OrderPdfRecord) {
         throw new Error(`ไม่พบข้อมูลเอกสาร ${order.invoiceNumber!}`);
       }
 
-      let verificationCode = doc.verificationCode;
-      if (!verificationCode) {
-        const { randomUUID } = await import("node:crypto");
-        verificationCode = randomUUID();
-        await db.orderDocument.update({
-          where: { id: doc.id },
-          data: { verificationCode },
-        });
-      }
+      const verificationCode = await ensureOrderDocumentVerificationCode(
+        db,
+        doc.id,
+        doc.verificationCode,
+      );
 
       const data = await buildOrderInvoicePdfData(order, {
         documentNumber: order.invoiceNumber!,
