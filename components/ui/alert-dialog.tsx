@@ -30,33 +30,12 @@ function AlertDialogOverlay({
     <AlertDialogPrimitive.Backdrop
       data-slot="alert-dialog-overlay"
       className={cn(
-        "fixed inset-0 z-50 pointer-events-none bg-black/80 duration-100 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+        "fixed inset-0 z-50 bg-black/80 duration-100 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
         className
       )}
       {...props}
     />
   )
-}
-
-/**
- * Strip Base UI's `inert` attribute from body children.
- * AlertDialog is always modal=true, so Base UI marks siblings as inert,
- * which can block pointer events on the dialog portal itself.
- */
-function useStripInert() {
-  React.useEffect(() => {
-    const observer = new MutationObserver((mutations) => {
-      for (const m of mutations) {
-        if (m.type === "attributes" && m.attributeName === "inert" && m.target instanceof HTMLElement) {
-          m.target.removeAttribute("inert")
-        }
-      }
-    })
-    observer.observe(document.body, { attributes: true, attributeFilter: ["inert"], subtree: true })
-    // Also strip any existing inert attrs
-    document.querySelectorAll("[inert]").forEach((el) => el.removeAttribute("inert"))
-    return () => observer.disconnect()
-  }, [])
 }
 
 function AlertDialogContent({
@@ -66,8 +45,6 @@ function AlertDialogContent({
 }: AlertDialogPrimitive.Popup.Props & {
   size?: "default" | "sm"
 }) {
-  useStripInert()
-
   return (
     <AlertDialogPortal>
       <AlertDialogOverlay />

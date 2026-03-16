@@ -31,6 +31,17 @@ const envSchema = z.object({
       (s) => process.env.NODE_ENV !== "production" || !WEAK_SECRETS.includes(s),
       "JWT_SECRET is too weak for production — use: openssl rand -hex 32"
     ),
+  ADMIN_JWT_SECRET: z.string()
+    .min(16, "ADMIN_JWT_SECRET must be at least 16 characters")
+    .refine(
+      (s) => process.env.NODE_ENV !== "production" || s.length >= 32,
+      "ADMIN_JWT_SECRET must be at least 32 characters in production"
+    )
+    .refine(
+      (s) => process.env.NODE_ENV !== "production" || !WEAK_SECRETS.includes(s),
+      "ADMIN_JWT_SECRET is too weak for production — use: openssl rand -hex 32"
+    )
+    .optional(),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   PORT: z.coerce.number().default(3000),
   REDIS_URL: z.string().url().optional(),
@@ -67,6 +78,20 @@ const envSchema = z.object({
       code: z.ZodIssueCode.custom,
       path: ["REDIS_URL"],
       message: "REDIS_URL is required in production",
+    });
+  }
+
+  if (!value.ADMIN_JWT_SECRET?.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["ADMIN_JWT_SECRET"],
+      message: "ADMIN_JWT_SECRET is required in production",
+    });
+  } else if (value.ADMIN_JWT_SECRET === value.JWT_SECRET) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["ADMIN_JWT_SECRET"],
+      message: "ADMIN_JWT_SECRET must be different from JWT_SECRET in production",
     });
   }
 

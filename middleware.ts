@@ -60,8 +60,21 @@ function shouldVerifyAdminSession(pathname: string) {
   return pathname === "/admin" || pathname.startsWith("/admin/");
 }
 
+function getAdminJwtSecretForMiddleware() {
+  const secret = process.env.ADMIN_JWT_SECRET?.trim();
+  if (secret) {
+    return secret;
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("ADMIN_JWT_SECRET env var required");
+  }
+
+  return null;
+}
+
 async function verifyAdminSessionToken(token: string) {
-  const secret = process.env.JWT_SECRET;
+  const secret = getAdminJwtSecretForMiddleware();
   if (!secret) {
     return false;
   }
@@ -69,7 +82,7 @@ async function verifyAdminSessionToken(token: string) {
   try {
     const { payload } = await jwtVerify(
       token,
-      new TextEncoder().encode(`${secret}_admin`),
+      new TextEncoder().encode(secret),
     );
 
     return (

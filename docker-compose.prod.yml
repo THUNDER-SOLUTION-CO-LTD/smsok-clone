@@ -180,14 +180,8 @@ services:
       - WATCHTOWER_INCLUDE_STOPPED=false
       - WATCHTOWER_SCOPE=smsok
       - WATCHTOWER_LIFECYCLE_HOOKS=true
-      - WATCHTOWER_HTTP_API_UPDATE=true
-      - WATCHTOWER_HTTP_API_PERIODIC_POLLS=true
-      - WATCHTOWER_HTTP_API_METRICS=true
-      - WATCHTOWER_HTTP_API_TOKEN=${WATCHTOWER_TOKEN:-watchtower-secret-change-me}
       - WATCHTOWER_NOTIFICATIONS=shoutrrr
       - WATCHTOWER_NOTIFICATION_URL=${WATCHTOWER_NOTIFY_URL:-}
-    ports:
-      - "8080:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${DOCKER_CONFIG_PATH:-/home/byteder/.docker/config.json}:/config.json:ro

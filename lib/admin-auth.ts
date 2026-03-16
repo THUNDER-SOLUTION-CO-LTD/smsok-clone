@@ -8,7 +8,7 @@ import { env } from "./env";
 import { hasValidCsrfOrigin } from "./csrf";
 import { redis } from "./redis";
 
-const ADMIN_JWT_SECRET = env.JWT_SECRET + "_admin";
+const ADMIN_JWT_SECRET = env.ADMIN_JWT_SECRET?.trim();
 const ADMIN_SESSION_TTL_SECONDS = 8 * 60 * 60;
 export const ADMIN_SESSION_COOKIE_NAME = "admin_session";
 const DUMMY_HASH = "$2b$12$qF1xea/GGCtjbQ6FC32FAu0YSQWxmgOuBDgvb4IVBhTrnjXPVYwoC";
@@ -38,17 +38,25 @@ function buildAdminSessionKey(sessionId: string) {
   return `admin_session:${sessionId}`;
 }
 
+function getAdminJwtSecret() {
+  if (!ADMIN_JWT_SECRET) {
+    throw new Error("ADMIN_JWT_SECRET env var required");
+  }
+
+  return ADMIN_JWT_SECRET;
+}
+
 export function signAdminToken(adminId: string, role: string, sessionId: string) {
   return jwt.sign(
     { type: "admin", adminId, role, sessionId, jti: randomUUID() },
-    ADMIN_JWT_SECRET,
+    getAdminJwtSecret(),
     { expiresIn: `${ADMIN_SESSION_TTL_SECONDS}s` },
   );
 }
 
 export function verifyAdminToken(token: string): AdminPayload | null {
   try {
-    const payload = jwt.verify(token, ADMIN_JWT_SECRET) as AdminPayload;
+    const payload = jwt.verify(token, getAdminJwtSecret()) as AdminPayload;
     if (
       payload?.type !== "admin" ||
       !payload?.adminId ||
