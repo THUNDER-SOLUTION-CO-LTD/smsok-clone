@@ -4,26 +4,35 @@ import { resolveActionUserId } from "@/lib/action-user"
 import { generateWebhookSecret, signPayload, type WebhookEvent } from "@/lib/webhook-dispatch"
 import { isObviouslyInternalUrl, safeFetch } from "@/lib/url-safety"
 import { encryptSecret, decryptSecret } from "@/lib/two-factor"
+import { ALL_EVENT_IDS, WEBHOOK_EVENTS } from "@/lib/webhook-events"
 import { randomBytes } from "crypto"
+import { z } from "zod"
 
-export const VALID_EVENTS: WebhookEvent[] = [
-  "sms.sent",
-  "sms.delivered",
-  "sms.failed",
-  "sms.clicked",
-  "otp.verified",
-  "credit.low",
-  "campaign.completed",
-  "campaign.started",
-  "campaign.failed",
-  "contact.opted_out",
-  "credits.depleted",
-]
+type WebhookSummaryRecord = {
+  id: string
+  url: string
+  events: string[]
+  active: boolean
+  failCount: number
+  createdAt: Date
+  updatedAt: Date
+  _count: { logs: number }
+}
 
-export const WEBHOOK_EVENT_REGISTRY = VALID_EVENTS.map((event) => {
-  const [category, action] = event.split(".")
-  return { event, category, action }
+const webhookLogsPaginationSchema = z.object({
+  page: z.coerce.number().catch(1).transform((value) => Math.max(1, Math.trunc(value))),
+  limit: z.coerce.number().catch(20).transform((value) => Math.min(100, Math.max(1, Math.trunc(value)))),
 })
+
+export const VALID_EVENTS: WebhookEvent[] = [...ALL_EVENT_IDS] as WebhookEvent[]
+
+export const WEBHOOK_EVENT_REGISTRY = WEBHOOK_EVENTS.map((event) => ({
+  id: event.id,
+  event: event.id,
+  label: event.label,
+  description: event.description,
+  group: event.group,
+}))
 
 async function resolveWebhookUserId(apiUserId?: string) {
   return resolveActionUserId(apiUserId)
@@ -35,6 +44,74 @@ function maskWebhookSecret(secret: string) {
   }
 
   return `••••••••${secret.slice(-4)}`
+}
+
+function calculateSuccessRate(successCount: number, deliveryCount: number) {
+  if (deliveryCount === 0) {
+    return 0
+  }
+
+  return Math.round((successCount / deliveryCount) * 10000) / 100
+}
+
+async function getWebhookLogStats(webhookIds: string[]) {
+  if (webhookIds.length === 0) {
+    return {
+      successCountByWebhookId: new Map<string, number>(),
+      lastDeliveryAtByWebhookId: new Map<string, Date | null>(),
+    }
+  }
+
+  const [successCounts, lastDeliveries] = await Promise.all([
+    prisma.webhookLog.groupBy({
+      by: ["webhookId"],
+      where: {
+        webhookId: { in: webhookIds },
+        success: true,
+      },
+      _count: { _all: true },
+    }),
+    prisma.webhookLog.groupBy({
+      by: ["webhookId"],
+      where: {
+        webhookId: { in: webhookIds },
+      },
+      _max: { createdAt: true },
+    }),
+  ])
+
+  return {
+    successCountByWebhookId: new Map(
+      successCounts.map((row) => [row.webhookId, row._count._all]),
+    ),
+    lastDeliveryAtByWebhookId: new Map(
+      lastDeliveries.map((row) => [row.webhookId, row._max.createdAt ?? null]),
+    ),
+  }
+}
+
+function buildWebhookSummary(
+  webhook: WebhookSummaryRecord,
+  successCountByWebhookId: Map<string, number>,
+  lastDeliveryAtByWebhookId: Map<string, Date | null>,
+) {
+  const deliveryCount = webhook._count.logs
+  const successCount = successCountByWebhookId.get(webhook.id) ?? 0
+
+  return {
+    id: webhook.id,
+    url: webhook.url,
+    events: webhook.events,
+    eventCount: webhook.events.length,
+    status: webhook.active ? "active" : "disabled",
+    active: webhook.active,
+    failCount: webhook.failCount,
+    deliveryCount,
+    successRate: calculateSuccessRate(successCount, deliveryCount),
+    lastDeliveryAt: lastDeliveryAtByWebhookId.get(webhook.id) ?? null,
+    createdAt: webhook.createdAt,
+    updatedAt: webhook.updatedAt,
+  }
 }
 
 // ── List webhooks ───────────────────────────────────────
@@ -58,17 +135,13 @@ export async function listWebhooks(apiUserId?: string) {
     orderBy: { createdAt: "desc" },
   })
 
-  return webhooks.map((w) => ({
-    id: w.id,
-    url: w.url,
-    events: w.events,
-    status: w.active ? "active" : "disabled",
-    active: w.active,
-    failCount: w.failCount,
-    deliveryCount: w._count.logs,
-    createdAt: w.createdAt,
-    updatedAt: w.updatedAt,
-  }))
+  const { successCountByWebhookId, lastDeliveryAtByWebhookId } = await getWebhookLogStats(
+    webhooks.map((webhook) => webhook.id),
+  )
+
+  return webhooks.map((webhook) =>
+    buildWebhookSummary(webhook, successCountByWebhookId, lastDeliveryAtByWebhookId),
+  )
 }
 
 // ── Get webhook detail ──────────────────────────────────
@@ -92,6 +165,7 @@ export async function getWebhook(id: string, apiUserId?: string) {
     },
   })
   if (!webhook) throw new Error("ไม่พบ webhook")
+  const { successCountByWebhookId, lastDeliveryAtByWebhookId } = await getWebhookLogStats([webhook.id])
 
   let plaintextSecret: string
   try {
@@ -101,15 +175,8 @@ export async function getWebhook(id: string, apiUserId?: string) {
   }
 
   return {
-    id: webhook.id,
-    url: webhook.url,
-    events: webhook.events,
-    status: webhook.active ? "active" : "disabled",
+    ...buildWebhookSummary(webhook, successCountByWebhookId, lastDeliveryAtByWebhookId),
     secret: maskWebhookSecret(plaintextSecret),
-    failCount: webhook.failCount,
-    deliveryCount: webhook._count.logs,
-    createdAt: webhook.createdAt,
-    updatedAt: webhook.updatedAt,
   }
 }
 
@@ -341,9 +408,11 @@ export async function testWebhook(id: string, apiUserId?: string) {
   return {
     success,
     statusCode,
+    latency,
     latencyMs: latency,
     url: webhook.url,
     event: "test",
+    responseBody: responseBody ? String(responseBody).slice(0, 1000) : null,
     response: responseBody ? String(responseBody).slice(0, 1000) : null,
   }
 }
@@ -388,8 +457,7 @@ export async function getWebhookLogs(
   })
   if (!webhook) throw new Error("ไม่พบ webhook")
 
-  const page = options.page ?? 1
-  const limit = Math.min(options.limit ?? 20, 100)
+  const { page, limit } = webhookLogsPaginationSchema.parse(options)
   const skip = (page - 1) * limit
 
   const [logs, total] = await Promise.all([
@@ -412,5 +480,29 @@ export async function getWebhookLogs(
     prisma.webhookLog.count({ where: { webhookId } }),
   ])
 
-  return { logs, total, page, limit, totalPages: Math.ceil(total / limit) }
+  return {
+    logs: logs.map((log) => {
+      const responseRecord =
+        log.response && typeof log.response === "object" && !Array.isArray(log.response)
+          ? log.response as Record<string, unknown>
+          : null
+
+      return {
+        id: log.id,
+        event: log.event,
+        statusCode: log.statusCode,
+        latency: log.latency,
+        success: log.success,
+        createdAt: log.createdAt,
+        payload: log.payload,
+        response: log.response,
+        requestBody: log.payload,
+        responseBody: responseRecord?.body ?? log.response ?? null,
+      }
+    }),
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit),
+  }
 }
