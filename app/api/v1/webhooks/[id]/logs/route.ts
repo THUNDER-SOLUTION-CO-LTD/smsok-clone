@@ -4,7 +4,7 @@ import { getWebhookLogs } from "@/lib/actions/webhooks"
 import { z } from "zod"
 
 const webhookLogsPaginationSchema = z.object({
-  page: z.coerce.number().catch(1).transform((value) => Math.max(1, Math.trunc(value))),
+  page: z.coerce.number().catch(1).transform((value) => Math.min(10_000, Math.max(1, Math.trunc(value)))),
   limit: z.coerce.number().catch(20).transform((value) => Math.min(100, Math.max(1, Math.trunc(value)))),
 })
 

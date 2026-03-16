@@ -4,7 +4,7 @@ import { resolveActionUserId } from "@/lib/action-user"
 import { generateWebhookSecret, signPayload, type WebhookEvent } from "@/lib/webhook-dispatch"
 import { isObviouslyInternalUrl, safeFetch } from "@/lib/url-safety"
 import { encryptSecret, decryptSecret } from "@/lib/two-factor"
-import { ALL_EVENT_IDS, WEBHOOK_EVENTS } from "@/lib/webhook-events"
+import { ALL_EVENT_IDS, WEBHOOK_EVENT_REGISTRY } from "@/lib/webhook-events"
 import { randomBytes } from "crypto"
 import { z } from "zod"
 
@@ -20,19 +20,11 @@ type WebhookSummaryRecord = {
 }
 
 const webhookLogsPaginationSchema = z.object({
-  page: z.coerce.number().catch(1).transform((value) => Math.max(1, Math.trunc(value))),
+  page: z.coerce.number().catch(1).transform((value) => Math.min(10_000, Math.max(1, Math.trunc(value)))),
   limit: z.coerce.number().catch(20).transform((value) => Math.min(100, Math.max(1, Math.trunc(value)))),
 })
 
 export const VALID_EVENTS: WebhookEvent[] = [...ALL_EVENT_IDS] as WebhookEvent[]
-
-export const WEBHOOK_EVENT_REGISTRY = WEBHOOK_EVENTS.map((event) => ({
-  id: event.id,
-  event: event.id,
-  label: event.label,
-  description: event.description,
-  group: event.group,
-}))
 
 async function resolveWebhookUserId(apiUserId?: string) {
   return resolveActionUserId(apiUserId)
