@@ -11,6 +11,7 @@
     "lint": "eslint",
     "db:generate": "bunx prisma generate",
     "db:push": "bunx prisma db push",
+    "db:deploy": "bunx prisma migrate deploy",
     "db:studio": "bunx prisma studio",
     "db:seed": "bunx prisma db seed",
     "db:seed:qa": "bun scripts/seed-qa.ts",
