@@ -181,12 +181,18 @@ export type TwoFactorStatusResponse = {
 
 // ── Contact Responses ───────────────────────────────────
 
+export type ContactTag = {
+  id: string
+  name: string
+  color: string
+}
+
 export type ContactItem = {
   id: string
   name: string
   phone: string
   email: string | null
-  tags: string | null
+  tags: ContactTag[] | string | null
   smsConsent: boolean
   groups: Array<{ id: string; name: string }>
   createdAt: string
@@ -293,7 +299,7 @@ export type GroupItem = {
   id: string
   name: string
   createdAt: string | Date
-  _count: { members: number }
+  memberCount: number
 }
 
 export type GroupContactStub = {

@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
+import { ALL_EVENT_IDS } from "./webhook-events";
 /**
  * OpenAPI 3.0.3 Spec Generator for SMSOK API
  *
@@ -14,6 +15,7 @@ type HttpMethod = Lowercase<(typeof HTTP_METHODS)[number]>;
 type OpenApiOperation = Record<string, unknown>;
 type OpenApiPathItem = Partial<Record<HttpMethod, OpenApiOperation>>;
 let cachedAutoDiscoveredPaths: Record<string, OpenApiPathItem> | null = null;
+const WEBHOOK_EVENT_ENUM = [...ALL_EVENT_IDS];
 
 const AUTH_API_SERVERS = [
   { url: "http://localhost:3000/api", description: "Development auth routes" },
@@ -762,7 +764,7 @@ export function generateOpenAPISpec() {
             url: { type: "string", format: "uri" },
             events: {
               type: "array",
-              items: { type: "string", enum: ["sms.sent", "sms.delivered", "sms.failed", "otp.verified", "credit.low"] },
+              items: { type: "string", enum: WEBHOOK_EVENT_ENUM },
             },
             active: { type: "boolean" },
             secret: { type: "string" },
@@ -2205,7 +2207,7 @@ export function generateOpenAPISpec() {
                     url: { type: "string", format: "uri" },
                     events: {
                       type: "array",
-                      items: { type: "string", enum: ["sms.sent", "sms.delivered", "sms.failed", "otp.verified", "credit.low"] },
+                      items: { type: "string", enum: WEBHOOK_EVENT_ENUM },
                     },
                   },
                 },
