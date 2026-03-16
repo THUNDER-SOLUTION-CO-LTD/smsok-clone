@@ -70,7 +70,7 @@ export default function SenderNameForm({ userId }: { userId: string }) {
             minLength={3}
           />
           <div className="flex items-center gap-3 mt-2">
-            <span className={`text-xs ${isValid ? "text-emerald-400" : "text-[var(--text-muted)]"}`}>
+            <span className={`text-xs ${isValid ? "text-[var(--success)]" : "text-[var(--text-muted)]"}`}>
               {name.length}/11 ตัวอักษร
             </span>
             {name.length > 0 && !isValid && (
@@ -202,7 +202,7 @@ export default function SenderNameForm({ userId }: { userId: string }) {
             transition={{ duration: 0.3, ease: "easeOut" }}
             className={`p-4 rounded-lg border text-sm font-medium ${
               result.type === "success"
-                ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+                ? "bg-[rgba(var(--success-rgb,34,197,94),0.1)] border-[rgba(var(--success-rgb,34,197,94),0.2)] text-[var(--success)]"
                 : "bg-[rgba(var(--error-rgb,239,68,68),0.1)] border-[rgba(var(--error-rgb,239,68,68),0.2)] text-[var(--error)]"
             }`}
           >

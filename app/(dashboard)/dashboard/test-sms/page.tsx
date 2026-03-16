@@ -25,7 +25,7 @@ type DeliveryStatus = "idle" | "sending" | "delivered" | "failed";
 
 function ConfettiEffect() {
   const [particles, setParticles] = useState<
-    { id: number; x: number; y: number; color: string; delay: number; size: number }[]
+    { id: number; x: number; y: number; color: string; delay: number; size: number; round: boolean; animDuration: number }[]
   >([]);
 
   useEffect(() => {
@@ -44,6 +44,8 @@ function ConfettiEffect() {
       color: colors[Math.floor(Math.random() * colors.length)],
       delay: Math.random() * 0.5,
       size: 6 + Math.random() * 6,
+      round: Math.random() > 0.5,
+      animDuration: 1.5 + Math.random() * 1.5,
     }));
     setParticles(items);
   }, []);
@@ -60,9 +62,9 @@ function ConfettiEffect() {
             width: `${p.size}px`,
             height: `${p.size}px`,
             backgroundColor: p.color,
-            borderRadius: Math.random() > 0.5 ? "50%" : "2px",
+            borderRadius: p.round ? "50%" : "2px",
             animationDelay: `${p.delay}s`,
-            animationDuration: `${1.5 + Math.random() * 1.5}s`,
+            animationDuration: `${p.animDuration}s`,
           }}
         />
       ))}

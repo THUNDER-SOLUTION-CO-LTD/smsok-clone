@@ -37,33 +37,38 @@ import PageLayout, {
 
 /* ─── Mock Data Generation ─── */
 
+/** Deterministic pseudo-random [0, 1) — no Math.random() → no SSR hydration mismatch */
+function seed(i: number, salt = 0): number {
+  return (((i * 2654435761 + salt) >>> 0) / 4294967296);
+}
+
 function makeHours() {
   return Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, "0")}:00`);
 }
 
 const HOURS = makeHours();
 
-const LATENCY_DATA = HOURS.map((hour) => ({
+const LATENCY_DATA = HOURS.map((hour, i) => ({
   hour,
-  p50: 35 + Math.round(Math.random() * 20),
-  p95: 110 + Math.round(Math.random() * 50),
-  p99: 280 + Math.round(Math.random() * 120),
+  p50: 35 + Math.round(seed(i, 0) * 20),
+  p95: 110 + Math.round(seed(i, 1) * 50),
+  p99: 280 + Math.round(seed(i, 2) * 120),
 }));
 
-const ERROR_RATE_DATA = HOURS.map((hour) => ({
+const ERROR_RATE_DATA = HOURS.map((hour, i) => ({
   hour,
-  rate: parseFloat((Math.random() * 0.4).toFixed(3)),
+  rate: parseFloat((seed(i, 3) * 0.4).toFixed(3)),
 }));
 
-const REQUEST_VOLUME_DATA = HOURS.map((hour) => ({
+const REQUEST_VOLUME_DATA = HOURS.map((hour, i) => ({
   hour,
-  requests: 800 + Math.round(Math.random() * 1600),
+  requests: 800 + Math.round(seed(i, 4) * 1600),
 }));
 
-const QUEUE_THROUGHPUT_DATA = HOURS.map((hour) => ({
+const QUEUE_THROUGHPUT_DATA = HOURS.map((hour, i) => ({
   hour,
-  enqueued: 600 + Math.round(Math.random() * 800),
-  processed: 580 + Math.round(Math.random() * 800),
+  enqueued: 600 + Math.round(seed(i, 5) * 800),
+  processed: 580 + Math.round(seed(i, 6) * 800),
 }));
 
 /* ─── Alert Mock Data ─── */

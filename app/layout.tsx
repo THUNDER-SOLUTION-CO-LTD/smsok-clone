@@ -27,10 +27,10 @@ const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://smsok.9phum.me";
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
   title: {
-    default: "SMSOK — แพลตฟอร์มส่ง SMS สำหรับธุรกิจ",
+    default: "SMSOK — บริการส่ง SMS Marketing & OTP API สำหรับธุรกิจ",
     template: "%s | SMSOK",
   },
-  description: "ส่ง SMS ผ่านเว็บและ API ได้ทันที ราคาถูกสุด 0.15 บาท/ข้อความ ส่งเร็ว ทดลองฟรี 15 SMS รองรับ OTP, แคมเปญ, และ Sender Name",
+  description: "บริการส่ง SMS ผ่านเว็บและ API ที่ดีที่สุดในไทย ส่งได้ทั้ง Marketing และ OTP ราคาเริ่มต้น 0.15 บาท เริ่มต้นฟรี 15 SMS!",
   keywords: ["SMS", "ส่ง SMS", "SMS API", "SMS Thailand", "OTP", "SMS ราคาถูก", "SMS marketing", "แพลตฟอร์ม SMS", "SMSOK"],
   authors: [{ name: "SMSOK" }],
   creator: "SMSOK",
@@ -38,14 +38,14 @@ export const metadata: Metadata = {
     type: "website",
     locale: "th_TH",
     siteName: "SMSOK",
-    title: "SMSOK — แพลตฟอร์มส่ง SMS สำหรับธุรกิจ",
-    description: "ส่ง SMS ผ่านเว็บและ API ได้ทันที ราคาถูก ส่งเร็ว ทดลองฟรี 15 SMS",
+    title: "SMSOK — บริการส่ง SMS Marketing & OTP API สำหรับธุรกิจ",
+    description: "บริการส่ง SMS ผ่านเว็บและ API ที่ดีที่สุดในไทย ราคาเริ่มต้น 0.15 บาท เริ่มต้นฟรี 15 SMS!",
     url: BASE_URL,
   },
   twitter: {
     card: "summary_large_image",
-    title: "SMSOK — แพลตฟอร์มส่ง SMS สำหรับธุรกิจ",
-    description: "ส่ง SMS ผ่านเว็บและ API ได้ทันที ราคาถูก ส่งเร็ว ทดลองฟรี 15 SMS",
+    title: "SMSOK — บริการส่ง SMS Marketing & OTP API สำหรับธุรกิจ",
+    description: "บริการส่ง SMS ผ่านเว็บและ API ที่ดีที่สุดในไทย ราคาเริ่มต้น 0.15 บาท เริ่มต้นฟรี 15 SMS!",
   },
   robots: {
     index: true,
@@ -57,7 +57,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0b1118",
+  themeColor: "var(--bg-base)",
   width: "device-width",
   initialScale: 1,
 };

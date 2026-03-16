@@ -6,7 +6,7 @@ import DashboardShell from "./DashboardShell";
 import AuthGuard from "@/components/AuthGuard";
 
 // Pages accessible without login (pricing, etc.)
-const PUBLIC_DASHBOARD_PATHS = ["/dashboard/packages", "/dashboard/billing/packages"];
+const PUBLIC_DASHBOARD_PATHS = ["/dashboard/packages", "/dashboard/billing/packages", "/dashboard/api-docs"];
 
 export default async function DashboardLayout({
   children,

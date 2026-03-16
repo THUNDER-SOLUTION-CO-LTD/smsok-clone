@@ -961,7 +961,7 @@ export default function ApiDocsPage() {
       <div className="flex gap-8 max-w-[1400px]">
         {/* Left Sidebar -- desktop only */}
         <div className="hidden xl:block w-64 shrink-0">
-          <Sidebar endpoints={endpoints} activeId={activeNavId} onSelect={handleSidebarSelect} />
+          <Sidebar endpoints={filtered} activeId={activeNavId} onSelect={handleSidebarSelect} />
         </div>
 
         {/* Main Content */}
@@ -1054,7 +1054,7 @@ const res = await fetch('https://api.smsok.com/api/v1/balance', {
           {/* Expand/Collapse controls */}
           <div className="flex items-center justify-between mb-4">
             <p className="text-xs text-[var(--text-muted)]">
-              {filtered.length} endpoint{filtered.length !== 1 ? "s" : ""}
+              {filtered.length}{activeCategory !== "ทั้งหมด" || search ? ` / ${endpoints.length}` : ""} endpoint{filtered.length !== 1 ? "s" : ""}
             </p>
             <div className="flex gap-2">
               <button onClick={expandAll} className="bg-transparent border border-[var(--border-default)] text-[var(--text-primary)] rounded-lg hover:border-[rgba(var(--accent-rgb),0.3)] hover:bg-[rgba(var(--accent-rgb),0.04)] px-3 py-1.5 text-[11px] rounded-lg flex items-center gap-1.5">

@@ -1313,15 +1313,9 @@ export default function ContactsClient({
                       </TableCell>
                       <TableCell className="py-3.5">
                         <DropdownMenu>
-                          <DropdownMenuTrigger>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[rgba(var(--accent-rgb),0.04)]"
-                            >
-                              <MoreHorizontal className="w-4 h-4" />
-                              <span className="sr-only">เมนู</span>
-                            </Button>
+                          <DropdownMenuTrigger className="h-8 w-8 p-0 flex items-center justify-center rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[rgba(var(--accent-rgb),0.04)] transition-colors">
+                            <MoreHorizontal className="w-4 h-4" />
+                            <span className="sr-only">เมนู</span>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent
                             align="end"
@@ -1542,10 +1536,8 @@ export default function ContactsClient({
                           {contact.name}
                         </a>
                         <DropdownMenu>
-                          <DropdownMenuTrigger>
-                            <button className="min-w-[44px] min-h-[44px] flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors shrink-0 ml-2">
-                              <MoreHorizontal className="w-4 h-4" />
-                            </button>
+                          <DropdownMenuTrigger className="min-w-[44px] min-h-[44px] flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors shrink-0 ml-2">
+                            <MoreHorizontal className="w-4 h-4" />
                           </DropdownMenuTrigger>
                           <DropdownMenuContent
                             align="end"

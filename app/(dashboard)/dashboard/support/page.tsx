@@ -320,7 +320,7 @@ export default function SupportPage() {
             type="button"
             onClick={() => setActiveStatus(tab.value)}
             className={cn(
-              "shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
+              "shrink-0 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
               activeStatus === tab.value
                 ? "bg-[var(--accent)] text-[var(--text-on-accent)]"
                 : "text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-secondary)]"
@@ -493,7 +493,7 @@ export default function SupportPage() {
               type="button"
               disabled={currentPage <= 1}
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)] disabled:opacity-40 disabled:cursor-not-allowed"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)] disabled:opacity-40 disabled:cursor-not-allowed"
               aria-label="หน้าก่อนหน้า"
             >
               <ChevronLeft size={16} />
@@ -519,7 +519,7 @@ export default function SupportPage() {
                 item === "ellipsis" ? (
                   <span
                     key={`ellipsis-${idx}`}
-                    className="flex h-8 w-8 items-center justify-center text-xs text-[var(--text-muted)]"
+                    className="flex h-11 w-11 items-center justify-center text-xs text-[var(--text-muted)]"
                   >
                     ...
                   </span>
@@ -529,7 +529,7 @@ export default function SupportPage() {
                     type="button"
                     onClick={() => setCurrentPage(item)}
                     className={cn(
-                      "inline-flex h-8 w-8 items-center justify-center rounded-lg text-xs font-medium transition-colors",
+                      "inline-flex h-11 w-11 items-center justify-center rounded-lg text-xs font-medium transition-colors",
                       currentPage === item
                         ? "bg-[var(--accent)] text-[var(--text-on-accent)]"
                         : "border border-[var(--border-default)] bg-[var(--bg-surface)] text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]"
@@ -544,7 +544,7 @@ export default function SupportPage() {
               type="button"
               disabled={currentPage >= pagination.totalPages}
               onClick={() => setCurrentPage((p) => Math.min(pagination.totalPages, p + 1))}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)] disabled:opacity-40 disabled:cursor-not-allowed"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)] disabled:opacity-40 disabled:cursor-not-allowed"
               aria-label="หน้าถัดไป"
             >
               <ChevronRight size={16} />

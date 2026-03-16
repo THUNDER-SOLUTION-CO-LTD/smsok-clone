@@ -58,10 +58,10 @@ export default function SendingHoursWarning({
       <AlertTriangle
         size={16}
         className="mt-0.5 flex-shrink-0"
-        style={{ color: "var(--warning, #F59E0B)" }}
+        style={{ color: "var(--warning-amber)" }}
       />
       <div>
-        <p className="text-sm font-medium" style={{ color: "var(--warning, #F59E0B)" }}>
+        <p className="text-sm font-medium" style={{ color: "var(--warning-amber)" }}>
           นอกเวลาส่ง Marketing SMS
         </p>
         <p className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>

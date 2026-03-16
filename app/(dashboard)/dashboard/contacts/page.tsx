@@ -1,6 +1,6 @@
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { getContacts, getContactGroups } from "@/lib/actions/contacts";
+import { getContacts, getContactGroups, getContactStats } from "@/lib/actions/contacts";
 import ContactsClient from "./ContactsClient";
 import { ErrorState } from "@/components/ErrorState";
 
@@ -9,23 +9,24 @@ const VALID_LIMITS = [20, 50, 100] as const;
 export default async function ContactsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; limit?: string }>;
+  searchParams: Promise<{ page?: string; limit?: string; status?: string }>;
 }) {
   const user = await getSession();
   if (!user) redirect("/login");
 
-  const { page: pageParam, limit: limitParam } = await searchParams;
+  const { page: pageParam, limit: limitParam, status: statusParam } = await searchParams;
   const page = Math.max(1, parseInt(pageParam ?? "1") || 1);
   const limitParsed = parseInt(limitParam ?? "20") || 20;
   const limit = (VALID_LIMITS as readonly number[]).includes(limitParsed) ? limitParsed : 20;
 
   try {
-    const [contactsResult, groups] = await Promise.all([
+    const [contactsResult, groups, stats] = await Promise.all([
       getContacts({ page, limit }),
       getContactGroups(),
+      getContactStats(),
     ]);
 
-    if (!contactsResult || !groups) {
+    if (!contactsResult || !groups || !stats) {
       return <ErrorState type="SERVER_ERROR" />;
     }
 
@@ -54,6 +55,8 @@ export default async function ContactsPage({
         initialLimit={limit}
         totalPages={pagination.totalPages}
         groups={groups}
+        stats={stats}
+        initialStatus={statusParam || "all"}
       />
     );
   } catch {

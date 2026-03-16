@@ -915,7 +915,7 @@ export default function LogsClient() {
                   <button
                     onClick={() => setPage(p => Math.max(1, p - 1))}
                     disabled={page <= 1}
-                    className="w-8 h-8 rounded flex items-center justify-center hover:bg-[var(--bg-surface)] disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+                    className="w-11 h-11 min-h-[44px] rounded flex items-center justify-center hover:bg-[var(--bg-surface)] disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
                   >
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M15 18l-6-6 6-6" /></svg>
                   </button>
@@ -923,7 +923,7 @@ export default function LogsClient() {
                   <button
                     onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                     disabled={page >= totalPages}
-                    className="w-8 h-8 rounded flex items-center justify-center hover:bg-[var(--bg-surface)] disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+                    className="w-11 h-11 min-h-[44px] rounded flex items-center justify-center hover:bg-[var(--bg-surface)] disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
                   >
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M9 18l6-6-6-6" /></svg>
                   </button>

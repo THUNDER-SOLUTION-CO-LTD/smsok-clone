@@ -11,7 +11,7 @@ export default function SessionExpiredPage() {
     <div className="bg-[var(--bg-base)]">
       <StateDisplay
         icon={Clock}
-        iconColor="#FACD63"
+        iconColor="var(--warning)"
         iconBg="rgba(250,205,99,0.08)"
         title="Session หมดอายุ"
         description="เพื่อความปลอดภัย กรุณาเข้าสู่ระบบอีกครั้ง"

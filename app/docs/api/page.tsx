@@ -42,10 +42,10 @@ type Endpoint = {
 // ─── HTTP Method colors (hardcoded hex per spec) ──────────────────────────────
 
 const METHOD_STYLES: Record<HttpMethod, { bg: string; text: string; border: string }> = {
-  GET: { bg: "rgba(var(--success-rgb),0.13)", text: "var(--success)", border: "#16a34a44" },
-  POST: { bg: "rgba(var(--info-rgb),0.13)", text: "var(--info)", border: "#2563eb44" },
-  PUT: { bg: "rgba(var(--warning-rgb),0.13)", text: "var(--warning)", border: "#d9770644" },
-  DELETE: { bg: "rgba(var(--error-rgb),0.13)", text: "var(--error)", border: "#dc262644" },
+  GET: { bg: "rgba(var(--success-rgb),0.13)", text: "var(--success)", border: "rgba(var(--success-rgb),0.27)" },
+  POST: { bg: "rgba(var(--info-rgb),0.13)", text: "var(--info)", border: "rgba(var(--info-rgb),0.27)" },
+  PUT: { bg: "rgba(var(--warning-rgb),0.13)", text: "var(--warning)", border: "rgba(var(--warning-rgb),0.27)" },
+  DELETE: { bg: "rgba(var(--error-rgb),0.13)", text: "var(--error)", border: "rgba(var(--error-rgb),0.27)" },
 };
 
 const STATUS_STYLE: Record<string, { bg: string; text: string }> = {

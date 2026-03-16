@@ -114,9 +114,9 @@ function PaymentSuccessContent() {
         <div className="w-full max-w-lg flex flex-col items-center gap-6 text-center">
           <div
             className="w-16 h-16 rounded-full flex items-center justify-center"
-            style={{ background: "rgba(var(--error-rgb, 239,68,68), 0.1)", border: "1px solid rgba(var(--error-rgb, 239,68,68), 0.2)" }}
+            style={{ background: "rgba(var(--error-rgb), 0.1)", border: "1px solid rgba(var(--error-rgb), 0.2)" }}
           >
-            <AlertTriangle size={32} style={{ color: "var(--error, #ef4444)" }} />
+            <AlertTriangle size={32} style={{ color: "var(--error)" }} />
           </div>
           <h1 className="text-xl font-bold" style={{ color: "var(--text-primary)" }}>
             ไม่สามารถโหลดข้อมูลคำสั่งซื้อได้

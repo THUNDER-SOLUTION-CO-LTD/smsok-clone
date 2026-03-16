@@ -19,7 +19,7 @@ export default function Error({
     <div className="bg-[var(--bg-base)]">
       <StateDisplay
         icon={AlertTriangle}
-        iconColor="#F23645"
+        iconColor="var(--error)"
         iconBg="rgba(242,54,69,0.08)"
         errorCode="500"
         title="เกิดข้อผิดพลาด"

@@ -410,7 +410,7 @@ export default function CampaignsClient({
           <AlertTriangle className="w-4 h-4 shrink-0" />
           <span className="font-medium">กรุณาสร้าง Sender Name ก่อนส่ง Campaign</span>
           <Link
-            href="/dashboard/senders/new"
+            href="/dashboard/senders"
             className="ml-auto text-xs font-semibold underline underline-offset-2 hover:opacity-80 transition-opacity"
             style={{ color: "var(--accent)" }}
           >

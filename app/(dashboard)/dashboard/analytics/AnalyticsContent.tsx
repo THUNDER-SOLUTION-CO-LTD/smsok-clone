@@ -667,7 +667,7 @@ export default function AnalyticsContent({ stats }: { stats: Stats }) {
     .map((c, i) => ({
       name: c.name,
       value: c.sentCount,
-      color: ["var(--accent)", "var(--success)", "var(--accent-blue, #3b82f6)", "var(--warning)", "var(--accent-secondary, #a855f7)"][i] || "var(--accent)",
+      color: ["var(--accent)", "var(--success)", "var(--accent-blue)", "var(--warning)", "var(--accent-secondary)"][i] || "var(--accent)",
     }));
 
   // Fetch daily chart data
@@ -1061,11 +1061,11 @@ export default function AnalyticsContent({ stats }: { stats: Stats }) {
       >
         <div
           className="absolute top-0 left-0 right-0 h-[2px]"
-          style={{ background: "linear-gradient(90deg, transparent, var(--accent-secondary, #a855f7), transparent)", opacity: 0.3 }}
+          style={{ background: "linear-gradient(90deg, transparent, var(--accent-secondary), transparent)", opacity: 0.3 }}
         />
         <div className="flex items-center justify-between px-6 pt-5 pb-4">
           <div className="flex items-center gap-2">
-            <Table2 size={16} style={{ color: "var(--accent-secondary, #a855f7)" }} />
+            <Table2 size={16} style={{ color: "var(--accent-secondary)" }} />
             <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
               ประสิทธิภาพแคมเปญ
             </h3>

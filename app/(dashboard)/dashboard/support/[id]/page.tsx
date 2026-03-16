@@ -440,6 +440,9 @@ export default function TicketDetailPage() {
               value={replyContent}
               onChange={(e) => setReplyContent(e.target.value)}
               onKeyDown={handleKeyDown}
+              onFocus={(e) => {
+                setTimeout(() => e.target.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
+              }}
               placeholder="พิมพ์ข้อความตอบกลับ..."
               rows={3}
               disabled={sending}

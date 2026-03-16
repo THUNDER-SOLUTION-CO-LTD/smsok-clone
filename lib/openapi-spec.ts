@@ -1763,7 +1763,7 @@ export function generateOpenAPISpec() {
         post: {
           tags: ["Templates"],
           summary: "Create template",
-          description: "Create message template with {variable} syntax for personalization.",
+          description: "Create message template with {{variable}} syntax for personalization.",
           requestBody: {
             required: true,
             content: {
@@ -1773,7 +1773,7 @@ export function generateOpenAPISpec() {
                   required: ["name", "content"],
                   properties: {
                     name: { type: "string" },
-                    content: { type: "string", example: "Hello {name}, your code is {code}" },
+                    content: { type: "string", example: "Hello {{name}}, your code is {{code}}" },
                     category: { type: "string", default: "general" },
                   },
                 },

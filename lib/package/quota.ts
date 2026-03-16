@@ -65,11 +65,12 @@ export async function deductQuota(
   userId: string,
   smsCount: number,
 ): Promise<{ success: boolean; deductions: Array<{ purchaseId: string; amount: number }> }> {
+  const now = new Date();
   const packages = await tx.packagePurchase.findMany({
     where: {
       userId,
       isActive: true,
-      expiresAt: { gt: new Date() },
+      expiresAt: { gt: now },
     },
     orderBy: { expiresAt: "asc" }, // FIFO
   });
@@ -88,23 +89,52 @@ export async function deductQuota(
 
   for (const pkg of packages) {
     if (remaining <= 0) break;
+    while (remaining > 0) {
+      const currentPackage = await tx.packagePurchase.findUnique({
+        where: { id: pkg.id },
+        select: {
+          id: true,
+          smsTotal: true,
+          smsUsed: true,
+          isActive: true,
+          expiresAt: true,
+        },
+      });
 
-    const available = pkg.smsTotal - pkg.smsUsed;
-    if (available <= 0) continue;
+      if (
+        !currentPackage ||
+        !currentPackage.isActive ||
+        currentPackage.expiresAt.getTime() <= now.getTime()
+      ) {
+        break;
+      }
 
-    const deduct = Math.min(available, remaining);
+      const available = currentPackage.smsTotal - currentPackage.smsUsed;
+      if (available <= 0) break;
 
-    await tx.packagePurchase.update({
-      where: { id: pkg.id },
-      data: { smsUsed: { increment: deduct } },
-    });
+      const deduct = Math.min(available, remaining);
+      const deductionResult = await tx.packagePurchase.updateMany({
+        where: {
+          id: currentPackage.id,
+          isActive: true,
+          expiresAt: { gt: now },
+          smsUsed: { lte: currentPackage.smsTotal - deduct },
+        },
+        data: { smsUsed: { increment: deduct } },
+      });
 
-    deductions.push({ purchaseId: pkg.id, amount: deduct });
-    remaining -= deduct;
+      if (deductionResult.count !== 1) {
+        continue;
+      }
+
+      deductions.push({ purchaseId: currentPackage.id, amount: deduct });
+      remaining -= deduct;
+      break;
+    }
   }
 
   if (remaining > 0) {
-    throwInsufficientCredits(smsCount, availableTotal - (smsCount - remaining));
+    throwInsufficientCredits(smsCount, smsCount - remaining);
   }
 
   return { success: true, deductions };

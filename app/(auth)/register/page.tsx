@@ -270,7 +270,7 @@ export default function RegisterPage() {
       {/* Back button */}
       <Link
         href="/"
-        className="fixed top-5 left-5 z-10 flex items-center gap-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors duration-200"
+        className="fixed top-5 left-5 z-10 min-h-[44px] px-2 flex items-center gap-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors duration-200"
       >
         <ArrowLeft className="w-4 h-4" />
         <span className="text-[13px]">กลับหน้าหลัก</span>
@@ -335,7 +335,7 @@ export default function RegisterPage() {
                           <FormItem>
                             <FormLabel className="text-xs font-semibold uppercase tracking-[0.05em] text-[var(--text-secondary)]">ชื่อ</FormLabel>
                             <FormControl>
-                              <Input placeholder="สมชาย" className="h-11 bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] rounded-lg focus:border-[var(--accent)] focus:ring-[rgba(var(--accent-rgb),0.12)]" {...field} />
+                              <Input autoFocus placeholder="สมชาย" className="h-11 bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] rounded-lg focus:border-[var(--accent)] focus:ring-[rgba(var(--accent-rgb),0.12)]" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -374,8 +374,8 @@ export default function RegisterPage() {
                                 className="h-11 bg-[var(--bg-base)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] rounded-lg pr-10 transition-[border-color,box-shadow] duration-200"
                                 style={{
                                   borderColor:
-                                    emailAvailability.status === "available" ? "#089981"
-                                    : emailAvailability.status === "taken" ? "#f23645"
+                                    emailAvailability.status === "available" ? "var(--success)"
+                                    : emailAvailability.status === "taken" ? "var(--error)"
                                     : undefined,
                                   boxShadow:
                                     emailAvailability.status === "available" ? "0 0 0 1px rgba(8,153,129,0.2)"
@@ -385,13 +385,13 @@ export default function RegisterPage() {
                                 {...field}
                               />
                               {emailAvailability.status === "checking" && (
-                                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-[#949FA8]" aria-label="กำลังตรวจสอบ" />
+                                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-[var(--text-muted)]" aria-label="กำลังตรวจสอบ" />
                               )}
                               {emailAvailability.status === "available" && (
-                                <CircleCheck className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#089981] animate-in fade-in duration-200" />
+                                <CircleCheck className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--success)] animate-in fade-in duration-200" />
                               )}
                               {emailAvailability.status === "taken" && (
-                                <CircleX className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#f23645] animate-in fade-in duration-200" />
+                                <CircleX className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--error)] animate-in fade-in duration-200" />
                               )}
                             </div>
                           </FormControl>
@@ -402,10 +402,10 @@ export default function RegisterPage() {
                                 role="status"
                                 className={`flex items-center gap-1 text-[12px] animate-in fade-in slide-in-from-bottom-1 duration-150 ${
                                   emailAvailability.status === "available"
-                                    ? "text-[#089981]"
+                                    ? "text-[var(--success)]"
                                     : emailAvailability.status === "taken"
-                                    ? "text-[#f23645]"
-                                    : "text-[#949FA8]"
+                                    ? "text-[var(--error)]"
+                                    : "text-[var(--text-muted)]"
                                 }`}
                               >
                                 {emailAvailability.status === "checking" && <Loader2 className="w-3 h-3 animate-spin" />}
@@ -441,8 +441,8 @@ export default function RegisterPage() {
                                 className="h-11 bg-[var(--bg-base)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] rounded-lg pr-10 transition-[border-color,box-shadow] duration-200"
                                 style={{
                                   borderColor:
-                                    phoneAvailability.status === "available" ? "#089981"
-                                    : phoneAvailability.status === "taken" ? "#f23645"
+                                    phoneAvailability.status === "available" ? "var(--success)"
+                                    : phoneAvailability.status === "taken" ? "var(--error)"
                                     : undefined,
                                   boxShadow:
                                     phoneAvailability.status === "available" ? "0 0 0 1px rgba(8,153,129,0.2)"
@@ -452,13 +452,13 @@ export default function RegisterPage() {
                                 {...field}
                               />
                               {phoneAvailability.status === "checking" && (
-                                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-[#949FA8]" aria-label="กำลังตรวจสอบ" />
+                                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-[var(--text-muted)]" aria-label="กำลังตรวจสอบ" />
                               )}
                               {phoneAvailability.status === "available" && (
-                                <CircleCheck className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#089981] animate-in fade-in duration-200" />
+                                <CircleCheck className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--success)] animate-in fade-in duration-200" />
                               )}
                               {phoneAvailability.status === "taken" && (
-                                <CircleX className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#f23645] animate-in fade-in duration-200" />
+                                <CircleX className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--error)] animate-in fade-in duration-200" />
                               )}
                             </div>
                           </FormControl>
@@ -470,10 +470,10 @@ export default function RegisterPage() {
                                 role="status"
                                 className={`flex items-center gap-1 text-[12px] animate-in fade-in slide-in-from-bottom-1 duration-150 ${
                                   phoneAvailability.status === "available"
-                                    ? "text-[#089981]"
+                                    ? "text-[var(--success)]"
                                     : phoneAvailability.status === "taken"
-                                    ? "text-[#f23645]"
-                                    : "text-[#949FA8]"
+                                    ? "text-[var(--error)]"
+                                    : "text-[var(--text-muted)]"
                                 }`}
                               >
                                 {phoneAvailability.status === "checking" && <Loader2 className="w-3 h-3 animate-spin" />}
@@ -505,7 +505,7 @@ export default function RegisterPage() {
                                 onKeyUp={(e) => setCapsLockOn(e.getModifierState("CapsLock"))}
                                 onBlur={(e) => { setCapsLockOn(false); field.onBlur(); }}
                               />
-                              <button type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors duration-150">
+                              <button type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"} className="absolute right-1 top-1/2 -translate-y-1/2 min-w-[44px] min-h-[44px] flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors duration-150">
                                 {showPassword ? <EyeOff className="w-[18px] h-[18px]" /> : <Eye className="w-[18px] h-[18px]" />}
                               </button>
                             </div>
@@ -537,7 +537,7 @@ export default function RegisterPage() {
                               </div>
                               <div className="space-y-0.5 mt-1">
                                 {passwordChecks.map((c) => (
-                                  <p key={c.label} className={`text-[11px] ${c.pass ? "text-[var(--success)]" : "text-[var(--text-muted)]"}`}>
+                                  <p key={c.label} className={`text-xs ${c.pass ? "text-[var(--success)]" : "text-[var(--text-muted)]"}`}>
                                     {c.pass ? "✓" : "○"} {c.label}
                                   </p>
                                 ))}
@@ -566,7 +566,7 @@ export default function RegisterPage() {
                                 onKeyUp={(e) => setCapsLockOn(e.getModifierState("CapsLock"))}
                                 onBlur={(e) => { setCapsLockOn(false); field.onBlur(); }}
                               />
-                              <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors duration-150">
+                              <button type="button" onClick={() => setShowConfirm(!showConfirm)} aria-label={showConfirm ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"} className="absolute right-1 top-1/2 -translate-y-1/2 min-w-[44px] min-h-[44px] flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors duration-150">
                                 {showConfirm ? <EyeOff className="w-[18px] h-[18px]" /> : <Eye className="w-[18px] h-[18px]" />}
                               </button>
                             </div>
@@ -590,10 +590,10 @@ export default function RegisterPage() {
                     {/* PDPA Consent */}
                     <div className="space-y-2.5 pt-2">
                       <div className="flex items-center justify-between">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.05em] text-[var(--text-secondary)]">
+                        <p className="text-xs font-semibold uppercase tracking-[0.05em] text-[var(--text-secondary)]">
                           ความยินยอม PDPA
                         </p>
-                        <span className="text-[10px] text-[var(--text-muted)] font-mono">
+                        <span className="text-xs text-[var(--text-muted)] font-mono">
                           Policy v1.0 — 1 มี.ค. 2569
                         </span>
                       </div>
@@ -716,7 +716,7 @@ export default function RegisterPage() {
               <CardHeader className="text-center pb-0 pt-8 px-5 sm:px-8">
                 <button
                   onClick={() => { setStep("form"); setOtpCode(""); setOtpError(""); }}
-                  className="inline-flex items-center gap-1 text-[13px] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors duration-200 mb-4 mx-auto"
+                  className="inline-flex items-center gap-1.5 text-[13px] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors duration-200 mb-4 mx-auto min-h-[44px] px-3"
                 >
                   <ArrowLeft className="w-3.5 h-3.5" /> แก้ไขข้อมูล
                 </button>
@@ -760,13 +760,15 @@ export default function RegisterPage() {
                     </InputOTP>
                   </div>
 
-                  <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
-                    <span>{countdown > 0 ? `หมดอายุใน ${fmtCountdown(countdown)}` : "OTP หมดอายุแล้ว"}</span>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className={countdown > 0 ? "text-[var(--text-muted)]" : "text-[var(--error)] font-medium"}>
+                      {countdown > 0 ? `หมดอายุใน ${fmtCountdown(countdown)}` : "OTP หมดอายุแล้ว — กรุณาส่งใหม่"}
+                    </span>
                     <button
                       type="button"
                       onClick={handleResend}
                       disabled={resendCooldown > 0 || otpPending}
-                      className="text-[var(--accent)] hover:underline disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
+                      className="min-h-[44px] px-3 text-[var(--accent)] hover:underline disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
                     >
                       {resendCooldown > 0 ? `ส่งอีกครั้ง (${resendCooldown}s)` : "ส่งอีกครั้ง"}
                     </button>
@@ -786,7 +788,18 @@ export default function RegisterPage() {
                 </div>
               </CardContent>
 
-              <CardFooter className="pb-8 pt-4" />
+              <CardFooter className="justify-center pb-8 pt-4">
+                <p className="text-[12px] text-[var(--text-muted)]">
+                  ไม่ได้รับ OTP? ตรวจสอบเบอร์โทรหรือ{" "}
+                  <button
+                    type="button"
+                    onClick={() => { setStep("form"); setOtpCode(""); setOtpError(""); }}
+                    className="text-[var(--accent-blue)] hover:underline transition-colors"
+                  >
+                    กลับไปแก้ไข
+                  </button>
+                </p>
+              </CardFooter>
             </>
           )}
         </Card>

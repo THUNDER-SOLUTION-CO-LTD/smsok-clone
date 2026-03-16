@@ -78,10 +78,15 @@ function ChartTooltip({
 
 /* ─── Mock Data ─── */
 
+/** Deterministic pseudo-random [0, 1) — no Math.random() → no SSR hydration mismatch */
+function seed(i: number, salt = 0): number {
+  return (((i * 2654435761 + salt) >>> 0) / 4294967296);
+}
+
 const TICKET_VOLUME_DATA = Array.from({ length: 14 }, (_, i) => ({
   day: `${i + 1}`,
-  new: Math.floor(3 + Math.random() * 8),
-  resolved: Math.floor(2 + Math.random() * 7),
+  new: Math.floor(3 + seed(i, 0) * 8),
+  resolved: Math.floor(2 + seed(i, 1) * 7),
 }));
 
 const CATEGORY_PIE_DATA = [
@@ -94,7 +99,7 @@ const CATEGORY_PIE_DATA = [
 
 const RESOLUTION_TIME_DATA = Array.from({ length: 14 }, (_, i) => ({
   day: `${i + 1}`,
-  hours: Math.floor(10 + Math.random() * 20),
+  hours: Math.floor(10 + seed(i, 2) * 20),
 }));
 
 /* ─── Badge Configs ─── */

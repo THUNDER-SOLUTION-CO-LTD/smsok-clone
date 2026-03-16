@@ -135,7 +135,7 @@ export async function loadCampaignsPageData(userId: string): Promise<CampaignPag
         orderBy: { name: "asc" },
       }),
       prisma.messageTemplate.findMany({
-        where: { userId },
+        where: { userId, deletedAt: null },
         select: { id: true, name: true, content: true },
         orderBy: { name: "asc" },
       }),

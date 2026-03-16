@@ -83,7 +83,7 @@ export default function LoginPage() {
       {/* Back button */}
       <Link
         href="/"
-        className="fixed top-5 left-5 z-10 flex items-center gap-1.5 text-[var(--text-muted)] hover:text-white transition-colors duration-200"
+        className="fixed top-5 left-5 z-10 min-h-[44px] px-2 flex items-center gap-1.5 text-[var(--text-muted)] hover:text-white transition-colors duration-200"
       >
         <ArrowLeft className="w-4 h-4" />
         <span className="text-[13px]">กลับหน้าหลัก</span>

@@ -69,34 +69,43 @@ function ConfettiEffect() {
     "#FBBF24",
   ];
 
+  const [particles, setParticles] = useState<
+    { left: number; delay: number; duration: number; size: number; color: string; rotation: number; round: boolean }[]
+  >([]);
+
+  useEffect(() => {
+    setParticles(
+      Array.from({ length: 50 }, (_, i) => ({
+        left: Math.random() * 100,
+        delay: Math.random() * 1.5,
+        duration: 2 + Math.random() * 2,
+        size: 6 + Math.random() * 8,
+        color: COLORS[i % COLORS.length],
+        rotation: Math.random() * 720,
+        round: Math.random() > 0.5,
+      }))
+    );
+  }, []);
+
   return (
     <div className="fixed inset-0 pointer-events-none z-[200]">
-      {Array.from({ length: 50 }).map((_, i) => {
-        const left = Math.random() * 100;
-        const delay = Math.random() * 1.5;
-        const duration = 2 + Math.random() * 2;
-        const size = 6 + Math.random() * 8;
-        const color = COLORS[i % COLORS.length];
-        const rotation = Math.random() * 720;
-
-        return (
+      {particles.map((p, i) => (
           <div
             key={i}
             className="absolute"
             style={{
-              left: `${left}%`,
+              left: `${p.left}%`,
               top: "-10px",
-              width: `${size}px`,
-              height: `${size}px`,
-              backgroundColor: color,
-              borderRadius: Math.random() > 0.5 ? "50%" : "2px",
-              animation: `confetti-fall ${duration}s ${delay}s ease-in forwards`,
-              transform: `rotate(${rotation}deg)`,
+              width: `${p.size}px`,
+              height: `${p.size}px`,
+              backgroundColor: p.color,
+              borderRadius: p.round ? "50%" : "2px",
+              animation: `confetti-fall ${p.duration}s ${p.delay}s ease-in forwards`,
+              transform: `rotate(${p.rotation}deg)`,
               opacity: 0,
             }}
           />
-        );
-      })}
+      ))}
       <style>{`
         @keyframes confetti-fall {
           0% { opacity: 1; transform: translateY(0) rotate(0deg) scale(1); }

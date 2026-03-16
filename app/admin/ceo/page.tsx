@@ -64,6 +64,11 @@ function ChartTooltip({
 
 /* ─── Mock Data ─── */
 
+/** Deterministic pseudo-random [0, 1) — no Math.random() → no SSR hydration mismatch */
+function seed(i: number, salt = 0): number {
+  return (((i * 2654435761 + salt) >>> 0) / 4294967296);
+}
+
 const MONTHS = [
   "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
   "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค.",
@@ -71,23 +76,23 @@ const MONTHS = [
 
 const REVENUE_TREND = MONTHS.map((month, i) => ({
   month,
-  revenue: 1_400_000 + i * 90_000 + Math.floor(Math.random() * 80_000),
+  revenue: 1_400_000 + i * 90_000 + Math.floor(seed(i, 0) * 80_000),
 }));
 
 const USER_GROWTH = MONTHS.map((month, i) => ({
   month,
-  total: 900 + i * 32 + Math.floor(Math.random() * 20),
-  newSignups: 40 + Math.floor(Math.random() * 30),
+  total: 900 + i * 32 + Math.floor(seed(i, 1) * 20),
+  newSignups: 40 + Math.floor(seed(i, 2) * 30),
 }));
 
-const CHURN_RATE = MONTHS.map((month) => ({
+const CHURN_RATE = MONTHS.map((month, i) => ({
   month,
-  churn: +(1.5 + Math.random() * 1.2).toFixed(2),
+  churn: +(1.5 + seed(i, 3) * 1.2).toFixed(2),
 }));
 
 const ARPU_DATA = MONTHS.map((month, i) => ({
   month,
-  arpu: 1_700 + i * 40 + Math.floor(Math.random() * 100),
+  arpu: 1_700 + i * 40 + Math.floor(seed(i, 4) * 100),
 }));
 
 const TOP_CUSTOMERS = [

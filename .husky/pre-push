@@ -1,1 +1,2 @@
-npx tsc --noEmit && rm -rf .next && bun run build
+#!/usr/bin/env sh
+bunx tsc --noEmit && bun run build

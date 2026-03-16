@@ -38,14 +38,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
   Form,
@@ -67,7 +59,6 @@ import {
 import {
   Plus,
   Pencil,
-  Trash2,
   FileText,
   Loader2,
   Copy,
@@ -131,8 +122,8 @@ const CATEGORY_STYLES: Record<
   },
   transactional: {
     bg: "bg-[rgba(168,85,247,0.08)]",
-    text: "text-[#A855F7]",
-    dot: "bg-[#A855F7]",
+    text: "text-[var(--accent-purple)]",
+    dot: "bg-[var(--accent-purple)]",
   },
 };
 
@@ -318,8 +309,6 @@ export default function TemplatesClient({
   // Dialog states
   const [showDialog, setShowDialog] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
-  const [showDeleteAlert, setShowDeleteAlert] = useState(false);
-  const [deletingTemplate, setDeletingTemplate] = useState<Template | null>(null);
 
   // Textarea ref for cursor insertion
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -438,21 +427,6 @@ export default function TemplatesClient({
           toast("success", "สร้างเทมเพลตสำเร็จ!");
         }
         setShowDialog(false);
-        router.refresh();
-      } catch (e) {
-        toast("error", safeErrorMessage(e));
-      }
-    });
-  }
-
-  function handleDeleteConfirm() {
-    if (!deletingTemplate) return;
-    startTransition(async () => {
-      try {
-        await deleteTemplate(deletingTemplate.id);
-        toast("success", "ลบเทมเพลตสำเร็จ");
-        setShowDeleteAlert(false);
-        setDeletingTemplate(null);
         router.refresh();
       } catch (e) {
         toast("error", safeErrorMessage(e));
@@ -652,12 +626,6 @@ export default function TemplatesClient({
                           <DropdownMenuSeparator className="bg-[var(--border-default)]" />
                           <DropdownMenuItem onClick={() => handleArchive(template)} className="gap-2 text-[var(--text-secondary)] focus:text-[var(--text-primary)] cursor-pointer">
                             <Archive className="w-4 h-4" /> เก็บเข้าคลัง
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => { setDeletingTemplate(template); setShowDeleteAlert(true); }}
-                            className="gap-2 text-[var(--error)] focus:text-[var(--error)] cursor-pointer"
-                          >
-                            <Trash2 className="w-4 h-4" /> ลบถาวร
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -922,39 +890,7 @@ export default function TemplatesClient({
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation */}
-      <AlertDialog open={showDeleteAlert} onOpenChange={setShowDeleteAlert}>
-        <AlertDialogContent className="bg-[var(--bg-surface)] border-[var(--border-default)] rounded-lg">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-[var(--text-primary)]">
-              ลบเทมเพลต?
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-[var(--text-muted)]">
-              การลบเทมเพลต &ldquo;{deletingTemplate?.name}&rdquo;
-              จะไม่สามารถกู้คืนได้
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="border-[var(--border-default)] text-[var(--text-muted)] hover:text-[var(--text-primary)] bg-transparent">
-              ยกเลิก
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              disabled={isPending}
-              className="bg-[var(--error)] hover:bg-[var(--error)] text-[var(--text-primary)]"
-            >
-              {isPending ? (
-                <span className="flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  กำลังลบ...
-                </span>
-              ) : (
-                "ลบ"
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+
     </div>
   );
 }

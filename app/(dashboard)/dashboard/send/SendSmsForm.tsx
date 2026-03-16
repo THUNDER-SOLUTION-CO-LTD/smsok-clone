@@ -368,7 +368,7 @@ export default function SendSmsForm({ senderNames: rawNames = [] }: { senderName
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-[0.05em] text-[var(--text-muted)] mb-1.5">ประเภทข้อความ</label>
                 <Tabs value={msgType} onValueChange={(v) => setMsgType(v as MsgType)}>
-                  <TabsList className="h-9 bg-transparent gap-2 p-0">
+                  <TabsList className="h-auto bg-transparent gap-2 p-0 overflow-x-auto">
                     {([
                       { value: "thai", label: "ภาษาไทย (70)" },
                       { value: "english", label: "English (160)" },
@@ -377,7 +377,7 @@ export default function SendSmsForm({ senderNames: rawNames = [] }: { senderName
                       <TabsTrigger
                         key={tab.value}
                         value={tab.value}
-                        className="h-9 px-4 rounded-lg text-xs font-medium border border-[var(--border-default)] text-[var(--text-muted)] data-[state=active]:bg-[rgba(var(--accent-rgb),0.08)] data-[state=active]:border-[rgba(var(--accent-rgb),0.3)] data-[state=active]:text-[var(--accent)]"
+                        className="h-11 px-4 rounded-lg text-xs font-medium border border-[var(--border-default)] text-[var(--text-muted)] data-[state=active]:bg-[rgba(var(--accent-rgb),0.08)] data-[state=active]:border-[rgba(var(--accent-rgb),0.3)] data-[state=active]:text-[var(--accent)]"
                       >
                         {tab.label}
                       </TabsTrigger>
@@ -551,14 +551,14 @@ export default function SendSmsForm({ senderNames: rawNames = [] }: { senderName
                         value={testPhone}
                         onChange={(e) => setTestPhone(e.target.value)}
                         placeholder="08X-XXX-XXXX"
-                        className="flex-1 h-9 px-3 rounded-lg text-sm bg-[var(--bg-base)] border border-[var(--border-default)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[rgba(var(--accent-rgb),0.6)]"
+                        className="flex-1 h-11 px-3 rounded-lg text-sm bg-[var(--bg-base)] border border-[var(--border-default)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[rgba(var(--accent-rgb),0.6)]"
                         maxLength={12}
                       />
                       <Button
                         type="button"
                         onClick={handleTestSend}
                         disabled={isTestSending || !testPhone.trim() || !message.trim() || isOutsideSendingHours}
-                        className="h-9 px-3 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--bg-base)] font-semibold text-xs"
+                        className="h-11 px-3 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--bg-base)] font-semibold text-xs"
                       >
                         {isTestSending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
                       </Button>
@@ -575,7 +575,7 @@ export default function SendSmsForm({ senderNames: rawNames = [] }: { senderName
                   <button
                     type="button"
                     onClick={() => setScheduleMode("now")}
-                    className={`flex-1 h-9 rounded-lg text-xs font-medium border transition-colors ${
+                    className={`flex-1 h-11 rounded-lg text-xs font-medium border transition-colors ${
                       scheduleMode === "now"
                         ? "bg-[rgba(var(--accent-rgb),0.08)] border-[rgba(var(--accent-rgb),0.3)] text-[var(--accent)]"
                         : "border-[var(--border-default)] text-[var(--text-muted)] hover:text-[var(--text-primary)]"
@@ -586,7 +586,7 @@ export default function SendSmsForm({ senderNames: rawNames = [] }: { senderName
                   <button
                     type="button"
                     onClick={() => setScheduleMode("later")}
-                    className={`flex-1 h-9 rounded-lg text-xs font-medium border transition-colors flex items-center justify-center gap-1.5 ${
+                    className={`flex-1 h-11 rounded-lg text-xs font-medium border transition-colors flex items-center justify-center gap-1.5 ${
                       scheduleMode === "later"
                         ? "bg-[rgba(var(--accent-rgb),0.08)] border-[rgba(var(--accent-rgb),0.3)] text-[var(--accent)]"
                         : "border-[var(--border-default)] text-[var(--text-muted)] hover:text-[var(--text-primary)]"
@@ -603,13 +603,13 @@ export default function SendSmsForm({ senderNames: rawNames = [] }: { senderName
                       value={scheduleDate}
                       onChange={(e) => setScheduleDate(e.target.value)}
                       min={todayStr || undefined}
-                      className="flex-1 h-9 px-3 rounded-lg text-sm bg-[var(--bg-base)] border border-[var(--border-default)] text-[var(--text-primary)] focus:outline-none focus:border-[rgba(var(--accent-rgb),0.6)]"
+                      className="flex-1 h-11 px-3 rounded-lg text-sm bg-[var(--bg-base)] border border-[var(--border-default)] text-[var(--text-primary)] focus:outline-none focus:border-[rgba(var(--accent-rgb),0.6)]"
                     />
                     <input
                       type="time"
                       value={scheduleTime}
                       onChange={(e) => setScheduleTime(e.target.value)}
-                      className="w-[120px] h-9 px-3 rounded-lg text-sm bg-[var(--bg-base)] border border-[var(--border-default)] text-[var(--text-primary)] focus:outline-none focus:border-[rgba(var(--accent-rgb),0.6)]"
+                      className="w-[120px] h-11 px-3 rounded-lg text-sm bg-[var(--bg-base)] border border-[var(--border-default)] text-[var(--text-primary)] focus:outline-none focus:border-[rgba(var(--accent-rgb),0.6)]"
                     />
                   </div>
                 )}
@@ -663,7 +663,7 @@ export default function SendSmsForm({ senderNames: rawNames = [] }: { senderName
               <button
                 type="button"
                 onClick={() => setShowConfirmModal(false)}
-                className="p-1 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-base)] transition-colors"
+                className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-base)] transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>

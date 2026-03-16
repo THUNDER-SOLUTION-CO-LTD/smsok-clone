@@ -1,7 +1,12 @@
+import { Prisma } from "@prisma/client";
 import { NextRequest } from "next/server";
 import { ApiError, apiResponse, apiError } from "@/lib/api-auth";
 import { getSession } from "@/lib/auth";
 import { prisma as db } from "@/lib/db";
+import {
+  getPaymentTableColumns,
+  prunePaymentSelectForAvailableColumns,
+} from "@/lib/payments/db-compat";
 import { z } from "zod";
 
 const historySchema = z.object({
@@ -33,34 +38,37 @@ export async function GET(req: NextRequest) {
       ...(status ? { status } : {}),
     };
 
+    const paymentColumns = await getPaymentTableColumns();
+    const paymentSelect = prunePaymentSelectForAvailableColumns({
+      id: true,
+      amount: true,
+      totalAmount: true,
+      creditsAdded: true,
+      method: true,
+      status: true,
+      slipFileName: true,
+      invoiceNumber: true,
+      invoiceUrl: true,
+      paidAt: true,
+      createdAt: true,
+      packageTier: {
+        select: {
+          id: true,
+          tierCode: true,
+          name: true,
+          totalSms: true,
+        },
+      },
+    }, paymentColumns) as Prisma.PaymentSelect;
+
     const [payments, total] = await Promise.all([
       db.payment.findMany({
         where,
-        select: {
-          id: true,
-          amount: true,
-          totalAmount: true,
-          creditsAdded: true,
-          method: true,
-          status: true,
-          slipFileName: true,
-          invoiceNumber: true,
-          invoiceUrl: true,
-          paidAt: true,
-          createdAt: true,
-          packageTier: {
-            select: {
-              id: true,
-              tierCode: true,
-              name: true,
-              totalSms: true,
-            },
-          },
-        },
+        select: paymentSelect,
         orderBy: { createdAt: "desc" },
         skip: (page - 1) * limit,
         take: limit,
-      }),
+      }) as Promise<Array<Record<string, any>>>,
       db.payment.count({ where }),
     ]);
 

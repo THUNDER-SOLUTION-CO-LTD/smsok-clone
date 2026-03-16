@@ -50,13 +50,15 @@ const STEPS: { key: CampaignWizardStep; label: string; icon: React.ReactNode }[]
   { key: "review", label: "ตรวจสอบ", icon: <CheckCircle2 size={16} /> },
 ];
 
-// Template variable tokens
+// Template variable tokens — must match backend engine {{variable}} syntax
 const VARIABLES = [
-  { token: "{ชื่อ}", label: "ชื่อผู้รับ" },
-  { token: "{นามสกุล}", label: "นามสกุล" },
-  { token: "{รหัส}", label: "รหัส OTP" },
-  { token: "{เบอร์}", label: "เบอร์โทร" },
-  { token: "{บริษัท}", label: "บริษัท" },
+  { token: "{{name}}", label: "ชื่อผู้รับ" },
+  { token: "{{phone}}", label: "เบอร์โทร" },
+  { token: "{{company}}", label: "บริษัท" },
+  { token: "{{otp}}", label: "รหัส OTP" },
+  { token: "{{code}}", label: "รหัสอ้างอิง" },
+  { token: "{{date}}", label: "วันที่" },
+  { token: "{{amount}}", label: "จำนวนเงิน" },
 ];
 
 const STOP_CODE = "\nReply STOP to unsubscribe";

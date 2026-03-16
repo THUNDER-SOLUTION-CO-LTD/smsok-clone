@@ -213,7 +213,7 @@ function AccordionCard({
       }}
     >
       <button
-        className="w-full px-4 py-3 flex items-center justify-between text-left"
+        className="w-full px-4 py-3 min-h-[44px] flex items-center justify-between text-left"
         onClick={onToggle}
       >
         <div className="flex items-center gap-3">

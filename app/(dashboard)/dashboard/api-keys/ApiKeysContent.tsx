@@ -641,7 +641,7 @@ export default function ApiKeysContent({
           Create Key Dialog
           ═══════════════════════════════════════════════════════ */}
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent className="sm:max-w-[480px] bg-[var(--bg-elevated,#0f1724)] border-[var(--border-default)] text-[var(--text-primary)] max-h-[85vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[480px] bg-[var(--bg-elevated)] border-[var(--border-default)] text-[var(--text-primary)] max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base font-semibold text-[var(--text-primary)]">
               <Key className="w-4 h-4 text-[var(--accent)]" /> สร้าง API Key ใหม่
@@ -662,7 +662,7 @@ export default function ApiKeysContent({
                 value={keyName}
                 onChange={(e) => setKeyName(e.target.value)}
                 maxLength={50}
-                className="h-11 bg-[var(--bg-inset,#061019)] border-[var(--border-default)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+                className="h-11 bg-[var(--bg-inset)] border-[var(--border-default)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
                 autoFocus
               />
             </div>
@@ -706,7 +706,7 @@ export default function ApiKeysContent({
                 onChange={(e) => setRateLimit(e.target.value)}
                 min={1}
                 max={1000}
-                className="h-11 bg-[var(--bg-inset,#061019)] border-[var(--border-default)] text-[var(--text-primary)]"
+                className="h-11 bg-[var(--bg-inset)] border-[var(--border-default)] text-[var(--text-primary)]"
               />
               <p className="text-[11px] text-[var(--text-muted)] mt-1">
                 ค่าเริ่มต้น 60 req/min (แพลน Free)
@@ -722,7 +722,7 @@ export default function ApiKeysContent({
                 placeholder="เช่น 203.0.113.1, 198.51.100.0"
                 value={ipWhitelist}
                 onChange={(e) => setIpWhitelist(e.target.value)}
-                className="h-11 bg-[var(--bg-inset,#061019)] border-[var(--border-default)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+                className="h-11 bg-[var(--bg-inset)] border-[var(--border-default)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
               />
               <p className="text-[11px] text-[var(--text-muted)] mt-1">
                 ใส่ IP คั่นด้วยคอมมา — ว่างไว้ = อนุญาตทุก IP
@@ -765,7 +765,7 @@ export default function ApiKeysContent({
         open={!!deleteTarget}
         onOpenChange={(open) => !open && setDeleteTarget(null)}
       >
-        <AlertDialogContent className="bg-[var(--bg-elevated,#0f1724)] border-[var(--border-default)]">
+        <AlertDialogContent className="bg-[var(--bg-elevated)] border-[var(--border-default)]">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-[var(--text-primary)]">
               เพิกถอน API Key &quot;{deleteTarget?.name}&quot;?

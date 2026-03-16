@@ -45,7 +45,7 @@ async function resolveCampaignMessageSnapshot(
 
   if (input.templateId) {
     const template = await db.messageTemplate.findFirst({
-      where: { id: input.templateId, userId },
+      where: { id: input.templateId, userId, deletedAt: null },
       select: { id: true, content: true },
     });
     if (!template) throw new Error("ไม่พบเทมเพลตข้อความ");

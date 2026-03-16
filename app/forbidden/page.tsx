@@ -8,7 +8,7 @@ export default function ForbiddenPage() {
     <div className="bg-[var(--bg-base)]">
       <StateDisplay
         icon={ShieldAlert}
-        iconColor="#F23645"
+        iconColor="var(--error)"
         iconBg="rgba(242,54,69,0.08)"
         title="ไม่มีสิทธิ์เข้าถึง"
         description="คุณไม่มีสิทธิ์เข้าถึงหน้านี้ กรุณาติดต่อผู้ดูแลระบบ"

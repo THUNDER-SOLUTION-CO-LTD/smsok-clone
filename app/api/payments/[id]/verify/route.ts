@@ -108,6 +108,31 @@ async function rollbackProcessingPayment(paymentId: string, note: string) {
   }
 }
 
+async function claimPendingPaymentForVerification(paymentId: string, userId: string) {
+  return db.$transaction(async (tx) => {
+    const claimedPayment = await tx.payment.updateMany({
+      where: { id: paymentId, userId, status: "PENDING" },
+      data: { status: "PROCESSING" },
+    });
+
+    if (claimedPayment.count !== 1) {
+      return false;
+    }
+
+    await tx.paymentHistory.create({
+      data: {
+        paymentId,
+        fromStatus: "PENDING",
+        toStatus: "PROCESSING",
+        changedBy: "system",
+        note: "EasySlip verifying",
+      },
+    });
+
+    return true;
+  });
+}
+
 // POST /api/payments/:id/verify — trigger EasySlip verification
 export async function POST(req: NextRequest, ctx: Ctx) {
   try {
@@ -164,16 +189,40 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     }
     if (payment.status !== "PENDING") throw new ApiError(400, "สถานะไม่อนุญาตให้ตรวจสอบ");
 
-    await db.payment.update({ where: { id }, data: { status: "PROCESSING" } });
-    await db.paymentHistory.create({
-      data: {
-        paymentId: id,
-        fromStatus: "PENDING",
-        toStatus: "PROCESSING",
-        changedBy: "system",
-        note: "EasySlip verifying",
-      },
-    });
+    const claimedForVerification = await claimPendingPaymentForVerification(id, session.id);
+    if (!claimedForVerification) {
+      const latestPayment = await db.payment.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          userId: true,
+          status: true,
+          easyslipAmount: true,
+          easyslipBank: true,
+          easyslipDate: true,
+          invoiceNumber: true,
+          invoiceUrl: true,
+        },
+      });
+
+      if (!latestPayment) throw new ApiError(404, "ไม่พบรายการชำระเงิน");
+      if (latestPayment.userId !== session.id) throw new ApiError(403, "ไม่มีสิทธิ์เข้าถึง");
+
+      return apiResponse(
+        buildVerifyResponse({
+          id: latestPayment.id,
+          status: latestPayment.status,
+          verified: latestPayment.status === "COMPLETED",
+          error: latestPayment.status === "COMPLETED" ? null : "already_processing",
+          amount: latestPayment.easyslipAmount,
+          bank: latestPayment.easyslipBank,
+          date: latestPayment.easyslipDate,
+          invoiceNumber: latestPayment.invoiceNumber,
+          invoiceUrl: latestPayment.invoiceUrl,
+        }),
+        409,
+      );
+    }
 
     try {
       const verificationSource = await resolveStoredFileVerificationUrl(payment.slipUrl);
@@ -287,17 +336,24 @@ export async function POST(req: NextRequest, ctx: Ctx) {
               if (tier) {
                 const expiresAt = new Date();
                 expiresAt.setMonth(expiresAt.getMonth() + tier.expiryMonths);
-                await tx.packagePurchase.create({
-                  data: {
-                    userId: payment.userId,
-                    organizationId: payment.organizationId,
-                    tierId: payment.packageTierId,
-                    smsTotal: tier.totalSms,
-                    expiresAt,
-                    isActive: true,
-                    transactionId: payment.id,
-                  },
+                const existingPurchase = await tx.packagePurchase.findFirst({
+                  where: { transactionId: payment.id },
+                  select: { id: true },
                 });
+
+                if (!existingPurchase) {
+                  await tx.packagePurchase.create({
+                    data: {
+                      userId: payment.userId,
+                      organizationId: payment.organizationId,
+                      tierId: payment.packageTierId,
+                      smsTotal: tier.totalSms,
+                      expiresAt,
+                      isActive: true,
+                      transactionId: payment.id,
+                    },
+                  });
+                }
               }
             }
 

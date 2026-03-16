@@ -71,6 +71,7 @@ import {
   ClipboardList,
   Megaphone,
   Bell,
+  Webhook,
   Search,
   LogOut,
   ChevronDown,
@@ -103,6 +104,7 @@ const sidebarItems: SidebarItem[] = [
   { icon: Megaphone, label: "แคมเปญ", href: "/dashboard/campaigns", section: "manage" },
   { icon: BarChart3, label: "รายงาน", href: "/dashboard/analytics", section: "manage" },
   { icon: Key, label: "คีย์ API", href: "/dashboard/api-keys", section: "settings" },
+  { icon: Webhook, label: "Webhooks", href: "/dashboard/webhooks", section: "settings" },
   { icon: ScrollText, label: "API Logs", href: "/dashboard/logs", section: "settings" },
   { icon: BookOpen, label: "เอกสาร API", href: "/dashboard/api-docs", section: "settings" },
   { icon: Settings, label: "ตั้งค่า", href: "/dashboard/settings", section: "settings" },
@@ -419,7 +421,7 @@ export default function DashboardShell({
 
             {/* Mobile avatar */}
             {user ? (
-              <Avatar className="w-8 h-8 rounded-lg md:hidden">
+              <Avatar className="w-11 h-11 rounded-lg md:hidden">
                 <AvatarFallback className="bg-[rgba(var(--accent-rgb),0.1)] border border-[rgba(var(--accent-rgb),0.15)] text-[var(--accent)] text-xs font-semibold rounded-lg">
                   {user.name.charAt(0)}
                 </AvatarFallback>
@@ -574,7 +576,7 @@ export default function DashboardShell({
                     )}
                   >
                     <Icon className="w-5 h-5" />
-                    <span className="text-[10px] font-medium text-center leading-tight">{item.label}</span>
+                    <span className="text-xs font-medium text-center leading-tight">{item.label}</span>
                   </Link>
                 );
               })}

@@ -107,10 +107,15 @@ const PAYMENT_PIE = [
   { name: "Banking", value: 15, color: "var(--warning)" },
 ];
 
+/** Deterministic pseudo-random [0, 1) — no Math.random() → no SSR hydration mismatch */
+function seed(i: number, salt = 0): number {
+  return (((i * 2654435761 + salt) >>> 0) / 4294967296);
+}
+
 // Daily revenue
 const DAILY_REVENUE = Array.from({ length: 30 }, (_, i) => ({
   day: `${i + 1}`,
-  revenue: 2000 + Math.floor(Math.random() * 5000),
+  revenue: 2000 + Math.floor(seed(i, 0) * 5000),
 }));
 
 // Refund trend

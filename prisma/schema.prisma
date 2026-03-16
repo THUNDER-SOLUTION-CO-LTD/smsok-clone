@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  engineType = "binary"
 }
 
 datasource db {
@@ -661,7 +662,7 @@ model PackagePurchase {
   purchasedAt    DateTime      @default(now()) @map("purchased_at")
   expiresAt      DateTime      @map("expires_at")
   isActive       Boolean       @default(true) @map("is_active")
-  transactionId  String?       @map("transaction_id")
+  transactionId  String?       @unique @map("transaction_id")
   promotionId    String?       @map("promotion_id")
   couponId       String?       @map("coupon_id")
   autoRenew      Boolean       @default(false) @map("auto_renew")

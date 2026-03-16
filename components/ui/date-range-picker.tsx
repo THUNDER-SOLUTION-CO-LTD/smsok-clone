@@ -405,7 +405,7 @@ function MonthPickerGrid({
               className={cn(
                 "h-12 flex items-center justify-center rounded-lg text-[13px] font-medium cursor-pointer transition-all border border-transparent",
                 isSelected || isEndSelected
-                  ? "bg-[var(--accent)] text-[#061019] font-semibold"
+                  ? "bg-[var(--accent)] text-[var(--bg-inset)] font-semibold"
                   : isInRange
                     ? "bg-[rgba(var(--accent-rgb),0.1)] text-[var(--text-primary)]"
                     : "text-[var(--text-primary)] hover:bg-[rgba(255,255,255,0.06)] hover:border-[var(--border-default)]",
@@ -549,7 +549,7 @@ function PickerFooter({
           type="button"
           onClick={onApply}
           disabled={!hasRange}
-          className="px-5 py-1.5 rounded-md text-[13px] font-semibold bg-[var(--accent)] text-[#061019] hover:bg-[var(--accent-alt)] transition-colors cursor-pointer min-w-[80px] disabled:opacity-40 disabled:pointer-events-none"
+          className="px-5 py-1.5 rounded-md text-[13px] font-semibold bg-[var(--accent)] text-[var(--bg-inset)] hover:bg-[var(--accent-alt)] transition-colors cursor-pointer min-w-[80px] disabled:opacity-40 disabled:pointer-events-none"
         >
           Apply
         </button>

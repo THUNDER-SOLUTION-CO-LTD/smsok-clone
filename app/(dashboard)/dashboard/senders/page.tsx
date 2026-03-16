@@ -602,6 +602,15 @@ export default function SendersPage() {
                               <DropdownMenuItem
                                 onClick={(e) => {
                                   e.stopPropagation();
+                                  router.push(`/dashboard/senders/${sender.id}`);
+                                }}
+                              >
+                                <Info className="size-4 mr-2" />
+                                ดูรายละเอียด
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   setExpandedId(sender.id);
                                 }}
                               >

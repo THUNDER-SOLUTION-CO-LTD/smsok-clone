@@ -41,18 +41,29 @@ export type TemplateVariableToken = {
   key: string;
 };
 
-export function extractVariableTokens(template: string): TemplateVariableToken[] {
-  const uniqueTokens = new Map<string, TemplateVariableToken>();
+function collectTemplateTokens(template: string): TemplateVariableToken[] {
+  const tokens: TemplateVariableToken[] = [];
 
   for (const match of template.matchAll(TEMPLATE_TOKEN_REGEX)) {
     const key = match[1]?.trim();
     if (!key) continue;
 
+    tokens.push({
+      key,
+      ...(match[2] !== undefined ? { defaultValue: match[2].trim() } : {}),
+    });
+  }
+
+  return tokens;
+}
+
+export function extractVariableTokens(template: string): TemplateVariableToken[] {
+  const uniqueTokens = new Map<string, TemplateVariableToken>();
+
+  for (const token of collectTemplateTokens(template)) {
+    const { key } = token;
     if (!uniqueTokens.has(key)) {
-      uniqueTokens.set(key, {
-        key,
-        ...(match[2] !== undefined ? { defaultValue: match[2].trim() } : {}),
-      });
+      uniqueTokens.set(key, token);
     }
   }
 
@@ -119,7 +130,7 @@ export function buildTemplatePreview(
 ) {
   const tokens = extractVariableTokens(template);
   const missing = tokens
-    .filter((token) => !hasVariableValue(variables, token.key))
+    .filter((token) => !hasVariableValue(variables, token.key) && !(token.defaultValue && token.defaultValue.length > 0))
     .map((token) => token.key);
 
   const previewVariables = Object.fromEntries(tokens.map((token) => {
@@ -136,13 +147,28 @@ export function buildTemplatePreview(
     return [token.key, worstCaseValue.length > previewValue.length ? worstCaseValue : previewValue];
   }));
 
+  const rendered = template.replace(TEMPLATE_TOKEN_REGEX, (_match, rawKey: string, defaultValue?: string) => {
+    const key = rawKey.trim();
+    if (hasVariableValue(variables, key)) return variables[key];
+    return getTemplateSampleValue(key, defaultValue?.trim(), "preview");
+  });
+
+  const worstCaseRendered = template.replace(TEMPLATE_TOKEN_REGEX, (_match, rawKey: string, defaultValue?: string) => {
+    const key = rawKey.trim();
+    const previewValue = hasVariableValue(variables, key)
+      ? variables[key]
+      : getTemplateSampleValue(key, defaultValue?.trim(), "preview");
+    const worstCaseValue = getTemplateSampleValue(key, defaultValue?.trim(), "worst-case");
+    return worstCaseValue.length > previewValue.length ? worstCaseValue : previewValue;
+  });
+
   return {
     missing,
     previewVariables,
-    rendered: substituteVariables(template, previewVariables),
+    rendered,
     syntaxWarnings: findTemplateSyntaxWarnings(template),
     variables: tokens.map((token) => token.key),
-    worstCaseRendered: substituteVariables(template, worstCaseVariables),
+    worstCaseRendered,
     worstCaseVariables,
   };
 }

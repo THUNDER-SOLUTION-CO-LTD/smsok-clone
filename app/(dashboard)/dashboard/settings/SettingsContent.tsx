@@ -407,7 +407,7 @@ function NotificationsContent({
 
       {apiUnavailable && (
         <div className="mb-4 px-4 py-2.5 rounded-lg bg-[rgba(var(--warning-rgb,245,158,11),0.08)] border border-[rgba(var(--warning-rgb,245,158,11),0.15)]">
-          <p className="text-xs text-[var(--warning,#f59e0b)]">
+          <p className="text-xs text-[var(--warning-amber)]">
             การตั้งค่าจะไม่ถูกบันทึก — ระบบยังไม่พร้อม
           </p>
         </div>
@@ -966,7 +966,7 @@ export default function SettingsContent({
                 icon={Webhook}
                 title="จัดการ Webhooks"
                 description="ตั้งค่า webhook endpoints สำหรับรับการแจ้งเตือน events ต่างๆ จากระบบ"
-                linkHref="/dashboard/settings/webhooks"
+                linkHref="/dashboard/webhooks"
                 linkLabel="ไปหน้า Webhooks"
               />
             </div>

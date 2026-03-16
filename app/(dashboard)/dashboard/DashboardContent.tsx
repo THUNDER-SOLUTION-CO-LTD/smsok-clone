@@ -239,7 +239,7 @@ function SmartAlertCards({ alerts }: { alerts: SmartAlert[] }) {
       {shown.map((alert) => (
         <div
           key={alert.id}
-          className="flex items-start gap-3 rounded-lg px-4 py-3 relative bg-[#10161c]/80 backdrop-blur border border-white/5"
+          className="flex items-start gap-3 rounded-lg px-4 py-3 relative bg-[var(--bg-surface)]/80 backdrop-blur border border-white/5"
           style={{ borderLeftWidth: 3, borderLeftColor: alert.borderColor }}
         >
           <span className="text-sm mt-0.5 shrink-0">{alert.icon}</span>
@@ -498,7 +498,7 @@ function StatCardsGrid({
               <div className="text-2xl font-bold text-[var(--text-primary)] tracking-tight mb-0.5">
                 {card.value}
               </div>
-              <div className="text-xs font-medium text-[var(--text-muted)] mb-2">
+              <div className="text-xs font-medium text-[var(--text-secondary)] mb-2">
                 {card.label}
               </div>
               {card.bottom}

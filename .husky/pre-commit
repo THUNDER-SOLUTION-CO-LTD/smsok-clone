@@ -1,1 +1,2 @@
-npx tsc --noEmit
+#!/usr/bin/env sh
+bunx tsc --noEmit
