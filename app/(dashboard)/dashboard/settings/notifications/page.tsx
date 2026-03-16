@@ -153,7 +153,8 @@ export default function NotificationPreferencesPage() {
   useEffect(() => {
     fetch("/api/v1/settings/notifications")
       .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
+      .then((json) => {
+        const data = json?.data ?? json;
         if (data) {
           setPrefs({ ...DEFAULT_PREFS, ...data });
         }

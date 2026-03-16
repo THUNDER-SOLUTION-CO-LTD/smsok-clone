@@ -288,7 +288,8 @@ export default function PackagesPage() {
       body: JSON.stringify({ code: couponCode.trim().toUpperCase() }),
     })
       .then((res) => res.ok ? res.json() : null)
-      .then((data) => {
+      .then((json) => {
+        const data = json?.data ?? json;
         if (data?.valid) {
           setCouponStatus("valid")
           setCouponDiscount(data.discount ?? "")

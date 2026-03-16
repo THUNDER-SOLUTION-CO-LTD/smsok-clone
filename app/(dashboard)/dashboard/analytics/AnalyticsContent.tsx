@@ -585,7 +585,8 @@ export default function AnalyticsContent({ stats }: { stats: Stats }) {
       try {
         const res = await fetch("/api/v1/campaigns?limit=50");
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const json = await res.json();
+        const raw = await res.json();
+        const json = raw.data ?? raw;
         if (!cancelled && Array.isArray(json.campaigns)) {
           setCampaigns(
             json.campaigns.map((c: Record<string, unknown>) => ({

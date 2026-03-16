@@ -185,7 +185,8 @@ export default function ScheduledPage() {
         const err = await res.json().catch(() => ({ error: "ยกเลิกล้มเหลว" }));
         throw new Error(err.error || "ยกเลิกล้มเหลว");
       }
-      const result = await res.json();
+      const json = await res.json();
+      const result = json.data ?? json;
       toast.success(`ยกเลิกสำเร็จ — คืน ${result.creditsRefunded || 0} SMS`);
       setItems((prev) => prev.map((i) => (i.id === id ? { ...i, status: "cancelled" as const } : i)));
     } catch (e) {

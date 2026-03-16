@@ -409,7 +409,8 @@ export default function PricingPage() {
       try {
         const res = await fetch("/api/v1/packages");
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
+        const json = await res.json();
+        const data = json.data ?? json;
         const pkgs: ApiPackage[] = Array.isArray(data) ? data : data.packages ?? [];
         if (!cancelled && pkgs.length > 0) {
           const mapped = mapApiToTiers(pkgs);

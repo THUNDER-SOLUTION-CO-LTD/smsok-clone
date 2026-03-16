@@ -131,7 +131,8 @@ export default function RegisterPage() {
         const res = await fetch(`/api/auth/check-duplicate?email=${encodeURIComponent(trimmedEmail)}`, {
           signal: controller.signal,
         });
-        const data = await res.json();
+        const json = await res.json();
+        const data = json.data ?? json;
         setEmailAvailability({
           status: data.available ? "available" : "taken",
           message: data.message ?? (data.available ? "อีเมลนี้ใช้ได้" : "อีเมลนี้ถูกใช้แล้ว"),
@@ -162,7 +163,8 @@ export default function RegisterPage() {
         const res = await fetch(`/api/auth/check-duplicate?phone=${encodeURIComponent(trimmedPhone)}`, {
           signal: controller.signal,
         });
-        const data = await res.json();
+        const json = await res.json();
+        const data = json.data ?? json;
         setPhoneAvailability({
           status: data.available ? "available" : "taken",
           message: data.message ?? (data.available ? "เบอร์นี้ใช้ได้" : "เบอร์นี้ถูกใช้แล้ว"),

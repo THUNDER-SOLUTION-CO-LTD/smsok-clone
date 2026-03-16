@@ -505,7 +505,8 @@ export default function PrivacySettingsPage() {
   useEffect(() => {
     fetch("/api/v1/consent/status")
       .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
+      .then((json) => {
+        const data = json?.data ?? json;
         if (data?.consents) {
           const mapped: Record<ConsentType, boolean> = {
             service: true,

@@ -327,7 +327,8 @@ export default function AuditLogsPage() {
         const params = new URLSearchParams({ range: dateRange });
         const res = await fetch(`/api/v1/audit-logs?${params}`);
         if (res.ok) {
-          const data = await res.json();
+          const json = await res.json();
+          const data = json.data ?? json;
           setEntries(Array.isArray(data) ? data : data.entries ?? []);
         }
       } catch {

@@ -127,15 +127,16 @@ export default function OrderManagementPage() {
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed");
-      const data = await res.json();
+      const json = await res.json();
+      const data = json.data ?? json;
 
-      setOrders(data.orders ?? data.data ?? []);
-      setTotalPages(data.pagination?.totalPages ?? 1);
+      setOrders(data.orders ?? []);
+      setTotalPages(data.pagination?.totalPages ?? data.pagination?.total_pages ?? 1);
 
       if (data.stats) {
         setStats(data.stats);
       } else {
-        const allOrders: Order[] = data.orders ?? data.data ?? [];
+        const allOrders: Order[] = data.orders ?? [];
         setStats({
           total: allOrders.length,
           pending: allOrders.filter((o) => o.status === "PENDING").length,
