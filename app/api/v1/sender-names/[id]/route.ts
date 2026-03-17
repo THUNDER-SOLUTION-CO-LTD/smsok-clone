@@ -3,6 +3,7 @@ import { authenticateRequest, apiResponse, apiError, ApiError } from "@/lib/api-
 import { prisma as db } from "@/lib/db";
 
 export { GET } from "@/app/api/v1/senders/name/[id]/route";
+export { PUT, PATCH } from "@/app/api/v1/senders/name/[id]/route";
 
 type Params = { params: Promise<{ id: string }> };
 
