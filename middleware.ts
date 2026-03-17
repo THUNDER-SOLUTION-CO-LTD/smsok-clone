@@ -133,7 +133,12 @@ export async function middleware(req: NextRequest) {
   const requestHeaders = new Headers(req.headers);
   const authHeader = req.headers.get("authorization");
   const apiKey = req.headers.get("x-api-key")?.trim();
-  const hasApiKeyAuth = Boolean(authHeader || apiKey);
+  const bearerToken = authHeader?.startsWith("Bearer ")
+    ? authHeader.slice(7).trim()
+    : "";
+  const hasApiKeyAuth = Boolean(
+    apiKey || (bearerToken.startsWith("sk_live_") && bearerToken.length >= 20),
+  );
   const accessToken = req.cookies.get(ACCESS_COOKIE_NAME)?.value;
   const refreshToken = req.cookies.get(REFRESH_COOKIE_NAME)?.value;
   const adminSessionToken = req.cookies.get(ADMIN_SESSION_COOKIE_NAME)?.value;

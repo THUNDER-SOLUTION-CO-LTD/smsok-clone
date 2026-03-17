@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma as db } from "@/lib/db";
+import { apiError } from "@/lib/api-auth";
 import { getRemainingQuota } from "@/lib/package/quota";
 import { ensureMembershipRoleAssignment, hasPermission } from "@/lib/rbac";
 
@@ -121,10 +122,6 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("[dev/reset-credits]", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return apiError(error);
   }
 }

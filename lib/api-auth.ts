@@ -134,8 +134,13 @@ export async function authenticateRequest(req: NextRequest) {
   if (session?.id) {
     const isMutatingRequest = req.method !== "GET" && req.method !== "HEAD" && req.method !== "OPTIONS";
     const isBrowserSessionApiRequest = req.nextUrl.pathname.startsWith("/api/v1/");
+    const authHeader = req.headers.get("authorization");
+    const bearerToken = authHeader?.startsWith("Bearer ")
+      ? authHeader.slice(7).trim()
+      : "";
     const hasExplicitApiKey = Boolean(
-      req.headers.get("authorization") || req.headers.get("x-api-key"),
+      req.headers.get("x-api-key") ||
+      (bearerToken.startsWith("sk_live_") && bearerToken.length >= 20),
     );
 
     if (isMutatingRequest && isBrowserSessionApiRequest && !hasExplicitApiKey && !hasValidCsrfOrigin(req)) {
@@ -206,10 +211,26 @@ export function apiError(error: unknown) {
   }
 
   // Handle Prisma unique constraint violation (race condition fallback)
-  if (error instanceof Error && "code" in error && (error as { code: string }).code === "P2002") {
-    const body = { error: "ข้อมูลซ้ำ กรุณาตรวจสอบและลองใหม่", code: ERROR_CODES.BUSINESS };
-    finishApiLog(409, body, ERROR_CODES.BUSINESS, body.error);
-    return Response.json(body, { status: 409 });
+  if (error instanceof Error && "code" in error) {
+    const prismaCode = (error as { code: string }).code;
+
+    if (prismaCode === "P2002") {
+      const body = { error: "ข้อมูลซ้ำ กรุณาตรวจสอบและลองใหม่", code: ERROR_CODES.BUSINESS };
+      finishApiLog(409, body, ERROR_CODES.BUSINESS, body.error);
+      return Response.json(body, { status: 409 });
+    }
+
+    if (prismaCode === "P2025") {
+      const body = { error: "ไม่พบข้อมูล", code: ERROR_CODES.NOT_FOUND };
+      finishApiLog(404, body, ERROR_CODES.NOT_FOUND, body.error);
+      return Response.json(body, { status: 404 });
+    }
+
+    if (prismaCode === "P2003") {
+      const body = { error: "ข้อมูลอ้างอิงไม่ถูกต้อง", code: ERROR_CODES.BUSINESS };
+      finishApiLog(400, body, ERROR_CODES.BUSINESS, body.error);
+      return Response.json(body, { status: 400 });
+    }
   }
 
   if (error instanceof Error) {

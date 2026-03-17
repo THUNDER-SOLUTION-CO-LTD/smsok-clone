@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { apiError } from "@/lib/api-auth";
 import { env } from "@/lib/env";
 import { reset2FARateLimit } from "@/lib/two-factor";
 
@@ -86,10 +87,6 @@ export async function POST(req: NextRequest) {
       guardMode: "dev_secret",
     });
   } catch (error) {
-    console.error("[dev/disable-2fa]", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return apiError(error);
   }
 }

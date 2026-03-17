@@ -233,6 +233,9 @@ export async function getNotificationPrefs(userId?: string) {
       emailCreditLow: true,
       emailCampaignDone: true,
       emailWeeklyReport: true,
+      emailPackageExpiry: true,
+      emailInvoice: true,
+      emailSecurity: true,
       smsCreditLow: true,
       smsCampaignDone: true,
     },
@@ -240,10 +243,8 @@ export async function getNotificationPrefs(userId?: string) {
 
   return prefs
     ? {
+        ...DEFAULT_NOTIFICATION_PREFS,
         ...prefs,
-        emailInvoice: DEFAULT_NOTIFICATION_PREFS.emailInvoice,
-        emailSecurity: DEFAULT_NOTIFICATION_PREFS.emailSecurity,
-        emailPackageExpiry: DEFAULT_NOTIFICATION_PREFS.emailPackageExpiry,
       }
     : { ...DEFAULT_NOTIFICATION_PREFS };
 }
@@ -255,22 +256,21 @@ export async function updateNotificationPrefs(userIdOrData: string | unknown, ma
     maybeData === undefined ? undefined : userIdOrData as string,
   );
   const input = updateNotificationPrefsSchema.parse(maybeData === undefined ? userIdOrData : maybeData);
-  const { emailInvoice, emailSecurity, emailPackageExpiry, ...persistedInput } = input;
-  const effectiveEmailInvoice = emailInvoice ?? DEFAULT_NOTIFICATION_PREFS.emailInvoice;
-  const effectiveEmailSecurity = emailSecurity ?? DEFAULT_NOTIFICATION_PREFS.emailSecurity;
-  const effectiveEmailPackageExpiry = emailPackageExpiry ?? DEFAULT_NOTIFICATION_PREFS.emailPackageExpiry;
 
   const prefs = await db.notificationPrefs.upsert({
     where: { userId },
     create: {
       userId,
-      ...persistedInput,
+      ...input,
     },
-    update: persistedInput,
+    update: input,
     select: {
       emailCreditLow: true,
       emailCampaignDone: true,
       emailWeeklyReport: true,
+      emailPackageExpiry: true,
+      emailInvoice: true,
+      emailSecurity: true,
       smsCreditLow: true,
       smsCampaignDone: true,
     },
@@ -278,9 +278,7 @@ export async function updateNotificationPrefs(userIdOrData: string | unknown, ma
 
   revalidatePath("/dashboard/settings");
   return {
+    ...DEFAULT_NOTIFICATION_PREFS,
     ...prefs,
-    emailInvoice: effectiveEmailInvoice,
-    emailSecurity: effectiveEmailSecurity,
-    emailPackageExpiry: effectiveEmailPackageExpiry,
   };
 }

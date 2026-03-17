@@ -19,8 +19,8 @@ TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 APP_STATUS="down"
 APP_LATENCY=0
 APP_HTTP=0
-APP_LATENCY_RAW=$(curl -sf -o /dev/null -w "%{time_total}" --max-time 10 "${APP_URL}/api/health" 2>/dev/null || echo "0")
-APP_HTTP=$(curl -sf -o /dev/null -w "%{http_code}" --max-time 10 "${APP_URL}/api/health" 2>/dev/null || echo "000")
+APP_LATENCY_RAW=$(curl -sf -o /dev/null -w "%{time_total}" --max-time 10 "${APP_URL}/api/health/ready" 2>/dev/null || echo "0")
+APP_HTTP=$(curl -sf -o /dev/null -w "%{http_code}" --max-time 10 "${APP_URL}/api/health/ready" 2>/dev/null || echo "000")
 APP_LATENCY=$(printf '%.0f' "$(echo "$APP_LATENCY_RAW * 1000" | bc 2>/dev/null || echo 0)")
 if [ "$APP_HTTP" -ge 200 ] 2>/dev/null && [ "$APP_HTTP" -lt 400 ] 2>/dev/null; then
   APP_STATUS="up"

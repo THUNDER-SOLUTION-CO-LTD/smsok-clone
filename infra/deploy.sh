@@ -54,7 +54,7 @@ if [ "${1:-}" = "--first-run" ]; then
   echo "  echo '<GITHUB_PAT>' | docker login ghcr.io -u lambogreny --password-stdin"
   echo "  docker compose -f ${COMPOSE_FILE} --env-file .env up -d"
   echo "  docker compose exec app npx prisma migrate deploy"
-  echo "  curl https://${DOMAIN}/api/health"
+  echo "  curl https://${DOMAIN}/api/health/ready"
   echo "═══════════════════════════════════════════════"
   exit 0
 fi
@@ -80,7 +80,7 @@ ssh "${SERVER_USER}@${SERVER}" "cd ${APP_DIR} && \
 log "Waiting for health check..."
 RETRIES=0
 MAX_RETRIES=10
-until ssh "${SERVER_USER}@${SERVER}" "curl -sf http://localhost:3000/api/health >/dev/null 2>&1"; do
+until ssh "${SERVER_USER}@${SERVER}" "curl -sf http://localhost:3000/api/health/ready >/dev/null 2>&1"; do
   RETRIES=$((RETRIES + 1))
   if [ "$RETRIES" -ge "$MAX_RETRIES" ]; then
     err "Health check failed after ${MAX_RETRIES} attempts. Check logs: ssh ${SERVER_USER}@${SERVER} 'docker compose -f ${APP_DIR}/${COMPOSE_FILE} logs app --tail 50'"
@@ -96,9 +96,9 @@ ssh "${SERVER_USER}@${SERVER}" "cd ${APP_DIR} && docker compose -f ${COMPOSE_FIL
 
 # 6. Verify
 log "Verifying deployment"
-HEALTH=$(ssh "${SERVER_USER}@${SERVER}" "curl -sf http://localhost:3000/api/health")
+HEALTH=$(ssh "${SERVER_USER}@${SERVER}" "curl -sf http://localhost:3000/api/health/ready")
 echo "$HEALTH" | python3 -m json.tool 2>/dev/null || echo "$HEALTH"
 
 log "Deploy complete! 🎉"
 echo "  Server:  https://${DOMAIN}"
-echo "  Health:  https://${DOMAIN}/api/health"
+echo "  Health:  https://${DOMAIN}/api/health/ready"

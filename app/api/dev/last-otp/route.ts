@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { apiError } from "@/lib/api-auth";
 
 // DEV-ONLY endpoint — returns last OTP request metadata for QA testing
 export async function GET() {
@@ -31,7 +32,6 @@ export async function GET() {
       expired: otp.expiresAt < new Date(),
     });
   } catch (error) {
-    console.error("[dev/last-otp]", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return apiError(error);
   }
 }
