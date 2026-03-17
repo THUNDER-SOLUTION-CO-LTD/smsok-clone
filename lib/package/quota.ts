@@ -3,9 +3,41 @@
  * Replaces credit system entirely
  */
 
+import type { Prisma } from "@prisma/client";
 import { prisma as db } from "@/lib/db";
 import { throwInsufficientCredits } from "@/lib/quota-errors";
 export { calculateSmsSegments, getSmsSegmentMetrics } from "@/lib/sms-segmentation";
+
+const FALLBACK_TIER = {
+  name: "Unknown package",
+  tierCode: "UNKNOWN",
+  senderNameLimit: 0,
+} as const;
+
+type PackageQuotaRow = Prisma.PackagePurchaseGetPayload<{
+  select: {
+    id: true;
+    userId: true;
+    organizationId: true;
+    tierId: true;
+    smsTotal: true;
+    smsUsed: true;
+    purchasedAt: true;
+    expiresAt: true;
+    isActive: true;
+    transactionId: true;
+    promotionId: true;
+    couponId: true;
+    autoRenew: true;
+    createdAt: true;
+  };
+}> & {
+  tier: {
+    name: string;
+    tierCode: string;
+    senderNameLimit: number | null;
+  };
+};
 
 /**
  * Get total remaining SMS across all active packages for a user (FIFO order)
@@ -17,16 +49,61 @@ export async function getRemainingQuota(userId: string) {
       isActive: true,
       expiresAt: { gt: new Date() },
     },
-    include: { tier: { select: { name: true, tierCode: true, senderNameLimit: true } } },
+    select: {
+      id: true,
+      userId: true,
+      organizationId: true,
+      tierId: true,
+      smsTotal: true,
+      smsUsed: true,
+      purchasedAt: true,
+      expiresAt: true,
+      isActive: true,
+      transactionId: true,
+      promotionId: true,
+      couponId: true,
+      autoRenew: true,
+      createdAt: true,
+    },
     orderBy: { expiresAt: "asc" }, // FIFO — earliest expiry first
   });
+
+  if (packages.length === 0) {
+    return {
+      packages: [] as PackageQuotaRow[],
+      totalSms: 0,
+      totalUsed: 0,
+      totalRemaining: 0,
+      senderNameLimit: 0,
+    };
+  }
+
+  const tiers = await db.packageTier.findMany({
+    where: {
+      id: { in: [...new Set(packages.map((pkg) => pkg.tierId))] },
+    },
+    select: {
+      id: true,
+      name: true,
+      tierCode: true,
+      senderNameLimit: true,
+    },
+  });
+  const tierById = new Map(
+    tiers.map((tier) => [tier.id, tier] as const),
+  );
+  const packagesWithTier: PackageQuotaRow[] = packages.map((pkg) => ({
+    ...pkg,
+    // Protect quota reads from inconsistent package→tier rows in older/dev datasets.
+    tier: tierById.get(pkg.tierId) ?? FALLBACK_TIER,
+  }));
 
   let totalSms = 0;
   let totalUsed = 0;
   let totalRemaining = 0;
   let maxSenderNames = 0;
 
-  for (const pkg of packages) {
+  for (const pkg of packagesWithTier) {
     const remaining = pkg.smsTotal - pkg.smsUsed;
     totalSms += pkg.smsTotal;
     totalUsed += pkg.smsUsed;
@@ -40,7 +117,7 @@ export async function getRemainingQuota(userId: string) {
   }
 
   return {
-    packages,
+    packages: packagesWithTier,
     totalSms,
     totalUsed,
     totalRemaining,

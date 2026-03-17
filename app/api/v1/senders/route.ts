@@ -70,7 +70,6 @@ export async function GET(req: NextRequest) {
         id: true,
         name: true,
         status: true,
-        senderType: true,
         adminNotes: true,
         rejectNote: true,
         createdAt: true,
@@ -94,7 +93,7 @@ export async function GET(req: NextRequest) {
     let senders = senderNames.map((sender) => ({
       id: sender.id,
       name: sender.name,
-      type: normalizeSenderType(sender.senderType),
+      type: normalizeSenderType(undefined),
       status: normalizeLegacyStatus(sender.status),
       smsSent: smsCountMap.get(sender.name) ?? 0,
       createdAt: sender.createdAt,
@@ -157,6 +156,9 @@ export async function POST(req: NextRequest) {
       }),
       db.senderName.findUnique({
         where: { userId_name: { userId: user.id, name: normalizedName } },
+        select: {
+          status: true,
+        },
       }),
     ]);
 
@@ -178,9 +180,17 @@ export async function POST(req: NextRequest) {
             userId: user.id,
             name: normalizedName,
             status: "PENDING",
-            senderType: input.type,
             adminNotes: input.note || null,
             submittedAt: new Date(),
+          },
+          select: {
+            id: true,
+            name: true,
+            status: true,
+            adminNotes: true,
+            rejectNote: true,
+            createdAt: true,
+            approvedAt: true,
           },
         });
 
@@ -208,7 +218,7 @@ export async function POST(req: NextRequest) {
       sender: {
         id: sender.id,
         name: sender.name,
-        type: normalizeSenderType(sender.senderType),
+        type: normalizeSenderType(undefined),
         status: normalizeLegacyStatus(sender.status),
         smsSent: 0,
         createdAt: sender.createdAt,
