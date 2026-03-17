@@ -1503,7 +1503,7 @@ function PromptPayQRCard({
           </>
         ) : (
           <div className="w-[200px] h-[200px] flex items-center justify-center">
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-[var(--text-muted)]">
               ไม่สามารถสร้าง QR ได้
             </p>
           </div>
