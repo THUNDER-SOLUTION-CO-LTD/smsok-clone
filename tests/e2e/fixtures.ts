@@ -1,14 +1,14 @@
 import { test as base, expect, type Page } from "@playwright/test";
 
-// Test data — must match DB users
+// Test data — must match DB users (read from env to avoid hardcoded credentials)
 export const TEST_USER = {
-  email: "qa-suite@smsok.test",
-  password: "QATest123!",
+  email: process.env.E2E_USER_EMAIL || "qa-suite@smsok.test",
+  password: process.env.E2E_USER_PASSWORD || (() => { throw new Error("E2E_USER_PASSWORD env var required"); })(),
 };
 
 export const TEST_ADMIN = {
-  email: "admin@smsok.com",
-  password: "Admin12345678",
+  email: process.env.E2E_ADMIN_EMAIL || "admin@smsok.com",
+  password: process.env.E2E_ADMIN_PASSWORD || (() => { throw new Error("E2E_ADMIN_PASSWORD env var required"); })(),
 };
 
 // Dismiss cookie consent banner — handles both overlay and bottom sheet variants

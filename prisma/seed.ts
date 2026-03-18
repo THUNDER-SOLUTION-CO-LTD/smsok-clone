@@ -9,9 +9,19 @@ const prisma = new PrismaClient();
 const SEED_MESSAGE_PREFIX = "[smsok-seed]";
 const DEFAULT_SEED_EMAIL = "demo@smsok.local";
 const DEFAULT_SEED_PHONE = "+66900000000";
-const DEFAULT_SEED_PASSWORD = "Password123!";
 const DEFAULT_SEED_NAME = "Demo User";
-const DEFAULT_ADMIN_SEED_PASSWORD = "admin1234";
+
+function requireSeedPassword(): string {
+  const pw = process.env.SEED_PASSWORD?.trim();
+  if (!pw) throw new Error("SEED_PASSWORD env var required (set in .env)");
+  return pw;
+}
+
+function requireAdminSeedPassword(): string {
+  const pw = process.env.ADMIN_SEED_PASSWORD?.trim();
+  if (!pw) throw new Error("ADMIN_SEED_PASSWORD env var required (set in .env)");
+  return pw;
+}
 
 async function resolveSeedUser() {
   const requestedEmail = process.env.SEED_EMAIL?.trim();
@@ -24,7 +34,7 @@ async function resolveSeedUser() {
       return existing;
     }
 
-    const password = await hashPassword(process.env.SEED_PASSWORD || DEFAULT_SEED_PASSWORD);
+    const password = await hashPassword(requireSeedPassword());
     return prisma.user.create({
       data: {
         email: requestedEmail,
@@ -43,7 +53,7 @@ async function resolveSeedUser() {
     return firstUser;
   }
 
-  const password = await hashPassword(DEFAULT_SEED_PASSWORD);
+  const password = await hashPassword(requireSeedPassword());
   return prisma.user.create({
     data: {
       email: DEFAULT_SEED_EMAIL,
@@ -59,7 +69,9 @@ async function ensureQaTestUser() {
   const existing = await prisma.user.findUnique({ where: { email: qaEmail } });
   if (existing) return existing;
 
-  const password = await hashPassword("QATest123!");
+  const qaPassword = process.env.QA_TEST_PASSWORD?.trim();
+  if (!qaPassword) throw new Error("QA_TEST_PASSWORD env var required");
+  const password = await hashPassword(qaPassword);
   return prisma.user.create({
     data: {
       email: qaEmail,
@@ -386,22 +398,13 @@ async function seedPDPA(userId: string, orgId: string) {
   console.log(`  ✅ PDPA consents: ${contacts.length * 2} records`);
 }
 
-async function resolveAdminSeedPassword(allowDefaultPassword: boolean) {
-  const configuredPassword = process.env.ADMIN_SEED_PASSWORD?.trim();
-  if (configuredPassword) {
-    return configuredPassword;
-  }
-
-  if (allowDefaultPassword) {
-    return DEFAULT_ADMIN_SEED_PASSWORD;
-  }
-
-  throw new Error("ADMIN_SEED_PASSWORD is required when NODE_ENV=production");
+async function resolveAdminSeedPassword() {
+  return requireAdminSeedPassword();
 }
 
-async function seedAdminUsers(options: { allowDefaultPassword: boolean }) {
+async function seedAdminUsers() {
   const adminPassword = await hashPassword(
-    await resolveAdminSeedPassword(options.allowDefaultPassword),
+    await resolveAdminSeedPassword(),
   );
 
   const admins = [
@@ -430,7 +433,7 @@ async function seedSmsProviders() {
       name: "easythunder",
       displayName: "EasyThunder (Primary)",
       apiUrl: "https://sms-api.easythunder.com",
-      credentials: { username: "test", password: "test" },
+      credentials: { username: process.env.SMS_API_USERNAME || "PLACEHOLDER", password: process.env.SMS_API_PASSWORD || "PLACEHOLDER" },
       costPerSms: 0.35,
       priority: 0,
       status: "ACTIVE",
@@ -444,7 +447,7 @@ async function seedSmsProviders() {
       name: "thaibulksms",
       displayName: "ThaiBulkSMS (Backup)",
       apiUrl: "https://api.thaibulksms.com",
-      credentials: { apiKey: "test_key", apiSecret: "test_secret" },
+      credentials: { apiKey: "PLACEHOLDER", apiSecret: "PLACEHOLDER" },
       costPerSms: 0.40,
       priority: 1,
       status: "ACTIVE",
@@ -455,7 +458,7 @@ async function seedSmsProviders() {
 }
 
 async function seedBackoffice() {
-  await seedAdminUsers({ allowDefaultPassword: true });
+  await seedAdminUsers();
   await seedSmsProviders();
 
   // Note: CreditPackage and PricingTier models removed.
@@ -742,7 +745,7 @@ async function main() {
 
   if (process.env.NODE_ENV === "production") {
     console.log("🌱 Seeding SMSOK Clone (production admin-only mode)...\n");
-    const adminCount = await seedAdminUsers({ allowDefaultPassword: false });
+    const adminCount = await seedAdminUsers();
     console.log(JSON.stringify({
       seeded: true,
       mode: "production-admin-only",
