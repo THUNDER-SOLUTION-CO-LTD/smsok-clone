@@ -33,7 +33,7 @@ jobs:
         image: postgres:16-alpine
         env:
           POSTGRES_USER: smsok
-          POSTGRES_PASSWORD: test_password
+          POSTGRES_PASSWORD: ${{ secrets.TEST_DB_PASSWORD }}
           POSTGRES_DB: smsok_test
         ports:
           - 5432:5432
@@ -60,12 +60,12 @@ jobs:
       - run: bunx prisma generate
       - run: bunx prisma db push
         env:
-          DATABASE_URL: postgresql://smsok:test_password@localhost:5432/smsok_test
+          DATABASE_URL: postgresql://smsok:${{ secrets.TEST_DB_PASSWORD }}@localhost:5432/smsok_test
       - run: bun run test || echo "No tests configured yet — skipping"
         env:
-          DATABASE_URL: postgresql://smsok:test_password@localhost:5432/smsok_test
+          DATABASE_URL: postgresql://smsok:${{ secrets.TEST_DB_PASSWORD }}@localhost:5432/smsok_test
           REDIS_URL: redis://localhost:6379
-          JWT_SECRET: test-secret-ci
+          JWT_SECRET: ${{ secrets.TEST_JWT_SECRET }}
 
   build:
     name: Build

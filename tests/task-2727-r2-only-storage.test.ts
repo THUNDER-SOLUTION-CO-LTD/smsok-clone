@@ -26,9 +26,9 @@ describe("Task #2715: slip upload fail-soft", () => {
     vi.clearAllMocks();
     process.env.R2_ENDPOINT = "https://example.r2.cloudflarestorage.com";
     process.env.R2_BUCKET = "smsok-clone";
-    process.env.R2_ACCESS_KEY_ID = "test-access-key";
-    process.env.R2_SECRET_ACCESS_KEY = "test-secret-key";
-    process.env.EASYSLIP_API_KEY = "test-easyslip-key";
+    process.env.R2_ACCESS_KEY_ID = "PLACEHOLDER_ACCESS_KEY";
+    process.env.R2_SECRET_ACCESS_KEY = "PLACEHOLDER_SECRET_KEY";
+    process.env.EASYSLIP_API_KEY = "PLACEHOLDER_EASYSLIP_KEY";
     process.env.EASYSLIP_API_URL = "https://document.easyslip.com/documents/verify/bank/image";
   });
 
@@ -95,7 +95,7 @@ describe("Task #2715: slip upload fail-soft", () => {
       expect.objectContaining({
         method: "POST",
         headers: expect.objectContaining({
-          Authorization: "Bearer test-easyslip-key",
+          Authorization: "Bearer PLACEHOLDER_EASYSLIP_KEY",
           "Content-Type": "application/json",
         }),
         body: JSON.stringify({ url: "https://signed.example/slip.jpg", checkDuplicate: true }),

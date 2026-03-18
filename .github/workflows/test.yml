@@ -20,7 +20,7 @@ jobs:
         image: postgres:17-alpine
         env:
           POSTGRES_USER: smsok
-          POSTGRES_PASSWORD: test_password
+          POSTGRES_PASSWORD: ${{ secrets.TEST_DB_PASSWORD }}
           POSTGRES_DB: smsok_test
         ports:
           - 5432:5432
@@ -39,10 +39,10 @@ jobs:
           --health-timeout 3s
           --health-retries 5
     env:
-      DATABASE_URL: postgresql://smsok:test_password@localhost:5432/smsok_test
+      DATABASE_URL: postgresql://smsok:${{ secrets.TEST_DB_PASSWORD }}@localhost:5432/smsok_test
       REDIS_URL: redis://localhost:6379
-      JWT_SECRET: test-secret-ci
-      TWO_FA_ENCRYPTION_KEY: test-2fa-key-ci
+      JWT_SECRET: ${{ secrets.TEST_JWT_SECRET }}
+      TWO_FA_ENCRYPTION_KEY: ${{ secrets.TEST_2FA_KEY }}
       NODE_ENV: test
     steps:
       - uses: actions/checkout@v4
@@ -71,7 +71,7 @@ jobs:
         image: postgres:17-alpine
         env:
           POSTGRES_USER: smsok
-          POSTGRES_PASSWORD: test_password
+          POSTGRES_PASSWORD: ${{ secrets.TEST_DB_PASSWORD }}
           POSTGRES_DB: smsok_test
         ports:
           - 5432:5432
@@ -90,10 +90,10 @@ jobs:
           --health-timeout 3s
           --health-retries 5
     env:
-      DATABASE_URL: postgresql://smsok:test_password@localhost:5432/smsok_test
+      DATABASE_URL: postgresql://smsok:${{ secrets.TEST_DB_PASSWORD }}@localhost:5432/smsok_test
       REDIS_URL: redis://localhost:6379
-      JWT_SECRET: test-secret-ci
-      TWO_FA_ENCRYPTION_KEY: test-2fa-key-ci
+      JWT_SECRET: ${{ secrets.TEST_JWT_SECRET }}
+      TWO_FA_ENCRYPTION_KEY: ${{ secrets.TEST_2FA_KEY }}
       NODE_ENV: test
       CI: true
     steps:

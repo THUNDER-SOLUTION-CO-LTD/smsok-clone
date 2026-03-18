@@ -8,7 +8,7 @@ import { verifySessionJwt } from "@/lib/session-jwt";
 
 const ROOT = resolve(__dirname, "..");
 const middlewareSource = readFileSync(resolve(ROOT, "middleware.ts"), "utf-8");
-const TEST_SECRET = "test-session-secret-1234567890";
+const TEST_SECRET = process.env.JWT_SECRET || (() => { throw new Error("JWT_SECRET env var required for tests"); })();
 
 const basePayload = {
   uid: "user_123",
