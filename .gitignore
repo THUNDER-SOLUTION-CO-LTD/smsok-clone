@@ -13,4 +13,5 @@ data/
 tests/e2e/.auth/
 .idea/
 .codex/
+ψ/
 *.log

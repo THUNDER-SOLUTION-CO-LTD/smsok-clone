@@ -1,2 +1,7 @@
-"lambogreny" ""
-"smsok" "smsok_dev_2026"
+;; Template only. Render real users from environment into an untracked file before
+;; switching PgBouncer auth_type away from "trust".
+;; Example:
+;;   printf '"%s" "%s"\n' "$PGBOUNCER_ADMIN_USER" "$PGBOUNCER_ADMIN_PASSWORD_HASH" > infra/pgbouncer_users.txt
+;;   printf '"%s" "%s"\n' "$PGBOUNCER_DB_USER" "$PGBOUNCER_DB_PASSWORD_HASH" >> infra/pgbouncer_users.txt
+"PGBOUNCER_ADMIN_USER" "PGBOUNCER_ADMIN_PASSWORD_HASH"
+"PGBOUNCER_DB_USER" "PGBOUNCER_DB_PASSWORD_HASH"

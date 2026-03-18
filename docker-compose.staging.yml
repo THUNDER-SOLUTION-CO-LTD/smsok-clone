@@ -5,11 +5,11 @@ services:
       - "3459:3000"
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=postgresql://smsok:staging_pass_2026@postgres:5432/smsok_staging
-      - REDIS_URL=redis://redis:6379
-      - JWT_SECRET=staging-secret-not-for-production-use-32chars
+      - DATABASE_URL=postgresql://${STAGING_DB_USER:-smsok}:${STAGING_DB_PASSWORD:?set STAGING_DB_PASSWORD}@postgres:5432/${STAGING_DB_NAME:-smsok_staging}
+      - REDIS_URL=${STAGING_REDIS_URL:-redis://redis:6379}
+      - JWT_SECRET=${STAGING_JWT_SECRET:?set STAGING_JWT_SECRET}
       - COMMIT_SHA=${COMMIT_SHA:-staging}
-      - NEXT_PUBLIC_APP_URL=http://localhost:3459
+      - NEXT_PUBLIC_APP_URL=${STAGING_APP_URL:-http://localhost:3459}
     depends_on:
       postgres:
         condition: service_healthy
@@ -30,13 +30,13 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: smsok
-      POSTGRES_PASSWORD: staging_pass_2026
-      POSTGRES_DB: smsok_staging
+      POSTGRES_USER: ${STAGING_DB_USER:-smsok}
+      POSTGRES_PASSWORD: ${STAGING_DB_PASSWORD:?set STAGING_DB_PASSWORD}
+      POSTGRES_DB: ${STAGING_DB_NAME:-smsok_staging}
     volumes:
       - staging_pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U smsok"]
+      test: ["CMD-SHELL", "pg_isready -U ${STAGING_DB_USER:-smsok}"]
       interval: 5s
       timeout: 3s
       retries: 5

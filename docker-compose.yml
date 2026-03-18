@@ -7,9 +7,9 @@ services:
     image: postgres:16-alpine
     container_name: smsok-postgres
     environment:
-      POSTGRES_USER: smsok
-      POSTGRES_PASSWORD: smsok_dev_2026
-      POSTGRES_DB: smsok
+      POSTGRES_USER: ${POSTGRES_USER:-smsok}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_DB: ${POSTGRES_DB:-smsok}
     ports:
       - "5434:5432"
     volumes:
@@ -48,7 +48,7 @@ services:
       - .env.development
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=postgresql://smsok:smsok_dev_2026@postgres:5432/smsok
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-smsok}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-smsok}
       - REDIS_URL=redis://redis:6379
       - REDIS_HOST=redis
       - REDIS_PORT=6379

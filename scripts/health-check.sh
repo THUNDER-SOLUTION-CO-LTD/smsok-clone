@@ -5,6 +5,7 @@
 set -uo pipefail
 
 APP_URL="${APP_URL:-http://localhost:3000}"
+DATABASE_URL="${DATABASE_URL:-}"
 PG_HOST="${PG_HOST:-localhost}"
 PG_PORT="${PG_PORT:-5434}"
 PG_USER="${PG_USER:-smsok}"
@@ -30,8 +31,18 @@ fi
 
 # ── 2. PostgreSQL ──
 PG_STATUS="down"
-if PGPASSWORD="${PGPASSWORD:-smsok_dev_2026}" psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" -c "SELECT 1" > /dev/null 2>&1; then
-  PG_STATUS="up"
+if [ -n "$DATABASE_URL" ]; then
+  if psql "$DATABASE_URL" -c "SELECT 1" > /dev/null 2>&1; then
+    PG_STATUS="up"
+  else
+    HEALTHY=false
+  fi
+elif [ -n "${PGPASSWORD:-}" ]; then
+  if PGPASSWORD="$PGPASSWORD" psql -h "$PG_HOST" -p "$PG_PORT" -U "$PG_USER" -d "$PG_DB" -c "SELECT 1" > /dev/null 2>&1; then
+    PG_STATUS="up"
+  else
+    HEALTHY=false
+  fi
 else
   HEALTHY=false
 fi
