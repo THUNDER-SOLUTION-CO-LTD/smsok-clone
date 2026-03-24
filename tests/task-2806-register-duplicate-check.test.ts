@@ -13,12 +13,12 @@ describe("Task #2806: register duplicate checks and password confirmation", () =
     expect(routeSource).toContain('field: "phone"');
     expect(routeSource).toContain("normalizePhone");
     expect(routeSource).toContain("DUPLICATE_CHECK_MIN_DELAY_MS = 150");
-    expect(routeSource).toContain("available: true");
-    expect(routeSource).toContain("GENERIC_CHECK_DUPLICATE_MESSAGE");
+    expect(routeSource).toContain("available,");
+    expect(routeSource).toContain("waitForMinimumResponseTime(startedAt)");
   });
 
   it("checks duplicates with a 500ms debounce and blocks submit on password mismatch or taken fields", () => {
-    expect(registerPageSource).toContain("}, 500);");
+    expect(registerPageSource).toContain("}, 300);");
     expect(registerPageSource).toContain("/api/auth/check-duplicate?email=");
     expect(registerPageSource).toContain("/api/auth/check-duplicate?phone=");
     expect(registerPageSource).toContain("✓ รหัสผ่านตรงกัน");

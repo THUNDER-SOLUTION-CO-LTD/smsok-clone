@@ -173,7 +173,7 @@ describe("Task #3325: CSV + auth + PDPA regressions", () => {
     expect(messagesClient).toContain("[\"วันที่\", \"ผู้รับ\", \"เนื้อหา\", \"ผู้ส่ง\", \"สถานะ\", \"ราคา (SMS)\"].map(toCsvCell)");
     expect(logsClient).toContain(".map(toCsvCell)");
     expect(auditActions).toContain('import { toCsvCell } from "../csv";');
-    expect(auditActions).toContain("].map(toCsvCell).join(\",\")");
+    expect(auditActions).toContain("].map((h: string) => toCsvCell(h)).join(\",\")");
     expect(auditActions).toContain("toCsvCell(userName)");
   });
 });

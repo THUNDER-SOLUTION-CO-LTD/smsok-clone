@@ -207,7 +207,7 @@ describe("updateContact logic", () => {
   });
 
   it("checks duplicate phone on change", () => {
-    expect(block).toContain("input.phone !== contact.phone");
+    expect(block).toContain("normalizedPhone !== contact.phone");
   });
 });
 

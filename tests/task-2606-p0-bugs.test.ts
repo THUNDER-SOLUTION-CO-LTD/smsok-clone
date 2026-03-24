@@ -31,7 +31,8 @@ describe("Task #2606: P0 backend bug fixes", () => {
   });
 
   it("keeps order input fields sanitized against stored HTML/script payloads", () => {
-    expect(orderRouteSource).toContain("const stripHtml = (val: string) => val.replace(/<[^>]*>/g, \"\");");
+    expect(orderRouteSource).toContain("const stripHtml = (val: string) =>");
+    expect(orderRouteSource).toContain('.replace(/<[^>]*>?/g, "")');
     expect(orderRouteSource).toContain("company_name: z.string().trim().transform(stripHtml)");
     expect(orderRouteSource).toContain("tax_name: z.string().trim().transform(stripHtml)");
     expect(orderRouteSource).toContain("tax_address: z.string().trim().transform(stripHtml)");

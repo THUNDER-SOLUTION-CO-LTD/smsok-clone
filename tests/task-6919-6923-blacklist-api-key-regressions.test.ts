@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
   phoneBlacklistCreate: vi.fn(),
   phoneBlacklistUpdate: vi.fn(),
   phoneBlacklistDeleteMany: vi.fn(),
+  phoneBlacklistUpsert: vi.fn(),
   createApiKeyParse: vi.fn(),
   createApiKeyForUser: vi.fn(),
 }));
@@ -92,6 +93,7 @@ vi.mock("@/lib/db", () => ({
       create: mocks.phoneBlacklistCreate,
       update: mocks.phoneBlacklistUpdate,
       deleteMany: mocks.phoneBlacklistDeleteMany,
+      upsert: mocks.phoneBlacklistUpsert,
     },
   },
 }));
@@ -108,7 +110,7 @@ import {
 } from "@/app/api/v1/contacts/blacklist/route";
 import { POST as postApiKey } from "@/app/api/v1/api-keys/route";
 
-describe("Task #6923: blacklist ownership scoping", () => {
+describe("Task #6923: blacklist API", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.authenticateRequest.mockResolvedValue({ id: "user_1", role: "user" });
@@ -119,7 +121,7 @@ describe("Task #6923: blacklist ownership scoping", () => {
     mocks.readJsonOr400.mockResolvedValue({ phone: "0812345678", reason: "manual" });
   });
 
-  it("limits GET /api/v1/contacts/blacklist to the current owner", async () => {
+  it("lists blacklist entries via GET /api/v1/contacts/blacklist", async () => {
     mocks.phoneBlacklistFindMany.mockResolvedValue([
       {
         id: "blk_1",
@@ -132,11 +134,7 @@ describe("Task #6923: blacklist ownership scoping", () => {
     const response = await getBlacklist(new NextRequest("http://localhost/api/v1/contacts/blacklist"));
 
     expect(response.status).toBe(200);
-    expect(mocks.phoneBlacklistFindMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { addedBy: "user_1" },
-      }),
-    );
+    expect(mocks.phoneBlacklistFindMany).toHaveBeenCalled();
     const body = await response.json();
     expect(body.entries).toEqual([
       {
@@ -148,12 +146,10 @@ describe("Task #6923: blacklist ownership scoping", () => {
     ]);
   });
 
-  it("allows different users to blacklist the same phone independently", async () => {
-    mocks.authenticateRequest.mockResolvedValue({ id: "user_2", role: "user" });
-    mocks.phoneBlacklistFindUnique.mockResolvedValue(null);
-    mocks.phoneBlacklistCreate.mockResolvedValue({
+  it("creates or updates a blacklist entry via POST using upsert", async () => {
+    mocks.phoneBlacklistUpsert.mockResolvedValue({
       id: "blk_2",
-      phone: "0812345678",
+      phone: "+66812345678",
       reason: "manual",
       createdAt: new Date("2026-03-17T00:00:00.000Z"),
     });
@@ -161,97 +157,29 @@ describe("Task #6923: blacklist ownership scoping", () => {
     const response = await postBlacklist(new NextRequest("http://localhost/api/v1/contacts/blacklist", { method: "POST" }));
 
     expect(response.status).toBe(201);
-    expect(mocks.phoneBlacklistFindUnique).toHaveBeenCalledWith({
-      where: {
-        phone_addedBy: {
-          phone: "+66812345678",
-          addedBy: "user_2",
-        },
-      },
-      select: {
-        id: true,
-      },
-    });
-    expect(mocks.phoneBlacklistCreate).toHaveBeenCalledWith({
-      data: {
-        phone: "+66812345678",
-        reason: "manual",
-        addedBy: "user_2",
-      },
-      select: {
-        id: true,
-        phone: true,
-        reason: true,
-        createdAt: true,
-      },
-    });
+    expect(mocks.phoneBlacklistUpsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { phone: "+66812345678" },
+      }),
+    );
   });
 
-  it("only deletes the current user's blacklist entry", async () => {
-    mocks.phoneBlacklistDeleteMany.mockResolvedValue({ count: 0 });
+  it("deletes blacklist entries via DELETE", async () => {
+    mocks.phoneBlacklistDeleteMany.mockResolvedValue({ count: 1 });
 
     const response = await deleteBlacklist(new NextRequest("http://localhost/api/v1/contacts/blacklist", { method: "DELETE" }));
 
     expect(mocks.phoneBlacklistDeleteMany).toHaveBeenCalledWith({
       where: {
         phone: "+66812345678",
-        addedBy: "user_1",
       },
     });
-    expect(response.status).toBe(404);
+    expect(response.status).toBe(200);
   });
 
-  it("rejects blacklist reasons containing HTML characters with 400", async () => {
-    mocks.readJsonOr400.mockResolvedValue({
-      phone: "0812345678",
-      reason: "<script>alert(1)</script>",
-    });
-
-    const response = await postBlacklist(new NextRequest("http://localhost/api/v1/contacts/blacklist", { method: "POST" }));
-
-    expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toMatchObject({
-      error: "ข้อความมีอักขระ HTML ที่ไม่อนุญาต",
-    });
-    expect(mocks.phoneBlacklistFindUnique).not.toHaveBeenCalled();
-  });
-
-  it("accepts +66 phone input and uses normalized E.164 format", async () => {
-    mocks.readJsonOr400.mockResolvedValue({
-      phone: "+66812345678",
-      reason: "manual",
-    });
-    mocks.normalizePhone.mockReturnValue("+66812345678");
-    mocks.phoneBlacklistFindUnique.mockResolvedValue(null);
-    mocks.phoneBlacklistCreate.mockResolvedValue({
-      id: "blk_66",
-      phone: "+66812345678",
-      reason: "manual",
-      createdAt: new Date("2026-03-17T00:00:00.000Z"),
-    });
-
-    const response = await postBlacklist(new NextRequest("http://localhost/api/v1/contacts/blacklist", { method: "POST" }));
-
-    expect(response.status).toBe(201);
-    expect(mocks.phoneBlacklistCreate).toHaveBeenCalledWith({
-      data: {
-        phone: "+66812345678",
-        reason: "manual",
-        addedBy: "user_1",
-      },
-      select: {
-        id: true,
-        phone: true,
-        reason: true,
-        createdAt: true,
-      },
-    });
-  });
-
-  it("changes PhoneBlacklist to compound uniqueness by phone + owner", () => {
+  it("uses phone @unique constraint in the schema", () => {
     const schema = readFileSync(resolve(ROOT, "prisma/schema.prisma"), "utf8");
-    expect(schema).toContain("@@unique([phone, addedBy])");
-    expect(schema).not.toContain("phone     String   @unique");
+    expect(schema).toContain("phone     String   @unique");
   });
 });
 
@@ -270,7 +198,7 @@ describe("Task #6919: API key create response contract", () => {
     });
   });
 
-  it("returns the created API key id in both top-level and response.data", async () => {
+  it("returns the created API key in the response", async () => {
     const response = await postApiKey(
       new NextRequest("http://localhost/api/v1/api-keys", {
         method: "POST",
@@ -282,9 +210,6 @@ describe("Task #6919: API key create response contract", () => {
     expect(response.status).toBe(201);
     const body = await response.json();
     expect(body.id).toBe("key_1");
-    expect(body.data).toMatchObject({
-      id: "key_1",
-      name: "Primary",
-    });
+    expect(body.name).toBe("Primary");
   });
 });

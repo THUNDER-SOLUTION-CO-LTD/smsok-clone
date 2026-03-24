@@ -19,7 +19,7 @@ describe("Task #2881: slip worker race-condition hardening", () => {
 
   it("awaits queue history persistence instead of firing it and forgetting the promise", () => {
     expect(slipRouteSource).toContain("try {");
-    expect(slipRouteSource).toContain("await db.$transaction(async (tx) => {");
+    expect(slipRouteSource).toContain("await db.$transaction(async (tx:");
     expect(slipRouteSource).toContain("note: SLIP_QUEUED_REVIEW_NOTE");
   });
 

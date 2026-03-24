@@ -18,7 +18,7 @@ const orderServiceSource = readFileSync(resolve(ROOT, "lib/orders/service.ts"), 
 
 describe("Task #3048: rejected slip flow backend", () => {
   it("extends the order schema with structured rejected-slip fields", () => {
-    expect(schemaSource).toContain('rejectReason       String?           @db.VarChar(30) @map("reject_reason")');
+    expect(schemaSource).toContain('rejectReason       String?           @map("reject_reason") @db.VarChar(30)');
     expect(schemaSource).toContain('rejectMessage      String?           @map("reject_message")');
     expect(schemaSource).toContain('rejectedAt         DateTime?         @map("rejected_at")');
     expect(schemaSource).toContain('slipAttemptCount   Int               @default(0) @map("slip_attempt_count")');

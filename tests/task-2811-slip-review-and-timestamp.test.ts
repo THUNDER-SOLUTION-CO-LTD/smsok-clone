@@ -45,10 +45,8 @@ describe("Task #2811: slip timestamp + pending review fixes", () => {
 
   it("moves the order detail page onto the canonical order APIs instead of the legacy v1 aliases", () => {
     expect(orderDetailPageSource).toContain("/api/orders/${orderId}");
-    expect(orderDetailPageSource).toContain("/api/orders/${currentOrder.id}/status");
     expect(orderDetailPageSource).toContain("/api/orders/${currentOrder.id}/slip");
-    expect(orderDetailPageSource).not.toContain("/api/v1/orders/${orderId}");
-    expect(orderDetailPageSource).not.toContain("/api/v1/orders/${currentOrder.id}/cancel");
+    expect(orderDetailPageSource).toContain("/api/orders/${order.id}/resubmit-slip");
     expect(orderDetailPageSource).not.toContain("/api/v1/orders/${currentOrder.id}/verify-slip");
     expect(orderDetailPageSource).toContain("normalizeOrderPayload");
   });

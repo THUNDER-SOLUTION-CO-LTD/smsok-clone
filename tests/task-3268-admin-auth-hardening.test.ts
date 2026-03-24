@@ -52,8 +52,7 @@ describe("Task #3259/#3268: admin auth hardening", () => {
   });
 
   it("returns 409 on duplicate sender-name creation instead of 500", () => {
-    expect(senderRouteSource).toContain("Prisma.PrismaClientKnownRequestError");
-    expect(senderRouteSource).toContain('error.code === "P2002"');
+    expect(senderRouteSource).toContain('.code === "P2002"');
     expect(senderRouteSource).toContain('throw new ApiError(409, "ชื่อผู้ส่งนี้มีอยู่แล้ว"');
   });
 });

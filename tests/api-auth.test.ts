@@ -77,15 +77,15 @@ describe("API Auth: Response helpers", () => {
 });
 
 describe("Auth: Password", () => {
-  it("uses bcrypt for hashing", () => {
-    expect(auth).toContain("bcrypt.hash");
+  it("uses argon2id for hashing", () => {
+    expect(auth).toContain("argon2id");
   });
 
-  it("uses salt rounds 12", () => {
-    expect(auth).toContain("12");
+  it("has hashPassword function", () => {
+    expect(auth).toContain("async function hashPassword");
   });
 
-  it("has verifyPassword function", () => {
+  it("has verifyPassword function with bcrypt fallback", () => {
     expect(auth).toContain("async function verifyPassword");
     expect(auth).toContain("bcrypt.compare");
   });

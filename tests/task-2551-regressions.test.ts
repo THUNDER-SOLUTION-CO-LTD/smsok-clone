@@ -15,11 +15,10 @@ const packagePurchaseVerifyRouteSource = readFileSync(
 const paymentVerifyRouteSource = readFileSync(resolve(ROOT, "app/api/payments/[id]/verify/route.ts"), "utf-8");
 
 describe("Task #2551: backend QA regressions", () => {
-  it("builds CSP per-route so Swagger CDN assets and Sentry ingest remain allowed", () => {
-    expect(middlewareSource).toContain("function buildContentSecurityPolicy");
-    expect(middlewareSource).toContain("https://cdn.jsdelivr.net");
-    expect(middlewareSource).toContain("https://*.ingest.sentry.io");
-    expect(middlewareSource).toContain('connectSrc.push("ws:", "http://localhost:*", "https://localhost:*")');
+  it("delegates CSP to Nginx so middleware does not duplicate the header", () => {
+    // CSP is handled by Nginx (infra/nginx.conf) to avoid dual-header conflicts
+    expect(middlewareSource).toContain("CSP is handled by Nginx");
+    expect(middlewareSource).not.toContain("function buildContentSecurityPolicy");
   });
 
   it("keeps duplicate contact and sender requests on HTTP 409 conflicts", () => {

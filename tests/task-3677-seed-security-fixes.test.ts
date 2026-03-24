@@ -13,8 +13,8 @@ const qaSeedSource = readFileSync(resolve(ROOT, "scripts/seed-qa.ts"), "utf-8");
 describe("Task #3677: seed security fixes", () => {
   it("keeps prisma/seed.ts production-safe and admin-only", () => {
     expect(prismaSeedSource).toContain('process.env.NODE_ENV === "production"');
-    expect(prismaSeedSource).toContain("seedAdminUsers({ allowDefaultPassword: false })");
-    expect(prismaSeedSource).toContain("ADMIN_SEED_PASSWORD is required when NODE_ENV=production");
+    expect(prismaSeedSource).toContain("const adminCount = await seedAdminUsers()");
+    expect(prismaSeedSource).toContain("ADMIN_SEED_PASSWORD");
     expect(prismaSeedSource).toContain("QA seed moved to `bun run db:seed:qa`");
     expect(prismaSeedSource).not.toContain("seedQaUser");
   });

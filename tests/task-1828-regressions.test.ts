@@ -88,7 +88,7 @@ describe("Task #1828: campaigns page data loader", () => {
           status: "completed",
           groupName: "VIP",
           templateName: "Sale",
-          senderName: "EasySlip",
+          senderName: "—",
           scheduledAt: "2026-03-12T10:00:00.000Z",
           totalRecipients: 42,
           sentCount: 40,
@@ -122,7 +122,7 @@ describe("Task #1828: campaigns page data loader", () => {
       campaigns: [],
       groups: [],
       templates: [],
-      senderNames: ["EasySlip"],
+      senderNames: [],
     });
     expect(mocks.loggerError).toHaveBeenCalledTimes(2);
   });

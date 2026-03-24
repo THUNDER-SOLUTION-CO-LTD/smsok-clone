@@ -507,6 +507,7 @@ describe("createCampaignSchema", () => {
     const result = createCampaignSchema.parse({
       name: "March Promo",
       senderName: "EASYSHOP",
+      messageBody: "Hello World",
     });
     expect(result.name).toBe("March Promo");
   });
@@ -514,6 +515,8 @@ describe("createCampaignSchema", () => {
   it("accepts scheduledAt string", () => {
     const result = createCampaignSchema.parse({
       name: "Scheduled Promo",
+      senderName: "EASYSHOP",
+      messageBody: "Hello World",
       scheduledAt: "2026-03-10T03:00:00Z",
     });
     expect(result.scheduledAt).toBeInstanceOf(Date);

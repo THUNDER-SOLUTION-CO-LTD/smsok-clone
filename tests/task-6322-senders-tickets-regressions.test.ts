@@ -75,9 +75,13 @@ vi.mock("@/lib/logger", () => ({
   },
 }));
 
-vi.mock("@/lib/sender-name-validation", () => ({
-  validateSenderName: vi.fn(),
-}));
+vi.mock("@/lib/sender-name-validation", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/sender-name-validation")>();
+  return {
+    ...actual,
+    validateSenderName: vi.fn(),
+  };
+});
 
 vi.mock("@/lib/tickets/rate-limit", () => ({
   enforceSupportTicketRateLimit: vi.fn(),

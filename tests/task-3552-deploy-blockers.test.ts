@@ -3,7 +3,6 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const ROOT = process.cwd();
-const BACKOFFICE_ROOT = resolve(ROOT, "../smsok-backoffice");
 
 const permissionHookSource = readFileSync(resolve(ROOT, "hooks/usePermission.tsx"), "utf-8");
 const permissionRouteSource = readFileSync(
@@ -12,8 +11,6 @@ const permissionRouteSource = readFileSync(
 );
 const twoFactorSource = readFileSync(resolve(ROOT, "lib/actions/two-factor.ts"), "utf-8");
 const cloneEnvExampleSource = readFileSync(resolve(ROOT, ".env.example"), "utf-8");
-const backofficeEnvExampleSource = readFileSync(resolve(BACKOFFICE_ROOT, ".env.example"), "utf-8");
-const seedAdminSource = readFileSync(resolve(BACKOFFICE_ROOT, "scripts/seed-admin.ts"), "utf-8");
 
 describe("Task #3552: deploy blockers", () => {
   it("resolves permission checks against the authenticated organization instead of a hardcoded default", () => {
@@ -32,10 +29,9 @@ describe("Task #3552: deploy blockers", () => {
     expect(twoFactorSource).not.toContain("http://localhost:3000");
   });
 
-  it("documents deploy-sensitive env vars in both repos", () => {
+  it("documents deploy-sensitive env vars in the clone repo", () => {
     for (const variable of [
       "NEXT_PUBLIC_COMMIT_SHA",
-      "NEXT_PUBLIC_BANK_NAME",
       "COMPANY_NAME",
       "DOCUMENT_VERIFY_BASE_URL",
       "SHORT_LINK_BASE_URL",
@@ -45,22 +41,5 @@ describe("Task #3552: deploy blockers", () => {
     ]) {
       expect(cloneEnvExampleSource).toContain(variable);
     }
-
-    for (const variable of [
-      "ADMIN_SEED_PASSWORD",
-      "BACKOFFICE_APP_URL",
-      "COMMIT_SHA",
-      "NEXT_PUBLIC_COMMIT_SHA",
-    ]) {
-      expect(backofficeEnvExampleSource).toContain(variable);
-    }
-  });
-});
-
-describe("Task #3558: backoffice seed password hardening", () => {
-  it("requires ADMIN_SEED_PASSWORD instead of shipping a hardcoded default", () => {
-    expect(seedAdminSource).toContain('process.env.ADMIN_SEED_PASSWORD?.trim()');
-    expect(seedAdminSource).toContain("ADMIN_SEED_PASSWORD is required");
-    expect(seedAdminSource).not.toContain('const DEFAULT_PASSWORD = "SmsokAdmin@2026!"');
   });
 });

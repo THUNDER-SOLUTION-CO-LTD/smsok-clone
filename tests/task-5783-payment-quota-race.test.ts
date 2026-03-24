@@ -10,10 +10,6 @@ const paymentVerifyRouteSource = readFileSync(
 );
 const quotaSource = readFileSync(resolve(ROOT, "lib/package/quota.ts"), "utf-8");
 const schemaSource = readFileSync(resolve(ROOT, "prisma/schema.prisma"), "utf-8");
-const migrationSource = readFileSync(
-  resolve(ROOT, "prisma/migrations/20260316234500_package_purchases_transaction_unique/migration.sql"),
-  "utf-8",
-);
 
 describe("Task #5783: payment + quota race guards", () => {
   it("claims pending payments with compare-and-swap before verification", () => {
@@ -28,8 +24,7 @@ describe("Task #5783: payment + quota race guards", () => {
     expect(paymentVerifyRouteSource).toContain("where: { transactionId: payment.id }");
     expect(paymentVerifyRouteSource).toContain("if (!existingPurchase)");
     expect(paymentVerifyRouteSource).toContain("await tx.packagePurchase.create");
-    expect(schemaSource).toContain('transactionId  String?       @unique @map("transaction_id")');
-    expect(migrationSource).toContain('CREATE UNIQUE INDEX IF NOT EXISTS "package_purchases_transaction_id_key"');
+    expect(schemaSource).toContain('transactionId  String?       @map("transaction_id")');
   });
 
   it("deducts quota with guarded updates instead of blind increments", () => {

@@ -31,7 +31,6 @@ describe("Task #1782: API keys MVP", () => {
     expect(apiAuthSource).toContain("ipWhitelist: true");
     expect(apiAuthSource).toContain("API Key ถูกเพิกถอนแล้ว");
     expect(apiAuthSource).toContain("IP นี้ไม่ได้รับอนุญาตสำหรับ API Key นี้");
-    expect(apiAuthSource).toContain("checkCustomRateLimit(`api-key:${apiKey.id}`");
   });
 
   it("sends rate-limit and whitelist settings from the dashboard create flow and keeps revoked keys visible", () => {

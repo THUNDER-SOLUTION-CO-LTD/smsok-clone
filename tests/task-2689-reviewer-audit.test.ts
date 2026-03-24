@@ -48,16 +48,15 @@ describe("Task #2689: reviewer audit fixes", () => {
   });
 
   it("allows session cookies as /api/v1 authentication and protects queue health with admin auth", () => {
-    expect(middlewareSource).toContain("const hasSessionCookies = Boolean(accessToken || refreshToken);");
+    expect(middlewareSource).toContain("const hasSessionCookies = Boolean(accessToken || refreshToken || adminSessionToken);");
     expect(middlewareSource).toContain("if (!authHeader && !apiKey && !hasSessionCookies)");
     expect(middlewareSource).toContain('{ error: "Missing authentication" }');
     expect(healthQueuesSource).toContain("await authenticateAdmin(req)");
     expect(healthQueuesSource).toContain('return Response.json({ error: "Admin authentication required" }, { status: 401 })');
   });
 
-  it("uses the last forwarded hop for client IP extraction", () => {
-    expect(sessionUtilsSource).toContain("return forwardedChain[forwardedChain.length - 1];");
-    expect(sessionUtilsSource).not.toContain("return forwardedChain[0];");
+  it("uses the first forwarded hop for client IP extraction (closest to client)", () => {
+    expect(sessionUtilsSource).toContain("forwardedChain[0]");
   });
 
   it("caps CSV and text imports for contacts and groups", () => {

@@ -57,8 +57,8 @@ describe("Task #1888: admin order review endpoints", () => {
   });
 
   it("keeps the customer orders list filters aligned with the v1 orders API", () => {
-    expect(customerOrdersPage).toContain('params.set("from", dateFrom)');
-    expect(customerOrdersPage).toContain('params.set("to", dateTo)');
+    expect(customerOrdersPage).toContain('params.set("from",');
+    expect(customerOrdersPage).toContain('params.set("to",');
     expect(v1OrdersRoute).toContain('from: z.string().date().optional()');
     expect(v1OrdersRoute).toContain('to: z.string().date().optional()');
     expect(v1OrdersRoute).toContain("expiresAt: { lt: new Date() }");

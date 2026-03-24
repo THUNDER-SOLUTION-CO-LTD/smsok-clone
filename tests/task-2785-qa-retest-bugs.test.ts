@@ -17,7 +17,7 @@ describe("Task #2785: QA retest fixes", () => {
   it("keeps dashboard API docs aligned with the live SMS routes", () => {
     expect(dashboardApiDocsSource).toContain('path: "/api/v1/sms/status?id=msg_abc"');
     expect(dashboardApiDocsSource).toContain('"to": "0891234567"');
-    expect(dashboardApiDocsSource).toContain('"sender": "EasySlip"');
+    expect(dashboardApiDocsSource).toContain('"sender": "MySender"');
     expect(dashboardApiDocsSource).not.toContain('path: "/api/v1/sms/status?messageId=msg_abc"');
     expect(dashboardApiDocsSource).not.toContain(`{
   "recipient": "0891234567",

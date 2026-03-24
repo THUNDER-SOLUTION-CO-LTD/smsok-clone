@@ -23,7 +23,7 @@ describe("Task #3063: reviewer race-condition fixes", () => {
   });
 
   it("guards the order auto-cancel cron with optimistic locking per stale order", () => {
-    expect(expireCronRouteSource).toContain("const cancelledIds = await db.$transaction(async (tx) => {");
+    expect(expireCronRouteSource).toContain("const cancelledIds = await db.$transaction(async (tx:");
     expect(expireCronRouteSource).toContain("for (const order of staleOrders)");
     expect(expireCronRouteSource).toContain("const updated = await tx.order.updateMany({");
     expect(expireCronRouteSource).toContain('status: "PENDING_PAYMENT"');

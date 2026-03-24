@@ -43,7 +43,7 @@ describe("Task #2610: order document endpoint fixes", () => {
   });
 
   it("builds the order document PDF response with explicit binary headers", () => {
-    expect(orderDocumentDownloadLib).toContain('const headers = new Headers(rl.headers)');
+    expect(orderDocumentDownloadLib).toContain('const headers = new Headers()');
     expect(orderDocumentDownloadLib).toContain('headers.set("Content-Type", "application/pdf")');
     expect(orderDocumentDownloadLib).toContain("return new NextResponse(Buffer.from(pdfBuffer), {");
     expect(orderDocumentBinaryRoute).toContain("buildOrderDocumentDownloadResponse");
