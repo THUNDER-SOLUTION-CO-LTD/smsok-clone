@@ -1,7 +1,5 @@
 "use client";
 
-export const dynamic = "force-dynamic";
-
 import Link from "next/link";
 import { useState, useRef, useEffect, type FormEvent } from "react";
 import { motion } from "framer-motion";

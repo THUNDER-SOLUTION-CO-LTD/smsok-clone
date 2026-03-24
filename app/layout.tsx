@@ -1,6 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Sans, IBM_Plex_Sans_Thai } from "next/font/google";
 import "./globals.css";
+
+// Force all pages to render dynamically — the root layout uses client
+// providers (StoreProviders, TooltipProvider) whose React hooks crash
+// during static prerendering when there is no React context.
+export const dynamic = "force-dynamic";
+
 import { cn } from "@/lib/utils";
 
 const ibmPlexSans = IBM_Plex_Sans({
