@@ -180,10 +180,10 @@ export function getEnv(): Env {
     console.error(errors);
 
     if (process.env.NODE_ENV === "production" && !isBuildPhase) {
-      process.exit(1);
+      console.error("⚠️ Running with incomplete env — some features may not work");
     }
 
-    // In dev or during build, return raw env to avoid crashing
+    // Return raw env to avoid crashing — validation errors are logged above
     return process.env as unknown as Env;
   }
 
