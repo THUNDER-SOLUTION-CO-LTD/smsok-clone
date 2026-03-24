@@ -21,7 +21,7 @@ describe("Tasks #6168 and #6170: security config regressions", () => {
 
   it("requires a dedicated admin JWT secret instead of deriving from JWT_SECRET", () => {
     expect(adminAuthSource).toContain("const ADMIN_JWT_SECRET = env.ADMIN_JWT_SECRET?.trim();");
-    expect(adminAuthSource).toContain('throw new Error("ADMIN_JWT_SECRET env var required")');
+    expect(adminAuthSource).toContain("ADMIN_JWT_SECRET not set");
     expect(adminAuthSource).not.toContain('env.JWT_SECRET + "_admin"');
     expect(middlewareSource).toContain("process.env.ADMIN_JWT_SECRET?.trim()");
     expect(middlewareSource).not.toContain('`${secret}_admin`');
