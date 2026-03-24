@@ -72,7 +72,7 @@ function getAdminJwtSecretForMiddleware() {
   }
 
   if (process.env.NODE_ENV === "production") {
-    throw new Error("ADMIN_JWT_SECRET env var required");
+    console.error("⚠️ ADMIN_JWT_SECRET not set — admin auth disabled");
   }
 
   return null;
