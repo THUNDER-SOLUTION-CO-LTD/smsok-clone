@@ -14,6 +14,7 @@ ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
 ENV JWT_SECRET=build-only-dummy-secret-not-used-in-production
 ENV REDIS_URL=redis://localhost:6379
 ENV OTP_HASH_SECRET=build-only-dummy-otp-hash-secret
+ENV NODE_ENV=production
 
 RUN bunx prisma generate
 RUN bun run build
