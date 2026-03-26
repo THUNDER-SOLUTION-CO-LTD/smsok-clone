@@ -19,8 +19,11 @@ type OtpDelivery = "sms" | "dev_bypass";
 
 function getOtpHashSecret(): string {
   const secret = process.env.OTP_HASH_SECRET?.trim();
-  if (!secret) throw new Error("ระบบยังไม่พร้อมให้บริการ กรุณาติดต่อผู้ดูแล");
-  return secret;
+  if (secret) return secret;
+  // Derive from JWT_SECRET so it works without extra env var
+  const jwtSecret = process.env.JWT_SECRET?.trim();
+  if (jwtSecret) return `otp-hash-${jwtSecret}`;
+  throw new Error("ระบบยังไม่พร้อมให้บริการ กรุณาติดต่อผู้ดูแล");
 }
 
 function generateOtp(): string {
