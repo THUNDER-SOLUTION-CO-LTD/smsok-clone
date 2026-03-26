@@ -51,31 +51,38 @@ function hasSmsGatewayCredentials(): boolean {
   );
 }
 
-function getDevOtpBypassCode(): string | null {
-  // Only allow OTP bypass in local development — never in staging/test/production
-  if (process.env.NODE_ENV !== "development") {
-    return null;
+function getOtpBypassCode(): string | null {
+  // 1. Server-level bypass via OTP_BYPASS_CODE env var (any environment)
+  //    Use this when SMS gateway is not yet configured
+  const serverBypass = process.env.OTP_BYPASS_CODE?.trim();
+  if (serverBypass && /^\d{6}$/.test(serverBypass)) {
+    return serverBypass;
   }
 
-  const code = process.env.DEV_OTP_BYPASS?.trim();
-  if (!code || !/^\d{6}$/.test(code)) {
-    return null;
+  // 2. Local dev bypass via DEV_OTP_BYPASS (development only)
+  if (process.env.NODE_ENV === "development") {
+    const devCode = process.env.DEV_OTP_BYPASS?.trim();
+    if (devCode && /^\d{6}$/.test(devCode)) {
+      return devCode;
+    }
   }
 
-  return code;
+  return null;
 }
 
 function resolveOtpCodeAndDelivery(): { code: string; delivery: OtpDelivery } {
+  // Prefer real SMS gateway when credentials are available
   if (hasSmsGatewayCredentials()) {
     return { code: generateOtp(), delivery: "sms" };
   }
 
-  const bypassCode = getDevOtpBypassCode();
-  if (!bypassCode) {
-    throw new Error("ระบบ OTP ยังไม่พร้อมให้บริการ กรุณาติดต่อผู้ดูแล");
+  // Fallback to bypass code (OTP_BYPASS_CODE or DEV_OTP_BYPASS)
+  const bypassCode = getOtpBypassCode();
+  if (bypassCode) {
+    return { code: bypassCode, delivery: "dev_bypass" };
   }
 
-  return { code: bypassCode, delivery: "dev_bypass" };
+  throw new Error("ระบบ OTP ยังไม่พร้อมให้บริการ กรุณาติดต่อผู้ดูแล");
 }
 
 async function requireSessionUserId() {
