@@ -198,7 +198,7 @@ export default function DashboardShell({
   }
 
   return (
-    <div className="min-h-screen flex bg-[var(--bg-base)]">
+    <div className="h-screen flex bg-[var(--bg-base)] overflow-hidden">
       {/* ── Desktop Sidebar ── */}
       <aside className="hidden md:flex w-[220px] shrink-0 border-r border-[var(--border-default)] bg-[var(--bg-base)] flex-col">
         {/* Logo */}
