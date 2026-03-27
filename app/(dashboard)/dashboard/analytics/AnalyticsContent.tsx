@@ -784,7 +784,12 @@ export default function AnalyticsContent({ stats }: { stats: Stats }) {
             <input
               type="date"
               value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
+              max={dateTo || undefined}
+              onChange={(e) => {
+                const val = e.target.value;
+                setDateFrom(val);
+                if (dateTo && val > dateTo) setDateTo(val);
+              }}
               className="bg-transparent text-[12px] border-none outline-none w-[110px] [&::-webkit-datetime-edit-fields-wrapper]:selection:bg-[var(--accent)]/30"
               style={{ color: "var(--text-secondary)", colorScheme: "dark", accentColor: "var(--accent)" }}
             />
@@ -792,7 +797,12 @@ export default function AnalyticsContent({ stats }: { stats: Stats }) {
             <input
               type="date"
               value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
+              min={dateFrom || undefined}
+              onChange={(e) => {
+                const val = e.target.value;
+                setDateTo(val);
+                if (dateFrom && val < dateFrom) setDateFrom(val);
+              }}
               className="bg-transparent text-[12px] border-none outline-none w-[110px] [&::-webkit-datetime-edit-fields-wrapper]:selection:bg-[var(--accent)]/30"
               style={{ color: "var(--text-secondary)", colorScheme: "dark", accentColor: "var(--accent)" }}
             />
