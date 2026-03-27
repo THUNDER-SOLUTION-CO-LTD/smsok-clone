@@ -738,7 +738,7 @@ export default function AnalyticsContent({ stats }: { stats: Stats }) {
   ];
 
   return (
-    <div className="p-6 md:p-8 max-w-7xl mx-auto animate-fade-in-up">
+    <div className="p-6 md:p-8 animate-fade-in-up">
       {/* ── Header ── */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>

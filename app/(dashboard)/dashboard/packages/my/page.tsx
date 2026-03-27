@@ -139,7 +139,7 @@ export default function MyPackagesPage() {
   }
 
   return (
-    <div className="px-8 py-6 max-md:px-4 max-w-4xl">
+    <div className="px-8 py-6 max-md:px-4">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>

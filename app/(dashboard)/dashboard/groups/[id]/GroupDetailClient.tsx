@@ -421,7 +421,7 @@ export default function GroupDetailClient({
   // ==========================================
 
   return (
-    <div className="p-4 md:p-8 max-w-5xl pb-20 md:pb-8">
+    <div className="p-4 md:p-8 pb-20 md:pb-8">
       {/* Back Link */}
       <Link
         href="/dashboard/groups"

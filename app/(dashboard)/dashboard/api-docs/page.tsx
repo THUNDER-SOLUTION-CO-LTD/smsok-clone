@@ -958,7 +958,7 @@ export default function ApiDocsPage() {
 
   return (
     <div className="p-6 md:p-8 animate-fade-in-up">
-      <div className="flex gap-8 max-w-[1400px]">
+      <div className="flex gap-8">
         {/* Left Sidebar -- desktop only */}
         <div className="hidden xl:block w-64 shrink-0">
           <Sidebar endpoints={filtered} activeId={activeNavId} onSelect={handleSidebarSelect} />

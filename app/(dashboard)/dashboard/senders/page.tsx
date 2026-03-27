@@ -233,7 +233,7 @@ export default function SendersPage() {
   // ---- Loading skeleton ----
   if (loading) {
     return (
-      <div className="p-6 md:p-8 max-w-6xl">
+      <div className="p-6 md:p-8">
         <Skeleton className="h-8 w-48 rounded-lg mb-2" />
         <Skeleton className="h-4 w-72 rounded-lg mb-8" />
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
@@ -251,7 +251,7 @@ export default function SendersPage() {
   if (senders.length === 0) {
     return (
       <>
-        <div className="p-6 md:p-8 max-w-6xl">
+        <div className="p-6 md:p-8">
           <div className="mb-6">
             <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)]">ชื่อผู้ส่ง</h1>
             <p className="text-sm text-[var(--text-muted)] mt-1">จัดการชื่อผู้ส่ง SMS ของคุณ</p>
