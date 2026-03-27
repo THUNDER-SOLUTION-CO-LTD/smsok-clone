@@ -785,16 +785,16 @@ export default function AnalyticsContent({ stats }: { stats: Stats }) {
               type="date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
-              className="bg-transparent text-[12px] border-none outline-none w-[110px]"
-              style={{ color: "var(--text-secondary)", colorScheme: "dark" }}
+              className="bg-transparent text-[12px] border-none outline-none w-[110px] [&::-webkit-datetime-edit-fields-wrapper]:selection:bg-[var(--accent)]/30"
+              style={{ color: "var(--text-secondary)", colorScheme: "dark", accentColor: "var(--accent)" }}
             />
             <span className="text-[11px]" style={{ color: "var(--text-muted)" }}>—</span>
             <input
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
-              className="bg-transparent text-[12px] border-none outline-none w-[110px]"
-              style={{ color: "var(--text-secondary)", colorScheme: "dark" }}
+              className="bg-transparent text-[12px] border-none outline-none w-[110px] [&::-webkit-datetime-edit-fields-wrapper]:selection:bg-[var(--accent)]/30"
+              style={{ color: "var(--text-secondary)", colorScheme: "dark", accentColor: "var(--accent)" }}
             />
           </div>
           {/* Export CSV */}

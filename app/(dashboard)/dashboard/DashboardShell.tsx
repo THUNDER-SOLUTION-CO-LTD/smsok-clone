@@ -210,7 +210,7 @@ export default function DashboardShell({
         </Link>
 
         {/* Navigation */}
-        <ScrollArea className="flex-1 py-3 px-3">
+        <ScrollArea className="flex-1 py-3 px-3 overflow-hidden min-h-0">
           <div className="text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)] px-3 mb-2 font-medium">
             เมนูหลัก
           </div>
@@ -338,7 +338,7 @@ export default function DashboardShell({
 
           <div className="flex items-center gap-2.5">
             {/* Language Switcher */}
-            <LanguageSwitcher />
+            {/* <LanguageSwitcher /> */}
 
             {/* CMD+K Search */}
             <Button

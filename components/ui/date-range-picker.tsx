@@ -646,7 +646,11 @@ export function DateRangePicker({
 
   const handleCalendarSelect = React.useCallback(
     (range: DateRange | undefined) => {
-      setInternalRange(range);
+      if (range?.from && range?.to && isBefore(range.to, range.from)) {
+        setInternalRange({ from: range.to, to: range.from });
+      } else {
+        setInternalRange(range);
+      }
     },
     []
   );
