@@ -21,6 +21,8 @@ import {
   Image,
   Table2,
 } from "lucide-react";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+import type { DateRange } from "react-day-picker";
 
 type Stats = {
   user: { name: string; email: string };
@@ -30,7 +32,7 @@ type Stats = {
   smsRemaining?: number;
 };
 
-type Period = "today" | "7d" | "30d" | "month";
+type Period = "today" | "7d" | "30d" | "month" | "custom";
 
 type DailyDataPoint = {
   date: string;
@@ -263,8 +265,8 @@ function LineChart({ data }: { data: DailyDataPoint[] }) {
     <div className="w-full">
       <svg viewBox={`0 0 ${w} ${h + 30}`} className="w-full h-auto">
         {/* Grid */}
-        {gridLines.map((g) => (
-          <g key={g.val}>
+        {gridLines.map((g, gi) => (
+          <g key={gi}>
             <line x1={px} y1={g.y} x2={w - px} y2={g.y} stroke="rgba(var(--border-default-rgb,40,45,55),0.3)" strokeDasharray="4" />
             <text x={px - 6} y={g.y + 4} textAnchor="end" fill="var(--text-muted)" fontSize="10">{g.val}</text>
           </g>
@@ -571,8 +573,7 @@ export default function AnalyticsContent({ stats }: { stats: Stats }) {
   );
   const [sortKey, setSortKey] = useState<SortKey>("sentCount");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
   const lineChartRef = useRef<HTMLDivElement>(null);
   const donutChartRef = useRef<HTMLDivElement>(null);
@@ -677,8 +678,17 @@ export default function AnalyticsContent({ stats }: { stats: Stats }) {
     async function fetchDaily() {
       setChartLoading(true);
       try {
-        const days = period === "today" ? 1 : period === "7d" ? 7 : 30;
-        const res = await fetch(`/api/v1/analytics/daily?days=${days}`);
+        let url: string;
+        if (dateRange?.from && dateRange?.to) {
+          const pad = (n: number) => String(n).padStart(2, "0");
+          const from = `${dateRange.from.getFullYear()}-${pad(dateRange.from.getMonth() + 1)}-${pad(dateRange.from.getDate())}`;
+          const to = `${dateRange.to.getFullYear()}-${pad(dateRange.to.getMonth() + 1)}-${pad(dateRange.to.getDate())}`;
+          url = `/api/v1/analytics/daily?from=${from}&to=${to}`;
+        } else {
+          const days = period === "today" ? 1 : period === "7d" ? 7 : 30;
+          url = `/api/v1/analytics/daily?days=${days}`;
+        }
+        const res = await fetch(url);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();
         if (!cancelled && Array.isArray(json.data)) {
@@ -700,7 +710,7 @@ export default function AnalyticsContent({ stats }: { stats: Stats }) {
     }
     fetchDaily();
     return () => { cancelled = true; };
-  }, [period]);
+  }, [period, dateRange]);
 
   // Export CSV
   const handleExportCsv = useCallback(() => {
@@ -763,7 +773,7 @@ export default function AnalyticsContent({ stats }: { stats: Stats }) {
             ]).map((p) => (
               <button
                 key={p.key}
-                onClick={() => setPeriod(p.key)}
+                onClick={() => { setPeriod(p.key); setDateRange(undefined); }}
                 className="px-3 py-2 rounded-md text-[13px] font-medium transition-all cursor-pointer"
                 style={{
                   background: period === p.key ? "rgba(var(--accent-rgb),0.1)" : "transparent",
@@ -776,37 +786,15 @@ export default function AnalyticsContent({ stats }: { stats: Stats }) {
             ))}
           </div>
           {/* Date Range Picker */}
-          <div
-            className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1"
-            style={{ border: "1px solid var(--border-default)", background: "var(--bg-base)" }}
-          >
-            <Calendar size={13} style={{ color: "var(--text-muted)" }} />
-            <input
-              type="date"
-              value={dateFrom}
-              max={dateTo || undefined}
-              onChange={(e) => {
-                const val = e.target.value;
-                setDateFrom(val);
-                if (dateTo && val > dateTo) setDateTo(val);
-              }}
-              className="bg-transparent text-[12px] border-none outline-none w-[110px] [&::-webkit-datetime-edit-fields-wrapper]:selection:bg-[var(--accent)]/30"
-              style={{ color: "var(--text-secondary)", colorScheme: "dark", accentColor: "var(--accent)" }}
-            />
-            <span className="text-[11px]" style={{ color: "var(--text-muted)" }}>—</span>
-            <input
-              type="date"
-              value={dateTo}
-              min={dateFrom || undefined}
-              onChange={(e) => {
-                const val = e.target.value;
-                setDateTo(val);
-                if (dateFrom && val < dateFrom) setDateFrom(val);
-              }}
-              className="bg-transparent text-[12px] border-none outline-none w-[110px] [&::-webkit-datetime-edit-fields-wrapper]:selection:bg-[var(--accent)]/30"
-              style={{ color: "var(--text-secondary)", colorScheme: "dark", accentColor: "var(--accent)" }}
-            />
-          </div>
+          <DateRangePicker
+            value={dateRange}
+            onChange={(range) => {
+              setDateRange(range);
+              if (range?.from) setPeriod("custom");
+            }}
+            placeholder="ช่วงวันที่"
+            className="w-auto"
+          />
           {/* Export CSV */}
           <button
             type="button"

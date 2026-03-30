@@ -823,7 +823,7 @@ export default function ContactsClient({
             className="border-[var(--border-default)] bg-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[rgba(var(--accent-rgb),0.04)] hover:border-[rgba(var(--accent-rgb),0.3)]"
           >
             <FileText className="w-4 h-4 mr-1.5" />
-            <span className="hidden sm:inline">Template</span>
+            <span className="hidden sm:inline">ดาวน์โหลดตัวอย่าง Template</span>
           </Button>
           {/* Import CSV */}
           <input

@@ -178,12 +178,26 @@
     color: #fff;
   }
 
+  input[type="date"] {
+    accent-color: transparent !important;
+  }
+
   input[type="date"]::-webkit-datetime-edit-day-field:focus,
   input[type="date"]::-webkit-datetime-edit-month-field:focus,
   input[type="date"]::-webkit-datetime-edit-year-field:focus {
-    background: rgba(var(--accent-rgb),0.3);
-    color: #fff;
-    outline: none;
+    background-color: transparent !important;
+    color: #fff !important;
+    outline: none !important;
+    border-radius: 0 !important;
+    -webkit-text-fill-color: #fff !important;
+    caret-color: transparent !important;
+  }
+
+  input[type="date"]::-webkit-datetime-edit-day-field::selection,
+  input[type="date"]::-webkit-datetime-edit-month-field::selection,
+  input[type="date"]::-webkit-datetime-edit-year-field::selection {
+    background-color: transparent !important;
+    color: #fff !important;
   }
 
   ::-webkit-scrollbar { width: 5px; height: 5px; }

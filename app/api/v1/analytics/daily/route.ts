@@ -24,13 +24,44 @@ function buildDateSeries(days: number) {
   });
 }
 
-// GET /api/v1/analytics/daily?days=1|7|30
+// GET /api/v1/analytics/daily?days=1|7|30 or ?from=YYYY-MM-DD&to=YYYY-MM-DD
 export async function GET(req: NextRequest) {
   try {
     const user = await authenticateRequest(req);
-    const days = Math.min(30, Math.max(1, Number(req.nextUrl.searchParams.get("days") || "30")));
-    const dateSeries = buildDateSeries(days);
-    const from = dateSeries[0];
+    const fromParam = req.nextUrl.searchParams.get("from");
+    const toParam = req.nextUrl.searchParams.get("to");
+
+    let dateKeys: string[];
+    let from: Date;
+
+    if (fromParam && toParam) {
+      // Build date series from string params to avoid timezone issues
+      const startParts = fromParam.split("-").map(Number);
+      const endParts = toParam.split("-").map(Number);
+      const startDate = new Date(startParts[0], startParts[1] - 1, startParts[2]);
+      const endDate = new Date(endParts[0], endParts[1] - 1, endParts[2]);
+      from = startDate;
+
+      dateKeys = [];
+      const cursor = new Date(startDate);
+      while (cursor <= endDate && dateKeys.length < 365) {
+        const y = cursor.getFullYear();
+        const m = String(cursor.getMonth() + 1).padStart(2, "0");
+        const d = String(cursor.getDate()).padStart(2, "0");
+        dateKeys.push(`${y}-${m}-${d}`);
+        cursor.setDate(cursor.getDate() + 1);
+      }
+    } else {
+      const days = Math.min(30, Math.max(1, Number(req.nextUrl.searchParams.get("days") || "30")));
+      const dateSeries = buildDateSeries(days);
+      from = dateSeries[0];
+      dateKeys = dateSeries.map((day) => {
+        const y = day.getFullYear();
+        const m = String(day.getMonth() + 1).padStart(2, "0");
+        const d = String(day.getDate()).padStart(2, "0");
+        return `${y}-${m}-${d}`;
+      });
+    }
 
     const rows = await db.$queryRaw<DailyRow[]>`
       SELECT
@@ -45,19 +76,24 @@ export async function GET(req: NextRequest) {
     `;
 
     const rowMap = new Map<string, { sent: number; delivered: number; failed: number }>(
-      rows.map((row: DailyRow) => [
-        new Date(row.day).toISOString().slice(0, 10),
-        {
-          sent: toCount(row.sent),
-          delivered: toCount(row.delivered),
-          failed: toCount(row.failed),
-        },
-      ] as [string, { sent: number; delivered: number; failed: number }]),
+      rows.map((row: DailyRow) => {
+        const rd = new Date(row.day);
+        const y = rd.getFullYear();
+        const m = String(rd.getMonth() + 1).padStart(2, "0");
+        const d = String(rd.getDate()).padStart(2, "0");
+        return [
+          `${y}-${m}-${d}`,
+          {
+            sent: toCount(row.sent),
+            delivered: toCount(row.delivered),
+            failed: toCount(row.failed),
+          },
+        ] as [string, { sent: number; delivered: number; failed: number }];
+      }),
     );
 
     return apiResponse({
-      data: dateSeries.map((day) => {
-        const key = day.toISOString().slice(0, 10);
+      data: dateKeys.map((key) => {
         const stats = rowMap.get(key);
         return {
           date: key,
