@@ -1202,6 +1202,17 @@ export default function ContactsClient({
               ? allOptions.filter((t) => t.toLowerCase().includes(query))
               : allOptions;
             const hasExact = allOptions.some((t) => t.toLowerCase() === query);
+
+            // Count how many selected contacts already have each tag
+            const selectedContacts = contacts.filter((c) => selectedIds.has(c.id));
+            const tagCountMap = new Map<string, number>();
+            selectedContacts.forEach((c) => {
+              getTagNames(c.tags).forEach((t) => {
+                tagCountMap.set(t, (tagCountMap.get(t) ?? 0) + 1);
+              });
+            });
+            const total = selectedIds.size;
+
             return (
               <div className="mt-3 pt-3 border-t border-[var(--border-default)]">
                 <div className="flex items-center gap-2 mb-2">
@@ -1218,16 +1229,27 @@ export default function ContactsClient({
                 <div className="max-h-36 overflow-y-auto rounded-md border border-[var(--border-default)] bg-[var(--bg-base)]">
                   {filtered.map((tag) => {
                     const color = getTagColor(tag, tagColorMap.get(tag));
+                    const count = tagCountMap.get(tag) ?? 0;
+                    const allHave = count === total;
+                    const someHave = count > 0 && count < total;
                     return (
                       <button
                         key={tag}
                         type="button"
                         disabled={isPending}
                         onClick={() => handleBatchTag(tag)}
-                        className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-[rgba(var(--accent-rgb),0.06)] transition-colors text-[var(--text-secondary)] disabled:opacity-50"
+                        className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-xs hover:bg-[rgba(var(--accent-rgb),0.06)] transition-colors disabled:opacity-50 ${allHave ? color.text : "text-[var(--text-secondary)]"}`}
                       >
-                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${color.dot}`} />
-                        {tag}
+                        <span className="flex items-center gap-2 min-w-0">
+                          <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${color.dot}`} />
+                          <span className="truncate">{tag}</span>
+                        </span>
+                        {allHave && <Check className="w-3 h-3 flex-shrink-0" />}
+                        {someHave && (
+                          <span className="text-[10px] text-[var(--text-muted)] flex-shrink-0">
+                            {count}/{total}
+                          </span>
+                        )}
                       </button>
                     );
                   })}
