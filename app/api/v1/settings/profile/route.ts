@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { authenticateRequest, apiResponse, apiError, ApiError } from "@/lib/api-auth";
-import { getProfile, updateProfile } from "@/lib/actions/settings";
+import { getProfile, updateProfile, updateAvatar } from "@/lib/actions/settings";
 // GET /api/v1/settings/profile — get user profile
 export async function GET(req: NextRequest) {
   try {
@@ -29,17 +29,17 @@ export async function PUT(req: NextRequest) {
   }
 }
 
-// PATCH /api/v1/settings/profile — update avatar or profile fields
+// PATCH /api/v1/settings/profile — update avatar
 export async function PATCH(req: NextRequest) {
   try {
     const user = await authenticateRequest(req);
-    let body: unknown;
+    let body: Record<string, unknown>;
     try {
       body = await req.json();
     } catch {
       throw new ApiError(400, "กรุณาส่งข้อมูล JSON");
     }
-    const result = await updateProfile(user.id, body);
+    const result = await updateAvatar(user.id, body.avatarUrl ?? null);
     return apiResponse(result);
   } catch (error) {
     return apiError(error);

@@ -28,14 +28,37 @@ export async function updateProfile(userIdOrData: string | unknown, maybeData?: 
   const updated = await db.user.update({
     where: { id: userId },
     data: {
-      ...(input.name !== undefined ? { name: input.name } : {}),
-      ...(input.avatarUrl !== undefined ? { avatarUrl: input.avatarUrl } : {}),
+      name: input.name,
     },
     select: { id: true, name: true, email: true, phone: true, avatarUrl: true },
   });
 
   revalidatePath("/dashboard/settings");
   revalidatePath("/dashboard");
+  return updated;
+}
+
+// ==========================================
+// Update avatar only
+// ==========================================
+
+export async function updateAvatar(userId: string, avatarUrl: unknown) {
+  userId = await resolveActionUserId(userId);
+
+  // Accept string data URL or null (to remove avatar)
+  const parsed = avatarUrl === null || avatarUrl === undefined
+    ? null
+    : typeof avatarUrl === "string"
+      ? avatarUrl
+      : null;
+
+  const updated = await db.user.update({
+    where: { id: userId },
+    data: { avatarUrl: parsed },
+    select: { id: true, avatarUrl: true },
+  });
+
+  revalidatePath("/dashboard/settings");
   return updated;
 }
 
