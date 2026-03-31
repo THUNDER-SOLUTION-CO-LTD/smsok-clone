@@ -548,8 +548,7 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="w-full flex justify-center animate-fade-in-up">
-    <div className="w-full max-w-6xl p-4 md:p-6 lg:p-8 pb-24 lg:pb-8">
+    <div className="max-w-6xl mx-auto px-4 md:px-6 lg:px-8 py-4 md:py-6 lg:py-8 pb-24 lg:pb-8 animate-fade-in-up">
       {/* Step Indicator */}
       <StepIndicator current={2} />
 
@@ -1140,7 +1139,6 @@ export default function CheckoutPage() {
           </div>
         </div>
       </div>
-    </div>
     </div>
   );
 }
