@@ -289,7 +289,8 @@ export default function OrderManagementPage() {
   // Loading skeleton
   if (loading) {
     return (
-      <div className="p-6 md:p-8 space-y-6 max-w-7xl mx-auto">
+      <div className="w-full flex justify-center">
+      <div className="w-full max-w-7xl p-6 md:p-8 space-y-6">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
             <Skeleton key={i} className="h-20 rounded-lg" />
@@ -303,11 +304,13 @@ export default function OrderManagementPage() {
           <Skeleton key={i} className="h-14 rounded-lg" />
         ))}
       </div>
+      </div>
     );
   }
 
   return (
-    <div className="p-6 md:p-8 animate-fade-in-up max-w-7xl mx-auto">
+    <div className="w-full flex justify-center animate-fade-in-up">
+    <div className="w-full max-w-7xl p-6 md:p-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
@@ -601,6 +604,7 @@ export default function OrderManagementPage() {
           )}
         </>
       )}
+    </div>
     </div>
   );
 }
