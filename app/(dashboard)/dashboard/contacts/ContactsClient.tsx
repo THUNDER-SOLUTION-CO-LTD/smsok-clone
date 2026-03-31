@@ -590,7 +590,7 @@ export default function ContactsClient({
         setShowContactDialog(false);
         router.refresh();
       } catch (e) {
-        const msg = e instanceof Error ? e.message : "";
+        const msg = e instanceof Error ? e.message : String(e ?? "");
         if (msg.includes("เบอร์โทรนี้มีอยู่แล้ว")) {
           contactForm.setError("phone", { message: "เบอร์โทรนี้มีอยู่ในระบบแล้ว" });
         } else {

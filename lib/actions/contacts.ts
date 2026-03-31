@@ -418,26 +418,33 @@ export async function updateContact(userIdOrContactId: string, contactIdOrData: 
     if (existing) throw new Error("เบอร์โทรนี้มีอยู่แล้ว");
   }
 
-  const updated = await db.$transaction(async (tx: Parameters<Parameters<typeof db.$transaction>[0]>[0]) => {
-    const nextContact = await tx.contact.update({
-      where: { id: contactId },
-      data: {
-        ...(input.name !== undefined && { name: input.name }),
-        ...(normalizedPhone !== undefined && { phone: normalizedPhone }),
-        ...(input.email !== undefined && { email: input.email || null }),
-        ...(input.tags !== undefined && { tags: null }),
-      },
+  try {
+    const updated = await db.$transaction(async (tx: Parameters<Parameters<typeof db.$transaction>[0]>[0]) => {
+      const nextContact = await tx.contact.update({
+        where: { id: contactId },
+        data: {
+          ...(input.name !== undefined && { name: input.name }),
+          ...(normalizedPhone !== undefined && { phone: normalizedPhone }),
+          ...(input.email !== undefined && { email: input.email || null }),
+          ...(input.tags !== undefined && { tags: null }),
+        },
+      });
+
+      if (input.tags !== undefined) {
+        await replaceContactTags(tx, userId, contactId, input.tags);
+      }
+
+      return nextContact;
     });
 
-    if (input.tags !== undefined) {
-      await replaceContactTags(tx, userId, contactId, input.tags);
+    revalidatePath("/dashboard/contacts");
+    return updated;
+  } catch (err) {
+    if (err instanceof Error && "code" in err && (err as { code: string }).code === "P2002") {
+      throw new Error("เบอร์โทรนี้มีอยู่แล้ว");
     }
-
-    return nextContact;
-  });
-
-  revalidatePath("/dashboard/contacts");
-  return updated;
+    throw err;
+  }
 }
 
 // ==========================================
