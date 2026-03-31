@@ -548,7 +548,7 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 pb-24 lg:pb-8 max-w-6xl animate-fade-in-up">
+    <div className="p-4 md:p-6 lg:p-8 pb-24 lg:pb-8 max-w-6xl mx-auto animate-fade-in-up">
       {/* Step Indicator */}
       <StepIndicator current={2} />
 
