@@ -296,7 +296,12 @@ export default function GroupsPageClient({
         setShowDialog(false);
         router.refresh();
       } catch (e) {
-        toast("error", safeErrorMessage(e));
+        const msg = e instanceof Error ? e.message : "";
+        if (msg.includes("มีกลุ่มชื่อนี้อยู่แล้ว")) {
+          form.setError("name", { message: "ชื่อกลุ่มนี้มีอยู่แล้ว กรุณาใช้ชื่ออื่น" });
+        } else {
+          toast("error", safeErrorMessage(e));
+        }
       }
     });
   }
