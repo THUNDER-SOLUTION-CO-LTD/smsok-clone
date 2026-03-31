@@ -157,7 +157,15 @@ export default function SendersPage() {
   const [newName, setNewName] = useState("");
   const [newType, setNewType] = useState("general");
   const [newNote, setNewNote] = useState("");
+  const [newNameError, setNewNameError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  // Edit form
+  const [editSender, setEditSender] = useState<Sender | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editNameError, setEditNameError] = useState("");
+  const [editSubmitting, setEditSubmitting] = useState(false);
 
   // ---- Fetch ----
   const fetchSenders = useCallback(async () => {
@@ -196,7 +204,12 @@ export default function SendersPage() {
 
   // ---- Handlers ----
   async function handleAddSender() {
-    if (!newName.trim() || submitting) return;
+    if (submitting) return;
+    if (!newName.trim()) {
+      setNewNameError("กรุณากรอกชื่อผู้ส่ง");
+      return;
+    }
+    setNewNameError("");
     setSubmitting(true);
     try {
       const res = await fetch("/api/v1/senders", {
@@ -204,16 +217,67 @@ export default function SendersPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: newName.trim(), type: newType, note: newNote.trim() }),
       });
-      if (!res.ok) throw new Error("create failed");
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        const msg: string = err.error || "ไม่สามารถเพิ่มชื่อผู้ส่งได้ กรุณาลองใหม่";
+        if (msg.includes("ชื่อผู้ส่งไม่ผ่านการตรวจสอบ")) {
+          setNewNameError("ชื่อผู้ส่งต้องเป็นตัวอักษรและตัวเลขเท่านั้น");
+        } else if (msg.includes("เกินจำนวน") || msg.includes("ครบจำนวนสูงสุด")) {
+          toast.error("ชื่อผู้ส่งครบจำนวนสูงสุดแล้ว");
+        } else if (msg.includes("มีอยู่แล้ว")) {
+          setNewNameError("ชื่อผู้ส่งนี้มีอยู่แล้ว กรุณาใช้ชื่ออื่น");
+        } else {
+          toast.error(msg);
+        }
+        return;
+      }
       setDialogOpen(false);
       setNewName("");
       setNewType("general");
       setNewNote("");
+      setNewNameError("");
       await fetchSenders();
     } catch {
       toast.error("ไม่สามารถเพิ่มชื่อผู้ส่งได้ กรุณาลองใหม่");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleEditSender() {
+    if (!editSender || editSubmitting) return;
+    if (!editName.trim()) {
+      setEditNameError("กรุณากรอกชื่อผู้ส่ง");
+      return;
+    }
+    setEditNameError("");
+    setEditSubmitting(true);
+    try {
+      const res = await fetch(`/api/v1/senders/${editSender.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: editName.trim() }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        const msg: string = err.error || "ไม่สามารถแก้ไขชื่อผู้ส่งได้ กรุณาลองใหม่";
+        if (msg.includes("ชื่อผู้ส่งไม่ผ่านการตรวจสอบ")) {
+          setEditNameError("ชื่อผู้ส่งต้องเป็นตัวอักษรและตัวเลขเท่านั้น");
+        } else if (msg.includes("มีอยู่แล้ว")) {
+          setEditNameError("ชื่อผู้ส่งนี้มีอยู่แล้ว กรุณาใช้ชื่ออื่น");
+        } else {
+          toast.error(msg);
+        }
+        return;
+      }
+      setEditDialogOpen(false);
+      setEditSender(null);
+      toast.success("แก้ไขชื่อผู้ส่งสำเร็จ");
+      await fetchSenders();
+    } catch {
+      toast.error("ไม่สามารถแก้ไขชื่อผู้ส่งได้ กรุณาลองใหม่");
+    } finally {
+      setEditSubmitting(false);
     }
   }
 
@@ -282,14 +346,15 @@ export default function SendersPage() {
                 <div className="relative">
                   <Input
                     value={newName}
-                    onChange={(e) => { if (e.target.value.length <= 11) setNewName(e.target.value); }}
+                    onChange={(e) => { if (e.target.value.length <= 11) { setNewName(e.target.value); if (newNameError) setNewNameError(""); } }}
                     placeholder="เช่น MyBrand"
                     maxLength={11}
-                    className="h-[36px] text-sm pr-12"
+                    className={`h-[36px] text-sm pr-12 ${newNameError ? "border-[var(--error)]" : ""}`}
                     style={{ fontFamily: "'IBM Plex Mono', monospace" }}
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--text-muted)]">{newName.length}/11</span>
                 </div>
+                {newNameError && <p className="text-xs mt-1" style={{ color: "var(--error)" }}>{newNameError}</p>}
               </div>
               <div>
                 <label className="text-xs font-medium text-[var(--text-primary)] mb-1.5 block">ประเภท</label>
@@ -304,8 +369,8 @@ export default function SendersPage() {
                 <p className="text-xs leading-relaxed" style={{ color: "var(--warning)" }}>ชื่อผู้ส่งต้องผ่านการอนุมัติก่อนใช้งาน โดยปกติใช้เวลา 1-3 วันทำการ</p>
               </div>
               <div className="flex items-center justify-end gap-2 pt-2">
-                <Button variant="ghost" size="sm" onClick={() => setDialogOpen(false)}>ยกเลิก</Button>
-                <Button size="sm" className="h-[36px] gap-1.5" onClick={handleAddSender} disabled={!newName.trim() || submitting}>
+                <Button variant="ghost" size="sm" onClick={() => { setDialogOpen(false); setNewNameError(""); }}>ยกเลิก</Button>
+                <Button size="sm" className="h-[36px] gap-1.5" onClick={handleAddSender} disabled={submitting}>
                   {submitting ? <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Plus className="size-4" />}
                   {submitting ? "กำลังส่ง..." : "ยื่นคำขอ"}
                 </Button>
@@ -464,6 +529,7 @@ export default function SendersPage() {
               variant="outline"
               size="sm"
               className="h-[28px] text-xs flex-shrink-0"
+              onClick={() => router.push("/dashboard/billing/packages")}
             >
               อัปเกรด
             </Button>
@@ -611,7 +677,10 @@ export default function SendersPage() {
                               <DropdownMenuItem
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setExpandedId(sender.id);
+                                  setEditSender(sender);
+                                  setEditName(sender.name);
+                                  setEditNameError("");
+                                  setEditDialogOpen(true);
                                 }}
                               >
                                 <Pencil className="size-4 mr-2" />
@@ -767,8 +836,71 @@ export default function SendersPage() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* ========== Edit Sender Dialog ========== */}
+      <Dialog
+        open={editDialogOpen}
+        onOpenChange={(open) => {
+          setEditDialogOpen(open);
+          if (!open) { setEditSender(null); setEditNameError(""); }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>แก้ไขชื่อผู้ส่ง</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <div>
+              <label className="text-xs font-medium text-[var(--text-primary)] mb-1.5 block">
+                ชื่อผู้ส่ง
+              </label>
+              <div className="relative">
+                <Input
+                  value={editName}
+                  onChange={(e) => {
+                    if (e.target.value.length <= 11) {
+                      setEditName(e.target.value);
+                      if (editNameError) setEditNameError("");
+                    }
+                  }}
+                  placeholder="เช่น MyBrand"
+                  maxLength={11}
+                  className={`h-[36px] text-sm pr-12 ${editNameError ? "border-[var(--error)]" : ""}`}
+                  style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--text-muted)]">
+                  {editName.length}/11
+                </span>
+              </div>
+              {editNameError && <p className="text-xs mt-1" style={{ color: "var(--error)" }}>{editNameError}</p>}
+            </div>
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => { setEditDialogOpen(false); setEditSender(null); setEditNameError(""); }}
+              >
+                ยกเลิก
+              </Button>
+              <Button
+                size="sm"
+                className="h-[36px] gap-1.5"
+                onClick={handleEditSender}
+                disabled={editSubmitting}
+              >
+                {editSubmitting ? (
+                  <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <Pencil className="size-4" />
+                )}
+                {editSubmitting ? "กำลังบันทึก..." : "บันทึก"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* ========== Add Sender Dialog ========== */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) setNewNameError(""); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>เพิ่มชื่อผู้ส่งใหม่</DialogTitle>
@@ -784,17 +916,21 @@ export default function SendersPage() {
                 <Input
                   value={newName}
                   onChange={(e) => {
-                    if (e.target.value.length <= 11) setNewName(e.target.value);
+                    if (e.target.value.length <= 11) {
+                      setNewName(e.target.value);
+                      if (newNameError) setNewNameError("");
+                    }
                   }}
                   placeholder="เช่น MyBrand"
                   maxLength={11}
-                  className="h-[36px] text-sm pr-12"
+                  className={`h-[36px] text-sm pr-12 ${newNameError ? "border-[var(--error)]" : ""}`}
                   style={{ fontFamily: "'IBM Plex Mono', monospace" }}
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--text-muted)]">
                   {newName.length}/11
                 </span>
               </div>
+              {newNameError && <p className="text-xs mt-1" style={{ color: "var(--error)" }}>{newNameError}</p>}
             </div>
 
             {/* Type */}
@@ -841,7 +977,7 @@ export default function SendersPage() {
                 variant="ghost"
                 size="sm"
                 className=""
-                onClick={() => setDialogOpen(false)}
+                onClick={() => { setDialogOpen(false); setNewNameError(""); }}
               >
                 ยกเลิก
               </Button>
@@ -849,7 +985,7 @@ export default function SendersPage() {
                 size="sm"
                 className="h-[36px] gap-1.5"
                 onClick={handleAddSender}
-                disabled={!newName.trim() || submitting}
+                disabled={submitting}
               >
                 {submitting ? (
                   <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />

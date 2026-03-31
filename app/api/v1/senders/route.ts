@@ -169,7 +169,7 @@ export async function POST(req: NextRequest) {
       throw new ApiError(409, "ชื่อผู้ส่งนี้มีอยู่แล้ว", "DUPLICATE");
     }
     if (quota.senderNameLimit !== null && used >= quota.senderNameLimit) {
-      throw new ApiError(400, "เกินจำนวน Sender Name ที่อนุญาต");
+      throw new ApiError(400, "ชื่อผู้ส่งครบจำนวนสูงสุดแล้ว");
     }
 
     let sender;
