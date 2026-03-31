@@ -158,7 +158,12 @@ export default function TagsPageClient({
         setShowDialog(false);
         router.refresh();
       } catch (e) {
-        toast("error", safeErrorMessage(e));
+        const msg = e instanceof Error ? e.message : "";
+        if (msg.includes("ชื่อแท็กนี้มีอยู่แล้ว")) {
+          form.setError("name", { message: "ชื่อแท็กนี้มีอยู่แล้ว กรุณาใช้ชื่ออื่น" });
+        } else {
+          toast("error", safeErrorMessage(e));
+        }
       }
     });
   }
