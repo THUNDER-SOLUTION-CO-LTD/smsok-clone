@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { authenticateRequest, apiResponse, apiError, ApiError } from "@/lib/api-auth";
-import { getProfile, updateProfile, updateAvatar } from "@/lib/actions/settings";
+import { getProfile, updateProfile } from "@/lib/actions/settings";
+import { prisma } from "@/lib/db";
 // GET /api/v1/settings/profile — get user profile
 export async function GET(req: NextRequest) {
   try {
@@ -39,8 +40,13 @@ export async function PATCH(req: NextRequest) {
     } catch {
       throw new ApiError(400, "กรุณาส่งข้อมูล JSON");
     }
-    const result = await updateAvatar(user.id, body.avatarUrl ?? null);
-    return apiResponse(result);
+    const avatarUrl = typeof body.avatarUrl === "string" ? body.avatarUrl : null;
+    const updated = await prisma.user.update({
+      where: { id: user.id },
+      data: { avatarUrl },
+      select: { id: true, avatarUrl: true },
+    });
+    return apiResponse(updated);
   } catch (error) {
     return apiError(error);
   }
