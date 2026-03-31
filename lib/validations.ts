@@ -399,14 +399,21 @@ export const contactFilterSchema = z.object({
 
 const hexColorSchema = z.string().regex(/^#[0-9A-Fa-f]{6}$/, "สีต้องเป็นรหัส HEX เช่น #94A3B8");
 
+// Allow Thai, Latin letters, numbers, spaces, hyphens, underscores only
+const TAG_NAME_REGEX = /^[\u0E00-\u0E7Fa-zA-Z0-9 _-]+$/;
+const TAG_NAME_REGEX_MSG = "ชื่อแท็กต้องเป็นตัวอักษร ตัวเลข ขีด (-) หรือ (_) เท่านั้น";
+
 export const createTagSchema = z.object({
-  name: sanitizedNameSchema(1, 50, "กรุณากรอกชื่อแท็ก", "ชื่อแท็กต้องไม่เกิน 50 ตัวอักษร"),
+  name: sanitizedNameSchema(1, 50, "กรุณากรอกชื่อแท็ก", "ชื่อแท็กต้องไม่เกิน 50 ตัวอักษร")
+    .refine((v) => TAG_NAME_REGEX.test(v), TAG_NAME_REGEX_MSG),
   color: hexColorSchema.default("#94A3B8"),
 });
 
 export const updateTagSchema = z
   .object({
-    name: sanitizedNameSchema(1, 50, "กรุณากรอกชื่อแท็ก", "ชื่อแท็กต้องไม่เกิน 50 ตัวอักษร").optional(),
+    name: sanitizedNameSchema(1, 50, "กรุณากรอกชื่อแท็ก", "ชื่อแท็กต้องไม่เกิน 50 ตัวอักษร")
+      .refine((v) => TAG_NAME_REGEX.test(v), TAG_NAME_REGEX_MSG)
+      .optional(),
     color: hexColorSchema.optional(),
   })
   .refine((data) => data.name !== undefined || data.color !== undefined, {

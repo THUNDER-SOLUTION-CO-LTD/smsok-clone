@@ -75,11 +75,14 @@ function getColorDotClass(hex: string) {
 // Zod schema
 // ==========================================
 
+const TAG_NAME_REGEX = /^[\u0E00-\u0E7Fa-zA-Z0-9 _-]+$/;
+
 const tagFormSchema = z.object({
   name: z
     .string()
     .min(1, "กรุณากรอกชื่อแท็ก")
-    .max(50, "ชื่อแท็กต้องไม่เกิน 50 ตัวอักษร"),
+    .max(50, "ชื่อแท็กต้องไม่เกิน 50 ตัวอักษร")
+    .refine((v) => TAG_NAME_REGEX.test(v.trim()), "ชื่อแท็กต้องเป็นตัวอักษร ตัวเลข ขีด (-) หรือ (_) เท่านั้น"),
   color: z.string().min(1),
 });
 
@@ -161,6 +164,8 @@ export default function TagsPageClient({
         const msg = e instanceof Error ? e.message : "";
         if (msg.includes("ชื่อแท็กนี้มีอยู่แล้ว")) {
           form.setError("name", { message: "ชื่อแท็กนี้มีอยู่แล้ว กรุณาใช้ชื่ออื่น" });
+        } else if (msg.includes("ขีด") || msg.includes("ตัวอักษร ตัวเลข")) {
+          form.setError("name", { message: "ชื่อแท็กต้องเป็นตัวอักษร ตัวเลข ขีด (-) หรือ (_) เท่านั้น" });
         } else {
           toast("error", safeErrorMessage(e));
         }
