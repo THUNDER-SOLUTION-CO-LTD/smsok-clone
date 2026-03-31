@@ -1083,6 +1083,31 @@ const DOC_TYPE_LABELS: Record<string, string> = {
 
 function DocumentsCard({ order }: { order: Order }) {
   const [previewDoc, setPreviewDoc] = useState<{ label: string; url: string } | null>(null);
+  const [previewBlobUrl, setPreviewBlobUrl] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  async function openPreview(doc: { label: string; url: string }) {
+    setPreviewDoc(doc);
+    setPreviewBlobUrl(null);
+    setPreviewLoading(true);
+    try {
+      const res = await fetch(doc.url, { credentials: "include" });
+      if (!res.ok) throw new Error("fetch failed");
+      const blob = await res.blob();
+      setPreviewBlobUrl(URL.createObjectURL(blob));
+    } catch {
+      setPreviewBlobUrl(null);
+    } finally {
+      setPreviewLoading(false);
+    }
+  }
+
+  function closePreview() {
+    if (previewBlobUrl) URL.revokeObjectURL(previewBlobUrl);
+    setPreviewDoc(null);
+    setPreviewBlobUrl(null);
+    setPreviewLoading(false);
+  }
 
   // Build document list from both old fields and new documents array
   const docs: { label: string; number: string | null; url: string | null }[] = [
@@ -1202,7 +1227,7 @@ function DocumentsCard({ order }: { order: Order }) {
                       size="sm"
                       className="gap-1 text-xs h-8 px-2"
                       style={{ color: "var(--text-secondary)" }}
-                      onClick={() => setPreviewDoc({ label: doc.label, url: doc.url! })}
+                      onClick={() => openPreview({ label: doc.label, url: doc.url! })}
                       title="ดูตัวอย่าง"
                     >
                       <Eye size={14} />
@@ -1228,7 +1253,7 @@ function DocumentsCard({ order }: { order: Order }) {
       </div>
 
       {/* PDF Preview Dialog */}
-      <Dialog open={!!previewDoc} onOpenChange={() => setPreviewDoc(null)}>
+      <Dialog open={!!previewDoc} onOpenChange={closePreview}>
         <DialogContent
           className="max-w-4xl h-[85vh] p-0 gap-0 overflow-hidden"
           style={{
@@ -1273,14 +1298,35 @@ function DocumentsCard({ order }: { order: Order }) {
               </div>
             </div>
           </DialogHeader>
-          <div className="flex-1 w-full h-full" style={{ background: "var(--bg-base)" }}>
-            {previewDoc?.url && (
+          <div className="flex-1 w-full h-full flex items-center justify-center" style={{ background: "var(--bg-base)" }}>
+            {previewLoading ? (
+              <div className="flex flex-col items-center gap-3" style={{ color: "var(--text-muted)" }}>
+                <svg className="animate-spin" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                </svg>
+                <span className="text-sm">กำลังโหลด...</span>
+              </div>
+            ) : previewBlobUrl ? (
               <iframe
-                src={previewDoc.url}
+                src={previewBlobUrl}
                 className="w-full h-full border-0"
-                title={previewDoc.label}
+                title={previewDoc?.label}
                 style={{ minHeight: "calc(85vh - 65px)" }}
               />
+            ) : (
+              <div className="flex flex-col items-center gap-4" style={{ color: "var(--text-muted)" }}>
+                <FileText size={40} style={{ opacity: 0.4 }} />
+                <p className="text-sm">ไม่สามารถแสดงตัวอย่างได้</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 text-xs"
+                  onClick={() => { if (previewDoc?.url) openDocument(previewDoc.url); }}
+                >
+                  <Eye size={14} />
+                  เปิดในแท็บใหม่
+                </Button>
+              </div>
             )}
           </div>
         </DialogContent>
