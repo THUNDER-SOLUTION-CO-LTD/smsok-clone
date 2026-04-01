@@ -953,7 +953,7 @@ function SettingsTab() {
                 max={600}
                 value={expiry}
                 onChange={(e) => setExpiry(e.target.value)}
-                className="h-9 bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] rounded-lg"
+                className="h-9 bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] rounded-lg [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
               />
               <p className="text-[11px] text-[var(--text-muted)] mt-1">= {expiryMinutes} นาที</p>
             </div>
@@ -968,7 +968,7 @@ function SettingsTab() {
                   max={20}
                   value={rateLimit}
                   onChange={(e) => setRateLimit(e.target.value)}
-                  className="h-9 bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] rounded-lg pr-24"
+                  className="h-9 bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] rounded-lg pr-24 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-[var(--text-muted)] pointer-events-none">
                   ครั้งต่อชั่วโมง
