@@ -10,6 +10,7 @@ import DashboardBreadcrumb from "@/components/DashboardBreadcrumb";
 import DashboardTour from "@/components/DashboardTour";
 // SidebarUpgradeCta removed — redundant with "ซื้อแพ็กเกจ" menu item
 import { cn } from "@/lib/utils";
+import { ToastContainer } from "@/app/components/ui/Toast";
 
 // shadcn components
 import { Button } from "@/components/ui/button";
@@ -199,6 +200,7 @@ export default function DashboardShell({
 
   return (
     <div className="h-screen flex bg-[var(--bg-base)] overflow-hidden">
+      <ToastContainer />
       {/* ── Desktop Sidebar ── */}
       <aside className="hidden md:flex w-[220px] shrink-0 border-r border-[var(--border-default)] bg-[var(--bg-base)] flex-col pt-[env(safe-area-inset-top)]">
         {/* Logo */}
