@@ -4,7 +4,6 @@ import { ApiError } from "../api-auth";
 
 import { prisma as db } from "../db";
 import type { ContactActionError } from "../contact-action-error";
-export type { ContactActionError } from "../contact-action-error";
 import { revalidatePath } from "next/cache";
 import {
   contactFilterSchema,
