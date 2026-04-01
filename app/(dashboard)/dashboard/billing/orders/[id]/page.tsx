@@ -1255,7 +1255,8 @@ function DocumentsCard({ order }: { order: Order }) {
       {/* PDF Preview Dialog */}
       <Dialog open={!!previewDoc} onOpenChange={closePreview}>
         <DialogContent
-          className="max-w-4xl h-[85vh] p-0 gap-0 overflow-hidden [&>button:last-child]:hidden"
+          className="max-w-4xl h-[85vh] p-0 gap-0 overflow-hidden"
+          showCloseButton={false}
           style={{
             background: "var(--bg-surface)",
             border: "1px solid var(--border-default)",
