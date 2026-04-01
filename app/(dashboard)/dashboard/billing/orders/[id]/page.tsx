@@ -1255,7 +1255,7 @@ function DocumentsCard({ order }: { order: Order }) {
       {/* PDF Preview Dialog */}
       <Dialog open={!!previewDoc} onOpenChange={closePreview}>
         <DialogContent
-          className="max-w-4xl h-[85vh] p-0 gap-0 overflow-hidden"
+          className="max-w-4xl h-[85vh] p-0 gap-0 overflow-hidden [&>button:last-child]:hidden"
           style={{
             background: "var(--bg-surface)",
             border: "1px solid var(--border-default)",
@@ -1295,6 +1295,14 @@ function DocumentsCard({ order }: { order: Order }) {
                   <Eye size={14} />
                   เปิดในแท็บใหม่
                 </Button>
+                <button
+                  type="button"
+                  onClick={closePreview}
+                  className="w-8 h-8 rounded-md flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[rgba(255,255,255,0.06)] transition-colors cursor-pointer"
+                  aria-label="ปิด"
+                >
+                  <X size={16} />
+                </button>
               </div>
             </div>
           </DialogHeader>
