@@ -83,7 +83,9 @@ const tagFormSchema = z.object({
     .min(1, "กรุณากรอกชื่อแท็ก")
     .max(50, "ชื่อแท็กต้องไม่เกิน 50 ตัวอักษร")
     .refine((v) => TAG_NAME_REGEX.test(v.trim()), "ชื่อแท็กต้องเป็นตัวอักษร ตัวเลข ขีด (-) หรือ (_) เท่านั้น"),
-  color: z.string().min(1),
+  color: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, "กรุณาเลือกสีแท็ก"),
 });
 
 type TagFormValues = z.infer<typeof tagFormSchema>;
@@ -120,10 +122,12 @@ export default function TagsPageClient({
     : null;
 
   // Form
+  const DEFAULT_COLOR = COLOR_OPTIONS[0]?.hex ?? "#10B981";
+
   const form = useForm<TagFormValues>({
     mode: "onChange",
     resolver: zodResolver(tagFormSchema),
-    defaultValues: { name: "", color: "var(--accent)" },
+    defaultValues: { name: "", color: DEFAULT_COLOR },
   });
 
   // ==========================================
@@ -132,7 +136,7 @@ export default function TagsPageClient({
 
   function openCreate() {
     setEditingTag(null);
-    form.reset({ name: "", color: "var(--accent)" });
+    form.reset({ name: "", color: DEFAULT_COLOR });
     setShowDialog(true);
   }
 
