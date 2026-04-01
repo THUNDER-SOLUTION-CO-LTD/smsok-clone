@@ -279,7 +279,7 @@ function TagInput({
         <input
           ref={inputRef}
           type="text"
-          className="bg-transparent outline-none text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] flex-1 min-w-[80px]"
+          className="bg-transparent outline-none ring-0 border-0 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] flex-1 min-w-[80px]"
           placeholder={tags.length === 0 ? "เลือกหรือพิมพ์แท็ก..." : ""}
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
