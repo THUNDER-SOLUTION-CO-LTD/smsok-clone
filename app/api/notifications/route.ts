@@ -94,16 +94,22 @@ export async function GET(req: NextRequest) {
       });
     }
 
+    const formatRecipient = (phone: string) => {
+      if (phone.startsWith("+66")) return "0" + phone.slice(3);
+      if (phone.startsWith("66") && phone.length >= 11) return "0" + phone.slice(2);
+      return phone;
+    };
+
     const items = [
       ...recentMessages.map((m: (typeof recentMessages)[number]) => ({
         id: `msg_${m.id}`,
         type: m.status === "sent" || m.status === "delivered" ? "sms_success" : m.status === "failed" ? "sms_failed" : "sms_pending",
         message:
           m.status === "sent" || m.status === "delivered"
-            ? `ส่ง SMS ถึง ${m.recipient} สำเร็จ`
+            ? `ส่ง SMS ถึง ${formatRecipient(m.recipient)} สำเร็จ`
             : m.status === "failed"
-            ? `ส่ง SMS ถึง ${m.recipient} ล้มเหลว`
-            : `กำลังส่ง SMS ถึง ${m.recipient}`,
+            ? `ส่ง SMS ถึง ${formatRecipient(m.recipient)} ล้มเหลว`
+            : `กำลังส่ง SMS ถึง ${formatRecipient(m.recipient)}`,
         createdAt: m.createdAt.toISOString(),
         read: readAt ? m.createdAt <= readAt : false,
       })),
