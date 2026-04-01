@@ -6,8 +6,16 @@ import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { createTag, updateTag, deleteTag } from "@/lib/actions/tags";
 import { safeErrorMessage } from "@/lib/error-messages";
+
+async function apiFetch(path: string, options?: RequestInit) {
+  const res = await fetch(path, options);
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(json?.error ?? json?.message ?? `เกิดข้อผิดพลาด (${res.status})`);
+  }
+  return json;
+}
 import { useToast } from "@/app/components/ui/Toast";
 import { TAG_COLORS } from "@/lib/tag-utils";
 import type { TagItem } from "@/lib/types/api-responses";
@@ -148,15 +156,17 @@ export default function TagsPageClient({
     startTransition(async () => {
       try {
         if (editingTag) {
-          await updateTag(editingTag.id, {
-            name: data.name.trim(),
-            color: data.color,
+          await apiFetch(`/api/v1/tags/${editingTag.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: data.name.trim(), color: data.color }),
           });
           toast("success", "อัปเดตแท็กสำเร็จ!");
         } else {
-          await createTag({
-            name: data.name.trim(),
-            color: data.color,
+          await apiFetch("/api/v1/tags", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: data.name.trim(), color: data.color }),
           });
           toast("success", "สร้างแท็กสำเร็จ!");
         }
@@ -164,12 +174,12 @@ export default function TagsPageClient({
         router.refresh();
       } catch (e) {
         const msg = e instanceof Error ? e.message : "";
-        if (msg.includes("ชื่อแท็กนี้มีอยู่แล้ว")) {
+        if (msg.includes("ชื่อแท็กนี้มีอยู่แล้ว") || msg.includes("ข้อมูลซ้ำ") || msg.includes("already exists") || msg.includes("duplicate") || msg.includes("unique")) {
           form.setError("name", { message: "ชื่อแท็กนี้มีอยู่แล้ว กรุณาใช้ชื่ออื่น" });
         } else if (msg.includes("ขีด") || msg.includes("ตัวอักษร ตัวเลข")) {
           form.setError("name", { message: "ชื่อแท็กต้องเป็นตัวอักษร ตัวเลข ขีด (-) หรือ (_) เท่านั้น" });
         } else {
-          toast("error", safeErrorMessage(e));
+          toast("error", msg || safeErrorMessage(e));
         }
       }
     });
@@ -179,13 +189,13 @@ export default function TagsPageClient({
     if (!deletingTag) return;
     startTransition(async () => {
       try {
-        await deleteTag(deletingTag.id);
+        await apiFetch(`/api/v1/tags/${deletingTag.id}`, { method: "DELETE" });
         toast("success", `ลบแท็ก "${deletingTag.name}" สำเร็จ`);
         setShowDeleteAlert(false);
         setDeletingTag(null);
         router.refresh();
       } catch (e) {
-        toast("error", safeErrorMessage(e));
+        toast("error", e instanceof Error ? e.message : safeErrorMessage(e));
       }
     });
   }
