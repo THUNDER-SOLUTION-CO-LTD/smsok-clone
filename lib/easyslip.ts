@@ -200,12 +200,12 @@ function mapVerifySuccess(payload: EasySlipApiResponse, providerStatus?: number)
     return buildValidationError("EasySlip response missing sender account", providerStatus);
   }
 
+  // receiverAccount may be absent for PromptPay slips — use empty string, let
+  // slip-verification.ts decide whether to accept or send for manual review
   const receiverAccount =
     toNonEmptyString(payload.data?.receiver?.account?.bank?.account) ??
-    toNonEmptyString(payload.data?.receiver?.account?.value);
-  if (!receiverAccount) {
-    return buildValidationError("EasySlip response missing receiver account", providerStatus);
-  }
+    toNonEmptyString(payload.data?.receiver?.account?.value) ??
+    "";
 
   return {
     success: true,

@@ -10,6 +10,7 @@ import { MAX_SLIP_ATTEMPTS, type SlipRejectCode } from "@/lib/orders/rejected-sl
 import { createOrderHistory } from "@/lib/orders/service";
 import { verifySlipByUrl, type SlipVerifyResult } from "@/lib/easyslip";
 import { extractStoredFileKey } from "@/lib/storage/files";
+import { COMPANY_BANK_ACCOUNT } from "@/lib/constants/bank-account";
 
 const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || "";
 
@@ -22,7 +23,10 @@ const SLIP_VERIFY_TIMEOUT_MS = 30_000;
 const SLIP_MAX_AGE_MS = 48 * 60 * 60 * 1000;
 const RECEIVER_ACCOUNTS = [
   COMPANY_ACCOUNT_DIGITS,
-  ...[process.env.KBANK_ACCOUNT, process.env.SCB_ACCOUNT]
+  // PromptPay proxy IDs (phone / tax ID) — for PromptPay slips where EasySlip
+  // returns account.value instead of a bank account number
+  COMPANY_BANK_ACCOUNT.promptpayId.replace(/\D/g, ""),
+  ...[process.env.KBANK_ACCOUNT, process.env.SCB_ACCOUNT, process.env.PROMPTPAY_ID]
     .filter(Boolean)
     .map((account) => account!.replace(/\D/g, "")),
 ];
