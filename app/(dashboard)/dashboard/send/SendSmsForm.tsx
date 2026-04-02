@@ -2,7 +2,16 @@
 
 import { useState, useEffect, useTransition, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { sendSms, sendBatchSms } from "@/lib/actions/sms";
+async function apiFetch(path: string, body: unknown) {
+  const res = await fetch(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
+  return json;
+}
 import { calculateCreditCost as calculateSmsCost } from "@/lib/validations";
 import { safeErrorMessage } from "@/lib/error-messages";
 
@@ -200,8 +209,8 @@ export default function SendSmsForm({ senderNames: rawNames = [] }: { senderName
 
         // Immediate send
         const result = recipientCount === 1
-          ? await sendSms({ senderName, recipient: recipientList[0], message })
-          : await sendBatchSms({ senderName, recipients: recipientList, message });
+          ? await apiFetch("/api/v1/sms/send", { senderName, recipient: recipientList[0], message })
+          : await apiFetch("/api/v1/sms/send", { senderName, recipients: recipientList, message });
 
         if (result && "error" in result && result.error === "INSUFFICIENT_CREDITS") {
           const detail = `SMS ไม่พอ — เหลือ ${result.creditsRemaining} ต้องการ ${result.creditsRequired}`;
@@ -235,7 +244,7 @@ export default function SendSmsForm({ senderNames: rawNames = [] }: { senderName
     }
     setIsTestSending(true);
     try {
-      const result = await sendSms({ senderName, recipient: cleanPhone, message });
+      const result = await apiFetch("/api/v1/sms/send", { senderName, recipient: cleanPhone, message });
       if (result && "error" in result && result.error === "INSUFFICIENT_CREDITS") {
         toast.error("SMS ไม่พอสำหรับทดสอบ");
       } else {

@@ -1,42 +1,20 @@
 import { NextRequest } from "next/server";
-import { authenticateRequest, ApiError, apiResponse, apiError } from "@/lib/api-auth";
-import { requireApiPermission } from "@/lib/rbac";
-import { sendSms } from "@/lib/actions/sms";
-import { sendSmsApiSchema } from "@/lib/validations";
-import { getRemainingQuota } from "@/lib/package/quota";
+import { authenticateRequest, apiResponse, apiError } from "@/lib/api-auth";
+import { sendSms, sendBatchSms } from "@/lib/actions/sms";
 
+// POST /api/v1/sms/send — send single or batch SMS (exposes real errors vs Server Action digest)
 export async function POST(req: NextRequest) {
   try {
     const user = await authenticateRequest(req);
+    const body = await req.json();
 
-    const denied = await requireApiPermission(user.id, "create", "sms");
-    if (denied) return denied;
-    let body: unknown;
-    try {
-      body = await req.json();
-    } catch {
-      throw new ApiError(400, "กรุณาส่งข้อมูล JSON");
-    }
-    const input = sendSmsApiSchema.parse(body);
-    const message = await sendSms(user.id, {
-      senderName: input.sender,
-      recipient: input.to,
-      message: input.message,
-    }, "API");
+    const isBatch = Array.isArray(body.recipients);
 
-    if ("error" in message && message.error === "INSUFFICIENT_CREDITS") {
-      return Response.json(message, { status: 402 });
-    }
+    const result = isBatch
+      ? await sendBatchSms(user.id, body)
+      : await sendSms(user.id, body);
 
-    const msg = message as { id: string; status: string; creditCost: number };
-    const quota = await getRemainingQuota(user.id);
-
-    return apiResponse({
-      id: msg.id,
-      status: msg.status,
-      sms_used: msg.creditCost,
-      sms_remaining: quota.totalRemaining,
-    }, 201);
+    return apiResponse(result);
   } catch (error) {
     return apiError(error);
   }
