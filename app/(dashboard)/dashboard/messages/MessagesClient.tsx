@@ -152,8 +152,8 @@ export default function MessagesClient({
         <div className="flex flex-col sm:flex-row sm:items-end gap-3">
           <div className="relative flex-1 flex flex-col gap-1">
             <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)] px-1">ค้นหา</span>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
+            <label className="relative flex items-center cursor-text">
+              <Search className="absolute left-3 w-4 h-4 text-[var(--text-muted)] pointer-events-none" />
               <Input
                 type="text"
                 className="pl-10 h-9 bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] rounded-lg focus:border-[rgba(var(--accent-rgb),0.6)] focus:ring-[rgba(var(--accent-rgb),0.12)]"
@@ -161,7 +161,7 @@ export default function MessagesClient({
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
-            </div>
+            </label>
           </div>
           {/* Mobile: Filter button → Sheet */}
           <button
