@@ -167,12 +167,18 @@ function PricingCard({
 
       {/* CTA Button */}
       <Button
-        className={tier.isBestValue
-          ? "w-full mt-5 bg-[var(--accent)] text-[var(--bg-base)] border-[var(--accent)] hover:bg-[var(--accent)] hover:opacity-80 transition-opacity"
-          : "w-full mt-5"}
+        className="w-full mt-5"
         size="lg"
         onClick={() => onSelect(tier)}
         variant={tier.isBestValue ? "default" : "outline"}
+        style={tier.isBestValue ? {
+          background: "var(--accent)",
+          color: "var(--bg-base)",
+          borderColor: "var(--accent)",
+          transition: "opacity 0.15s ease",
+        } : undefined}
+        onMouseEnter={tier.isBestValue ? (e) => { e.currentTarget.style.opacity = "0.8"; } : undefined}
+        onMouseLeave={tier.isBestValue ? (e) => { e.currentTarget.style.opacity = "1"; } : undefined}
       >
         {tier.isBestValue ? "ซื้อเลย →" : "ซื้อ"}
       </Button>
@@ -281,12 +287,18 @@ function AccordionCard({
           </ul>
 
           <Button
-            className={tier.isBestValue
-              ? "w-full bg-[var(--accent)] text-[var(--bg-base)] border-[var(--accent)] hover:bg-[var(--accent)] hover:opacity-80 transition-opacity"
-              : "w-full"}
+            className="w-full"
             size="lg"
             onClick={() => onSelect(tier)}
             variant={tier.isBestValue ? "default" : "outline"}
+            style={tier.isBestValue ? {
+              background: "var(--accent)",
+              color: "var(--bg-base)",
+              borderColor: "var(--accent)",
+              transition: "opacity 0.15s ease",
+            } : undefined}
+            onMouseEnter={tier.isBestValue ? (e) => { e.currentTarget.style.opacity = "0.8"; } : undefined}
+            onMouseLeave={tier.isBestValue ? (e) => { e.currentTarget.style.opacity = "1"; } : undefined}
           >
             {tier.isBestValue ? "ซื้อเลย →" : "ซื้อ"}
           </Button>
