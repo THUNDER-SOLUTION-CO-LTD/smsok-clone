@@ -55,14 +55,24 @@ export default function OnboardingChecklist({
 }: OnboardingChecklistProps) {
   const [dismissed, setDismissed] = useState(false);
 
-  if (dismissed) return null;
-
   const completedCount = STEPS.filter((step) =>
     completedSteps.includes(step.id)
   ).length;
   const totalSteps = STEPS.length;
   const percentage = Math.round((completedCount / totalSteps) * 100);
   const allDone = completedCount === totalSteps;
+
+  if (dismissed) {
+    return (
+      <button
+        type="button"
+        onClick={() => setDismissed(false)}
+        className="text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors py-1 cursor-pointer"
+      >
+        แสดงขั้นตอนเริ่มต้น ({completedCount}/{STEPS.length}) ↓
+      </button>
+    );
+  }
 
   return (
     <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg p-5">
