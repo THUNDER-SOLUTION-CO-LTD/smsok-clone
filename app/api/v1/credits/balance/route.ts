@@ -1,25 +1,46 @@
-import { NextRequest } from "next/server";
-import { ApiError, apiError } from "@/lib/api-auth";
+import { ApiError, apiError, apiResponse } from "@/lib/api-auth";
 import { getSession } from "@/lib/auth";
+import { getRemainingQuota } from "@/lib/package/quota";
 
 // GET /api/v1/credits/balance — compatibility alias for dashboard send/otp UIs
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     const session = await getSession();
     if (!session?.id) throw new ApiError(401, "กรุณาเข้าสู่ระบบ");
 
-    const target = new URL("/api/credits/balance", req.url);
-    const response = await fetch(target, {
-      headers: {
-        cookie: req.headers.get("cookie") || "",
-        accept: "application/json",
-      },
-      cache: "no-store",
-    });
+    const quota = await getRemainingQuota(session.id);
+    const expiry = quota.packages[0]?.expiresAt ?? null;
 
-    return new Response(response.body, {
-      status: response.status,
-      headers: new Headers(response.headers),
+    const quotaSummary = {
+      remaining_credits: quota.totalRemaining,
+      remaining_messages: quota.totalRemaining,
+      total_quota: quota.totalSms,
+      used_quota: quota.totalUsed,
+      expiry,
+    };
+
+    return apiResponse({
+      remaining_credits: quota.totalRemaining,
+      remaining_messages: quota.totalRemaining,
+      total_quota: quota.totalSms,
+      used_quota: quota.totalUsed,
+      quotaSummary,
+      quota: quotaSummary,
+      balance: quota.totalRemaining,
+      smsRemaining: quota.totalRemaining,
+      remaining: quota.totalRemaining,
+      totalCredits: quota.totalSms,
+      usedCredits: quota.totalUsed,
+      expiry,
+      packages: quota.packages.map((pkg) => ({
+        id: pkg.id,
+        smsTotal: pkg.smsTotal,
+        smsUsed: pkg.smsUsed,
+        smsRemaining: pkg.smsTotal - pkg.smsUsed,
+        expiresAt: pkg.expiresAt,
+        tierCode: pkg.tier.tierCode,
+        packageName: pkg.tier.name,
+      })),
     });
   } catch (error) {
     return apiError(error);
