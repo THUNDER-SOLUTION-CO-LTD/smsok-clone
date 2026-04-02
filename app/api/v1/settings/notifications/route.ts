@@ -26,3 +26,6 @@ export async function PUT(req: NextRequest) {
     return apiError(error);
   }
 }
+
+// PATCH /api/v1/settings/notifications — alias for PUT
+export { PUT as PATCH };
