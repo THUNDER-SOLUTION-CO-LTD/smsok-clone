@@ -118,14 +118,6 @@ const DEFAULT_NOTIF_PREFS: NotifPref[] = [
     email: true,
     sms: true,
   },
-  {
-    id: "api_error",
-    label: "API Error",
-    description: "แจ้งเตือนเมื่อ API call ล้มเหลวติดต่อกัน",
-    icon: AlertTriangle,
-    email: true,
-    sms: false,
-  },
 ];
 
 /* ─── Shared Sub-Components ─── */
@@ -486,13 +478,17 @@ function NotificationsContent({
                   />
                 </div>
                 <div className="w-16 flex justify-center">
-                  <Switch
-                    checked={pref.sms}
-                    onCheckedChange={() => toggleNotif(pref.id, "sms")}
-                    disabled={savingSms}
-                    aria-label={`${pref.label} — SMS`}
-                    className={`transition-opacity ${savingSms ? "opacity-40 cursor-wait" : ""}`}
-                  />
+                  {pref.sms !== undefined ? (
+                    <Switch
+                      checked={pref.sms}
+                      onCheckedChange={() => toggleNotif(pref.id, "sms")}
+                      disabled={pref.id === "security_alert" || savingSms}
+                      aria-label={`${pref.label} — SMS`}
+                      className={`transition-opacity ${savingSms ? "opacity-40 cursor-wait" : ""}`}
+                    />
+                  ) : (
+                    <span className="text-[var(--text-muted)] text-xs">—</span>
+                  )}
                 </div>
               </div>
             );
