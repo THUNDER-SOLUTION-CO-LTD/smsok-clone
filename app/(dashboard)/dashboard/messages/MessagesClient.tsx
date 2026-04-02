@@ -46,6 +46,13 @@ function detectType(content: string): "OTP" | "SMS" {
   return /^\d{4,8}$/.test(content.trim()) ? "OTP" : "SMS";
 }
 
+function formatDisplayPhone(phone: string): string {
+  if (phone.startsWith("+66") && phone.length >= 11) {
+    return "0" + phone.slice(3);
+  }
+  return phone;
+}
+
 export default function MessagesClient({
   messages,
   pagination,
@@ -95,7 +102,7 @@ export default function MessagesClient({
       ["วันที่", "ผู้รับ", "เนื้อหา", "ผู้ส่ง", "สถานะ", "ราคา (SMS)"].map(toCsvCell),
       ...filtered.map((msg) => [
         toCsvCell(new Date(msg.createdAt).toISOString()),
-        toCsvCell(msg.recipient),
+        toCsvCell(formatDisplayPhone(msg.recipient)),
         toCsvCell(msg.content),
         toCsvCell(msg.senderName),
         toCsvCell(msg.status),
@@ -141,16 +148,19 @@ export default function MessagesClient({
 
       {/* Filter Bar */}
       <div className="space-y-3">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
-            <Input
-              type="text"
-              className="pl-10 h-11 bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] rounded-lg focus:border-[rgba(var(--accent-rgb),0.6)] focus:ring-[rgba(var(--accent-rgb),0.12)]"
-              placeholder="ค้นหาเบอร์, เนื้อหา, ผู้ส่ง..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+        <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+          <div className="relative flex-1 flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)] px-1">ค้นหา</span>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
+              <Input
+                type="text"
+                className="pl-10 h-9 bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] rounded-lg focus:border-[rgba(var(--accent-rgb),0.6)] focus:ring-[rgba(var(--accent-rgb),0.12)]"
+                placeholder="ค้นหาเบอร์, เนื้อหา, ผู้ส่ง..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
           </div>
           {/* Mobile: Filter button → Sheet */}
           <button
@@ -198,14 +208,18 @@ export default function MessagesClient({
           </div>
         </div>
         {/* Desktop: date filters */}
-        <div className="hidden sm:flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2">
-            <label className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider font-medium">ตั้งแต่</label>
-            <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 text-sm w-[150px] bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] rounded-lg" />
+        <div className="hidden sm:flex flex-wrap items-end gap-3">
+          <div className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)] px-1">ตั้งแต่</span>
+            <div className="focus-within:ring-2 focus-within:ring-[rgba(var(--accent-rgb),0.2)] focus-within:border-transparent rounded-lg">
+              <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 text-sm w-[150px] bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] rounded-lg focus:border-[rgba(var(--accent-rgb),0.6)]" />
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <label className="text-[11px] text-[var(--text-muted)] uppercase tracking-wider font-medium">ถึง</label>
-            <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 text-sm w-[150px] bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] rounded-lg" />
+          <div className="flex flex-col gap-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)] px-1">ถึง</span>
+            <div className="focus-within:ring-2 focus-within:ring-[rgba(var(--accent-rgb),0.2)] focus-within:border-transparent rounded-lg">
+              <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 text-sm w-[150px] bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] rounded-lg focus:border-[rgba(var(--accent-rgb),0.6)]" />
+            </div>
           </div>
           {hasFilters && (
             <Button
@@ -298,7 +312,7 @@ export default function MessagesClient({
               <Card key={msg.id} className="bg-[var(--bg-surface)] border-[var(--border-default)] rounded-lg">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-[var(--text-primary)] font-mono">{msg.recipient}</span>
+                    <span className="text-sm text-[var(--text-primary)] font-mono">{formatDisplayPhone(msg.recipient)}</span>
                     <Badge variant="outline" className={`text-[11px] px-2.5 py-0.5 rounded-full border ${status.badge}`}>
                       {status.label}
                     </Badge>
@@ -351,7 +365,7 @@ export default function MessagesClient({
                       <TableCell className="text-xs text-[var(--text-muted)] whitespace-nowrap py-2">
                         {formatThaiDateTimeShort(msg.createdAt)}
                       </TableCell>
-                      <TableCell className="text-sm text-[var(--text-primary)] font-mono py-2">{msg.recipient}</TableCell>
+                      <TableCell className="text-sm text-[var(--text-primary)] font-mono py-2">{formatDisplayPhone(msg.recipient)}</TableCell>
                       <TableCell className="hidden md:table-cell py-2">
                         <span className="text-xs text-[var(--text-muted)] truncate block max-w-[150px] lg:max-w-[300px]" title={msg.content}>
                           {msg.content.length > 40 ? `${msg.content.slice(0, 40)}...` : msg.content}
