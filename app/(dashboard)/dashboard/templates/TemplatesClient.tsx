@@ -603,7 +603,7 @@ export default function TemplatesClient({
                 return (
                   <Card
                     key={template.id}
-                    className="bg-[var(--bg-surface)] border-[var(--border-default)] rounded-lg p-4 hover:border-[rgba(var(--accent-rgb),0.15)] hover:-translate-y-0.5 transition-all group"
+                    className="bg-[var(--bg-surface)] border-[var(--border-default)] rounded-lg p-4 hover:border-[rgba(var(--accent-rgb),0.15)] hover:-translate-y-0.5 transition-all group flex flex-col"
                   >
                     <div className="flex items-start justify-between mb-3">
                       <h3 className="text-[15px] font-semibold text-[var(--text-primary)] leading-snug pr-4 line-clamp-1">
@@ -616,22 +616,24 @@ export default function TemplatesClient({
                         {getCategoryLabel(template.category)}
                       </span>
                     </div>
-                    <div className="text-[13px] text-[var(--text-secondary)] leading-relaxed mb-3 line-clamp-3 min-h-[3.6em]">
-                      {highlightVariables(template.content)}
-                    </div>
-                    {vars.length > 0 && (
-                      <div className="flex items-center gap-1.5 mb-3 flex-wrap">
-                        {vars.map((v) => (
-                          <span
-                            key={v}
-                            className="text-[11px] px-1.5 py-0.5 rounded bg-[rgba(var(--accent-rgb),0.06)] text-[var(--accent)] font-mono border border-[rgba(var(--accent-rgb),0.1)]"
-                          >
-                            {v}
-                          </span>
-                        ))}
+                    <div className="flex-1 flex flex-col">
+                      <div className="text-[13px] text-[var(--text-secondary)] leading-relaxed line-clamp-3 min-h-[3.6em]">
+                        {highlightVariables(template.content)}
                       </div>
-                    )}
-                    <div className="flex items-center justify-between pt-3 border-t border-[var(--border-default)]">
+                      {vars.length > 0 && (
+                        <div className="flex items-center gap-1.5 mt-3 flex-wrap">
+                          {vars.map((v) => (
+                            <span
+                              key={v}
+                              className="text-[11px] px-1.5 py-0.5 rounded bg-[rgba(var(--accent-rgb),0.06)] text-[var(--accent)] font-mono border border-[rgba(var(--accent-rgb),0.1)]"
+                            >
+                              {v}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-[var(--border-default)]">
                       <span className="text-[12px] text-[var(--text-muted)]">
                         อัปเดต {formatDate(template.updatedAt)}
                       </span>

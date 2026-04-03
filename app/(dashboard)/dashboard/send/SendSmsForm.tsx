@@ -29,7 +29,7 @@ import {
 } from "@/components/sms/VariableInsert";
 
 import { toast } from "sonner";
-import { ArrowRight, Loader2, AlertTriangle, Send, FlaskConical, Upload, Calendar, X } from "lucide-react";
+import { ArrowRight, Loader2, AlertTriangle, Send, FlaskConical, Upload, Calendar, X, Users, Search, Check, ChevronRight } from "lucide-react";
 import SendingHoursWarning, { checkSendingHours } from "@/components/blocks/SendingHoursWarning";
 import { TrialNotice } from "@/components/blocks/TrialBanner";
 
@@ -52,6 +52,19 @@ export default function SendSmsForm({ senderNames: rawNames = [] }: { senderName
   const [scheduleDate, setScheduleDate] = useState("");
   const [scheduleTime, setScheduleTime] = useState("");
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [hasPackage, setHasPackage] = useState(false);
+
+  // Contact/Group picker
+  const [showPicker, setShowPicker] = useState(false);
+  const [pickerTab, setPickerTab] = useState<"contacts" | "groups">("contacts");
+  const [pickerSearch, setPickerSearch] = useState("");
+  const [pickerLoading, setPickerLoading] = useState(false);
+  const [contacts, setContacts] = useState<Array<{ id: string; name: string; phone: string }>>([]);
+  const [groups, setGroups] = useState<Array<{ id: string; name: string; memberCount: number }>>([]);
+  const [selectedPhones, setSelectedPhones] = useState<Set<string>>(new Set());
+  const [expandedGroupId, setExpandedGroupId] = useState<string | null>(null);
+  const [groupMembers, setGroupMembers] = useState<Record<string, Array<{ id: string; name: string; phone: string }>>>({});
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const messageTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -63,20 +76,20 @@ export default function SendSmsForm({ senderNames: rawNames = [] }: { senderName
     setTodayStr(new Date().toISOString().slice(0, 10));
   }, []);
 
-  // Fetch SMS quota on mount
-  useEffect(() => {
-    async function fetchBalance() {
-      try {
-        const res = await fetch("/api/v1/credits/balance");
-        if (res.ok) {
-          const data = await res.json();
-          const remaining = data.smsRemaining ?? data.remaining ?? data.balance;
-          if (typeof remaining === "number") { setSmsRemaining(remaining); return; }
-        }
-      } catch { /* endpoint may not exist yet */ }
-    }
-    fetchBalance();
+  // Fetch SMS quota — callable on mount and after send
+  const fetchBalance = useCallback(async () => {
+    try {
+      const res = await fetch("/api/v1/credits/balance");
+      if (res.ok) {
+        const data = await res.json();
+        const remaining = data.smsRemaining ?? data.remaining ?? data.balance;
+        if (typeof remaining === "number") setSmsRemaining(remaining);
+        if (Array.isArray(data.packages) && data.packages.length > 0) setHasPackage(true);
+      }
+    } catch { /* endpoint may not exist yet */ }
   }, []);
+
+  useEffect(() => { fetchBalance(); }, [fetchBalance]);
 
   const hasThai = /[\u0E00-\u0E7F]/.test(message);
   const hasNonGsm = /[^\x00-\x7F]/.test(message);
@@ -166,6 +179,81 @@ export default function SendSmsForm({ senderNames: rawNames = [] }: { senderName
     autocompleteInsert,
   );
 
+  // ── Contact / Group Picker ──────────────────────────────────
+  const openPicker = useCallback(async (tab: "contacts" | "groups") => {
+    setPickerTab(tab);
+    setPickerSearch("");
+    setSelectedPhones(new Set());
+    setExpandedGroupId(null);
+    setShowPicker(true);
+    setPickerLoading(true);
+    try {
+      if (tab === "contacts") {
+        const res = await fetch("/api/v1/contacts?limit=200");
+        const data = res.ok ? await res.json() : {};
+        setContacts((data.contacts ?? []).map((c: { id: string; name?: string; phone: string }) => ({ id: c.id, name: c.name || c.phone, phone: c.phone })));
+      } else {
+        const res = await fetch("/api/v1/groups");
+        const data = res.ok ? await res.json() : {};
+        setGroups(data.groups ?? []);
+      }
+    } catch { /* ignore */ }
+    setPickerLoading(false);
+  }, []);
+
+  const togglePhone = useCallback((phone: string) => {
+    setSelectedPhones((prev) => {
+      const next = new Set(prev);
+      if (next.has(phone)) next.delete(phone);
+      else next.add(phone);
+      return next;
+    });
+  }, []);
+
+  const expandGroup = useCallback(async (groupId: string) => {
+    if (expandedGroupId === groupId) { setExpandedGroupId(null); return; }
+    setExpandedGroupId(groupId);
+    if (groupMembers[groupId]) return; // cached
+    setPickerLoading(true);
+    try {
+      const res = await fetch(`/api/v1/groups/${groupId}/members?limit=500`);
+      const data = res.ok ? await res.json() : {};
+      const members = (data.members ?? []).map((m: { contact?: { id: string; name?: string; phone: string } }) => ({
+        id: m.contact?.id ?? "",
+        name: m.contact?.name || m.contact?.phone || "",
+        phone: m.contact?.phone ?? "",
+      })).filter((m: { phone: string }) => m.phone);
+      setGroupMembers((prev) => ({ ...prev, [groupId]: members }));
+    } catch { /* ignore */ }
+    setPickerLoading(false);
+  }, [expandedGroupId, groupMembers]);
+
+  const selectAllGroupMembers = useCallback((groupId: string) => {
+    const members = groupMembers[groupId] ?? [];
+    setSelectedPhones((prev) => {
+      const next = new Set(prev);
+      const allSelected = members.every((m) => next.has(m.phone));
+      members.forEach((m) => allSelected ? next.delete(m.phone) : next.add(m.phone));
+      return next;
+    });
+  }, [groupMembers]);
+
+  const confirmPicker = useCallback(() => {
+    if (selectedPhones.size === 0) return;
+    const newPhones = Array.from(selectedPhones);
+    setRecipients((prev) => {
+      const existing = prev.trim();
+      return existing ? `${existing}\n${newPhones.join("\n")}` : newPhones.join("\n");
+    });
+    toast.success(`เพิ่ม ${newPhones.length} เบอร์แล้ว`);
+    setShowPicker(false);
+    setSelectedPhones(new Set());
+  }, [selectedPhones]);
+
+  const filteredContacts = contacts.filter(
+    (c) => !pickerSearch || c.name.includes(pickerSearch) || c.phone.includes(pickerSearch)
+  );
+
   const handleSend = () => {
     if (!recipients.trim() || !message.trim()) return;
     if (isOutsideSendingHours && scheduleMode === "now") {
@@ -178,27 +266,31 @@ export default function SendSmsForm({ senderNames: rawNames = [] }: { senderName
 
     startTransition(async () => {
       try {
-        // Scheduled SMS
+        // Scheduled SMS — API expects { sender, to, message, scheduledAt } per recipient
         if (scheduleMode === "later" && scheduleDate && scheduleTime) {
           const scheduledAt = new Date(`${scheduleDate}T${scheduleTime}:00`).toISOString();
-          const res = await fetch("/api/v1/sms/scheduled", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({
-              action: "create",
-              senderName: senderName || "",
-              recipients: validPhones,
-              message,
-              scheduledAt,
-            }),
-          });
-          if (!res.ok) {
-            const err = await res.json().catch(() => ({ error: "ตั้งเวลาส่งล้มเหลว" }));
-            throw new Error(err.error || "ตั้งเวลาส่งล้มเหลว");
+          let failCount = 0;
+          for (const phone of validPhones) {
+            const res = await fetch("/api/v1/sms/scheduled", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({
+                sender: senderName || "",
+                to: phone,
+                message,
+                scheduledAt,
+              }),
+            });
+            if (!res.ok) failCount++;
           }
-          setResult({ type: "success", text: `ตั้งเวลาส่งสำเร็จ ${validPhones.length} เบอร์ — ${scheduleDate} ${scheduleTime}` });
-          toast.success("ตั้งเวลาส่ง SMS สำเร็จ!");
+          const successCount = validPhones.length - failCount;
+          if (successCount > 0) {
+            setResult({ type: "success", text: `ตั้งเวลาส่งสำเร็จ ${successCount} เบอร์ — ${scheduleDate} ${scheduleTime}${failCount > 0 ? ` (ล้มเหลว ${failCount} เบอร์)` : ""}` });
+            toast.success(`ตั้งเวลาส่ง SMS สำเร็จ ${successCount} เบอร์!`);
+          } else {
+            throw new Error("ตั้งเวลาส่งล้มเหลวทั้งหมด");
+          }
           setRecipients("");
           setMessage("");
           setScheduleMode("now");
@@ -208,9 +300,9 @@ export default function SendSmsForm({ senderNames: rawNames = [] }: { senderName
         }
 
         // Immediate send
-        const result = recipientCount === 1
-          ? await apiFetch("/api/v1/sms/send", { senderName, recipient: recipientList[0], message })
-          : await apiFetch("/api/v1/sms/send", { senderName, recipients: recipientList, message });
+        const result = validPhones.length === 1
+          ? await apiFetch("/api/v1/sms/send", { senderName, recipient: validPhones[0], message })
+          : await apiFetch("/api/v1/sms/send", { senderName, recipients: validPhones, message });
 
         if (result && "error" in result && result.error === "INSUFFICIENT_CREDITS") {
           const detail = `SMS ไม่พอ — เหลือ ${result.creditsRemaining} ต้องการ ${result.creditsRequired}`;
@@ -220,10 +312,11 @@ export default function SendSmsForm({ senderNames: rawNames = [] }: { senderName
           return;
         }
 
-        setResult({ type: "success", text: `ส่งสำเร็จ ${recipientCount} เบอร์!` });
+        setResult({ type: "success", text: `ส่งสำเร็จ ${validPhones.length} เบอร์!` });
         toast.success("ส่ง SMS สำเร็จ!");
         setRecipients("");
         setMessage("");
+        fetchBalance(); // refresh credit balance after send
       } catch (e) {
         setResult({ type: "error", text: safeErrorMessage(e) });
         toast.error(safeErrorMessage(e));
@@ -263,8 +356,8 @@ export default function SendSmsForm({ senderNames: rawNames = [] }: { senderName
       {/* Page Header */}
       <h1 className="text-2xl font-bold text-[var(--text-primary)]">ส่ง SMS</h1>
 
-      {/* Trial Limitation Notice */}
-      <TrialNotice variant="send-limit" />
+      {/* Trial Limitation Notice — only for users without a paid package */}
+      {!hasPackage && <TrialNotice variant="send-limit" />}
 
       {/* No Approved Senders Warning */}
       {hasNoSenders && (
@@ -397,16 +490,36 @@ export default function SendSmsForm({ senderNames: rawNames = [] }: { senderName
 
               {/* Recipients */}
               <div>
-                <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center justify-between mb-1.5 gap-2 flex-wrap">
                   <label className="text-xs font-semibold uppercase tracking-[0.05em] text-[var(--text-muted)]">ผู้รับ</label>
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--accent)] hover:underline cursor-pointer"
-                  >
-                    <Upload className="w-3 h-3" />
-                    นำเข้า CSV
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => openPicker("contacts")}
+                      className="flex items-center gap-1 text-[11px] font-medium text-[var(--accent)] hover:underline cursor-pointer"
+                    >
+                      <Users className="w-3 h-3" />
+                      รายชื่อ
+                    </button>
+                    <span className="text-[var(--border-default)] text-[10px]">|</span>
+                    <button
+                      type="button"
+                      onClick={() => openPicker("groups")}
+                      className="flex items-center gap-1 text-[11px] font-medium text-[var(--accent)] hover:underline cursor-pointer"
+                    >
+                      <Users className="w-3 h-3" />
+                      กลุ่ม
+                    </button>
+                    <span className="text-[var(--border-default)] text-[10px]">|</span>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="flex items-center gap-1 text-[11px] font-medium text-[var(--accent)] hover:underline cursor-pointer"
+                    >
+                      <Upload className="w-3 h-3" />
+                      CSV
+                    </button>
+                  </div>
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -613,12 +726,14 @@ export default function SendSmsForm({ senderNames: rawNames = [] }: { senderName
                       onChange={(e) => setScheduleDate(e.target.value)}
                       min={todayStr || undefined}
                       className="flex-1 h-11 px-3 rounded-lg text-sm bg-[var(--bg-base)] border border-[var(--border-default)] text-[var(--text-primary)] focus:outline-none focus:border-[rgba(var(--accent-rgb),0.6)]"
+                      style={{ colorScheme: "dark" }}
                     />
                     <input
                       type="time"
                       value={scheduleTime}
                       onChange={(e) => setScheduleTime(e.target.value)}
                       className="w-[120px] h-11 px-3 rounded-lg text-sm bg-[var(--bg-base)] border border-[var(--border-default)] text-[var(--text-primary)] focus:outline-none focus:border-[rgba(var(--accent-rgb),0.6)]"
+                      style={{ colorScheme: "dark" }}
                     />
                   </div>
                 )}
@@ -662,6 +777,153 @@ export default function SendSmsForm({ senderNames: rawNames = [] }: { senderName
           </Button>
         </div>
       </div>
+
+      {/* Contact / Group Picker Modal */}
+      {showPicker && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" role="dialog" aria-modal="true">
+          <div className="w-full max-w-md rounded-lg border border-[var(--border-default)] bg-[var(--bg-surface)] flex flex-col" style={{ maxHeight: "80vh" }}>
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border-default)] shrink-0">
+              <div className="flex gap-1">
+                {(["contacts", "groups"] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => { setPickerTab(tab); setPickerSearch(""); setExpandedGroupId(null); if (tab === "contacts" && contacts.length === 0) openPicker("contacts"); if (tab === "groups" && groups.length === 0) openPicker("groups"); }}
+                    className={`px-3 py-1.5 rounded-lg text-[13px] font-medium transition-colors ${pickerTab === tab ? "bg-[rgba(var(--accent-rgb),0.1)] text-[var(--accent)]" : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"}`}
+                  >
+                    {tab === "contacts" ? "รายชื่อผู้ติดต่อ" : "กลุ่ม"}
+                  </button>
+                ))}
+              </div>
+              <button type="button" onClick={() => setShowPicker(false)} className="w-8 h-8 flex items-center justify-center rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[rgba(255,255,255,0.04)]">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Search */}
+            {pickerTab === "contacts" && (
+              <div className="px-4 py-3 border-b border-[var(--border-default)] shrink-0">
+                <div className="flex items-center gap-2 h-9 px-3 rounded-lg bg-[var(--bg-base)] border border-[var(--border-default)]">
+                  <Search className="w-3.5 h-3.5 text-[var(--text-muted)] shrink-0" />
+                  <input
+                    type="text"
+                    value={pickerSearch}
+                    onChange={(e) => setPickerSearch(e.target.value)}
+                    placeholder="ค้นหาชื่อหรือเบอร์..."
+                    className="flex-1 bg-transparent text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* List */}
+            <div className="flex-1 overflow-y-auto">
+              {pickerLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-5 h-5 animate-spin text-[var(--text-muted)]" />
+                </div>
+              ) : pickerTab === "contacts" ? (
+                filteredContacts.length === 0 ? (
+                  <p className="text-center text-[13px] text-[var(--text-muted)] py-12">ไม่พบรายชื่อ</p>
+                ) : (
+                  <div className="py-1">
+                    {filteredContacts.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => togglePhone(c.phone)}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-[rgba(255,255,255,0.03)] transition-colors"
+                      >
+                        <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${selectedPhones.has(c.phone) ? "bg-[var(--accent)] border-[var(--accent)]" : "border-[var(--border-default)]"}`}>
+                          {selectedPhones.has(c.phone) && <Check className="w-2.5 h-2.5 text-[var(--bg-base)]" />}
+                        </div>
+                        <div className="flex-1 text-left min-w-0">
+                          <p className="text-[13px] text-[var(--text-primary)] truncate">{c.name}</p>
+                          <p className="text-[11px] text-[var(--text-muted)]">{c.phone}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )
+              ) : (
+                groups.length === 0 ? (
+                  <p className="text-center text-[13px] text-[var(--text-muted)] py-12">ไม่พบกลุ่ม</p>
+                ) : (
+                  <div className="py-1">
+                    {groups.map((g) => (
+                      <div key={g.id}>
+                        <div className="flex items-center gap-2 px-4 py-2.5 hover:bg-[rgba(255,255,255,0.03)]">
+                          <button
+                            type="button"
+                            onClick={() => expandGroup(g.id)}
+                            className="flex items-center gap-3 flex-1 text-left min-w-0"
+                          >
+                            <ChevronRight className={`w-4 h-4 text-[var(--text-muted)] shrink-0 transition-transform ${expandedGroupId === g.id ? "rotate-90" : ""}`} />
+                            <div className="min-w-0">
+                              <p className="text-[13px] text-[var(--text-primary)] truncate">{g.name}</p>
+                              <p className="text-[11px] text-[var(--text-muted)]">{g.memberCount} คน</p>
+                            </div>
+                          </button>
+                          {groupMembers[g.id] && (
+                            <button
+                              type="button"
+                              onClick={() => selectAllGroupMembers(g.id)}
+                              className="text-[11px] font-medium text-[var(--accent)] hover:underline shrink-0"
+                            >
+                              {(groupMembers[g.id] ?? []).every((m) => selectedPhones.has(m.phone)) ? "ยกเลิกทั้งหมด" : "เลือกทั้งหมด"}
+                            </button>
+                          )}
+                        </div>
+                        {expandedGroupId === g.id && groupMembers[g.id] && (
+                          <div className="pl-10 border-l border-[var(--border-default)] ml-8 mb-1">
+                            {(groupMembers[g.id] ?? []).map((m) => (
+                              <button
+                                key={m.id}
+                                type="button"
+                                onClick={() => togglePhone(m.phone)}
+                                className="w-full flex items-center gap-3 px-3 py-2 hover:bg-[rgba(255,255,255,0.03)] transition-colors"
+                              >
+                                <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${selectedPhones.has(m.phone) ? "bg-[var(--accent)] border-[var(--accent)]" : "border-[var(--border-default)]"}`}>
+                                  {selectedPhones.has(m.phone) && <Check className="w-2.5 h-2.5 text-[var(--bg-base)]" />}
+                                </div>
+                                <div className="flex-1 text-left min-w-0">
+                                  <p className="text-[13px] text-[var(--text-primary)] truncate">{m.name}</p>
+                                  <p className="text-[11px] text-[var(--text-muted)]">{m.phone}</p>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-5 py-3 border-t border-[var(--border-default)] flex items-center justify-between gap-3 shrink-0">
+              <span className="text-[12px] text-[var(--text-muted)]">
+                เลือกแล้ว {selectedPhones.size} เบอร์
+              </span>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setShowPicker(false)} className="px-4 py-2 rounded-lg text-[13px] text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-[var(--border-default)] hover:bg-[rgba(255,255,255,0.04)]">
+                  ยกเลิก
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmPicker}
+                  disabled={selectedPhones.size === 0}
+                  className="px-4 py-2 rounded-lg text-[13px] font-semibold text-[var(--bg-base)] bg-[var(--accent)] hover:bg-[var(--accent-hover)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  เพิ่ม {selectedPhones.size > 0 ? `${selectedPhones.size} เบอร์` : ""}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Confirmation Modal */}
       {showConfirmModal && (
