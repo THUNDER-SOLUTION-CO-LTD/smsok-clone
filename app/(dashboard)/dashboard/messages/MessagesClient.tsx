@@ -66,6 +66,8 @@ export default function MessagesClient({
   const searchParams = useSearchParams();
   const searchRef = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState(initialSearch ?? "");
+  const [dateFromFocused, setDateFromFocused] = useState(false);
+  const [dateToFocused, setDateToFocused] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState("");
@@ -214,11 +216,11 @@ export default function MessagesClient({
         <div className="hidden sm:flex flex-wrap items-end gap-3">
           <div className="flex flex-col gap-1">
             <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)] px-1">ตั้งแต่</span>
-            <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} onClick={(e) => { try { (e.currentTarget as HTMLInputElement).showPicker(); } catch {} }} style={{ colorScheme: "dark" }} className="h-9 text-sm w-[150px] bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] rounded-lg focus:border-[rgba(var(--accent-rgb),0.6)] cursor-pointer" />
+            <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} onClick={(e) => { setDateFromFocused(true); try { (e.currentTarget as HTMLInputElement).showPicker(); } catch {} }} onFocus={() => setDateFromFocused(true)} onBlur={() => setDateFromFocused(false)} style={{ colorScheme: "dark" }} className={`h-9 text-sm w-[150px] bg-[var(--bg-base)] text-[var(--text-primary)] rounded-lg cursor-pointer transition-colors border ${dateFromFocused ? "border-[rgba(var(--accent-rgb),0.6)] ring-2 ring-[rgba(var(--accent-rgb),0.12)]" : "border-[var(--border-default)]"}`} />
           </div>
           <div className="flex flex-col gap-1">
             <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)] px-1">ถึง</span>
-            <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} onClick={(e) => { try { (e.currentTarget as HTMLInputElement).showPicker(); } catch {} }} style={{ colorScheme: "dark" }} className="h-9 text-sm w-[150px] bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] rounded-lg focus:border-[rgba(var(--accent-rgb),0.6)] cursor-pointer" />
+            <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} onClick={(e) => { setDateToFocused(true); try { (e.currentTarget as HTMLInputElement).showPicker(); } catch {} }} onFocus={() => setDateToFocused(true)} onBlur={() => setDateToFocused(false)} style={{ colorScheme: "dark" }} className={`h-9 text-sm w-[150px] bg-[var(--bg-base)] text-[var(--text-primary)] rounded-lg cursor-pointer transition-colors border ${dateToFocused ? "border-[rgba(var(--accent-rgb),0.6)] ring-2 ring-[rgba(var(--accent-rgb),0.12)]" : "border-[var(--border-default)]"}`} />
           </div>
           {hasFilters && (
             <Button
