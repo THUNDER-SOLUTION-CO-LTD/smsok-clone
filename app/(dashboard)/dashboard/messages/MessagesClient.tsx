@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -31,8 +31,8 @@ import type { MessageItem, PaginationMeta } from "@/lib/types/api-responses";
 import { toCsvCell } from "@/lib/csv";
 
 const statusConfig: Record<string, { badge: string; label: string }> = {
-  delivered: { badge: "bg-[rgba(var(--success-rgb),0.08)] text-[var(--success)] border-[rgba(var(--success-rgb),0.2)]", label: "ส่งสำเร็จ" },
-  sent:      { badge: "bg-[rgba(var(--accent-rgb),0.08)] text-[var(--accent)] border-[rgba(var(--accent-rgb),0.2)]", label: "ส่งแล้ว" },
+  delivered: { badge: "bg-[rgba(var(--success-rgb),0.08)] text-[var(--success)] border-[rgba(var(--success-rgb),0.2)]", label: "สำเร็จ" },
+  sent:      { badge: "bg-[rgba(var(--accent-rgb),0.08)] text-[var(--accent)] border-[rgba(var(--accent-rgb),0.2)]", label: "กำลังส่ง" },
   pending:   { badge: "bg-[rgba(var(--warning-rgb),0.08)] text-[var(--warning)] border-[rgba(var(--warning-rgb),0.2)]", label: "รอส่ง" },
   failed:    { badge: "bg-[rgba(var(--error-rgb),0.08)] text-[var(--error)] border-[rgba(var(--error-rgb),0.2)]", label: "ล้มเหลว" },
 };
@@ -64,6 +64,7 @@ export default function MessagesClient({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const searchRef = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState(initialSearch ?? "");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -152,9 +153,10 @@ export default function MessagesClient({
         <div className="flex flex-col sm:flex-row sm:items-end gap-3">
           <div className="relative flex-1 flex flex-col gap-1">
             <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)] px-1">ค้นหา</span>
-            <label className="relative flex items-center cursor-text">
+            <label className="relative flex items-center cursor-text" onClick={() => searchRef.current?.focus()}>
               <Search className="absolute left-3 w-4 h-4 text-[var(--text-muted)] pointer-events-none" />
               <Input
+                ref={searchRef}
                 type="text"
                 className="pl-10 h-9 bg-[var(--bg-base)] border-[var(--border-default)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] rounded-lg focus:border-[rgba(var(--accent-rgb),0.6)] focus:ring-[rgba(var(--accent-rgb),0.12)]"
                 placeholder="ค้นหาเบอร์, เนื้อหา, ผู้ส่ง..."
@@ -200,7 +202,7 @@ export default function MessagesClient({
                 options={[
                   { value: "all", label: "ทุกสถานะ" },
                   { value: "delivered", label: "สำเร็จ" },
-                  { value: "sent", label: "ส่งแล้ว" },
+                  { value: "sent", label: "กำลังส่ง" },
                   { value: "pending", label: "รอส่ง" },
                   { value: "failed", label: "ล้มเหลว" },
                 ]}
@@ -260,7 +262,7 @@ export default function MessagesClient({
                 options={[
                   { value: "all", label: "ทุกสถานะ" },
                   { value: "delivered", label: "สำเร็จ" },
-                  { value: "sent", label: "ส่งแล้ว" },
+                  { value: "sent", label: "กำลังส่ง" },
                   { value: "pending", label: "รอส่ง" },
                   { value: "failed", label: "ล้มเหลว" },
                 ]}
